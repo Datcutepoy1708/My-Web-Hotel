@@ -1,3 +1,181 @@
+<?php
+// Xử lý CRUD trong invoice-manager
+ $action = isset($_GET['action']) ? $_GET['action'] : '';
+$message = '';
+$messageType = '';
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Thêm hóa đơn
+    if (isset($_POST['add_invoice'])) {
+        $booking_id = intval($_POST['booking_id']);
+        $room_charge = floatval($_POST['room_charge']);
+        $service_charge = floatval($_POST['service_charge']);
+        $vat = floatval($_POST['vat']);
+        $other_fees = floatval($_POST['other_fees']);
+        $total_amount = $room_charge + $service_charge + $vat + $other_fees;
+        $payment_method = trim($_POST['payment_method']);
+        $status = $_POST['status'] ?? 'Unpaid';
+        $payment_time = !empty($_POST['payment_time']) ? $_POST['payment_time'] : null;
+        $note = trim($_POST['note'] ?? '');
+        
+        $stmt = $mysqli->prepare("INSERT INTO invoice (booking_id, room_charge, service_charge, vat, other_fees, total_amount, payment_method, status, payment_time, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("idddddssts", $booking_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $payment_method, $status, $payment_time, $note);
+        
+        if ($stmt->execute()) {
+            $message = 'Thêm hóa đơn thành công!';
+            $messageType = 'success';
+            $action = '';
+        } else {
+            $message = 'Lỗi: ' . $stmt->error;
+            $messageType = 'danger';
+        }
+        $stmt->close();
+    }
+    
+    // Cập nhật hóa đơn
+    if (isset($_POST['update_invoice'])) {
+        $invoice_id = intval($_POST['invoice_id']);
+        $booking_id = intval($_POST['booking_id']);
+        $room_charge = floatval($_POST['room_charge']);
+        $service_charge = floatval($_POST['service_charge']);
+        $vat = floatval($_POST['vat']);
+        $other_fees = floatval($_POST['other_fees']);
+        $total_amount = $room_charge + $service_charge + $vat + $other_fees;
+        $payment_method = trim($_POST['payment_method']);
+        $status = $_POST['status'] ?? 'Unpaid';
+        $payment_time = !empty($_POST['payment_time']) ? $_POST['payment_time'] : null;
+        $note = trim($_POST['note'] ?? '');
+        
+        $stmt = $mysqli->prepare("UPDATE invoice SET booking_id=?, room_charge=?, service_charge=?, vat=?, other_fees=?, total_amount=?, payment_method=?, status=?, payment_time=?, note=? WHERE invoice_id=? AND deleted IS NULL");
+        $stmt->bind_param("idddddssstsi", $booking_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $payment_method, $status, $payment_time, $note, $invoice_id);
+        
+        if ($stmt->execute()) {
+            $message = 'Cập nhật hóa đơn thành công!';
+            $messageType = 'success';
+            $action = '';
+            header("Location: index.php?page=invoice-manager&success=1");
+            exit;
+        } else {
+            $message = 'Lỗi: ' . $stmt->error;
+            $messageType = 'danger';
+        }
+        $stmt->close();
+    }
+    
+    // Xóa hóa đơn
+    if (isset($_POST['delete_invoice'])) {
+        $invoice_id = intval($_POST['invoice_id']);
+        $stmt = $mysqli->prepare("UPDATE invoice SET deleted = NOW() WHERE invoice_id = ?");
+        $stmt->bind_param("i", $invoice_id);
+        
+        if ($stmt->execute()) {
+            $message = 'Xóa hóa đơn thành công!';
+            $messageType = 'success';
+        } else {
+            $message = 'Lỗi: ' . $stmt->error;
+            $messageType = 'danger';
+        }
+        $stmt->close();
+    }
+}
+
+// Lấy thông tin hóa đơn để edit
+$editInvoice = null;
+if ($action == 'edit' && isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+    $stmt = $mysqli->prepare("SELECT * FROM invoice WHERE invoice_id = ? AND deleted IS NULL");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $editInvoice = $result->fetch_assoc();
+    $stmt->close();
+}
+
+// Phân trang và tìm kiếm
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'newest';
+$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
+$perPage = 10;
+
+if ($page < 1) $page = 1;
+$offset = ($page - 1) * $perPage;
+
+// Xây dựng WHERE clause
+$where = "WHERE i.deleted IS NULL";
+
+if ($search) {
+    $search = $mysqli->real_escape_string($search);
+    $where .= " AND (i.invoice_id LIKE '%$search%' OR b.booking_id LIKE '%$search%')";
+}
+
+if ($status_filter) {
+    $status_filter = $mysqli->real_escape_string($status_filter);
+    $where .= " AND i.status = '$status_filter'";
+}
+
+// Xây dựng ORDER BY
+$orderBy = "ORDER BY i.created_at DESC";
+switch ($sort) {
+    case 'oldest':
+        $orderBy = "ORDER BY i.created_at ASC";
+        break;
+    case 'amount_high':
+        $orderBy = "ORDER BY i.total_amount DESC";
+        break;
+    case 'amount_low':
+        $orderBy = "ORDER BY i.total_amount ASC";
+        break;
+    case 'newest':
+    default:
+        $orderBy = "ORDER BY i.created_at DESC";
+        break;
+}
+
+// Đếm tổng số
+$countQuery = "SELECT COUNT(*) as total FROM invoice i LEFT JOIN booking b ON i.booking_id = b.booking_id $where";
+$countResult = $mysqli->query($countQuery);
+$total = 0;
+
+if ($countResult) {
+    $totalRow = $countResult->fetch_assoc();
+    $total = $totalRow['total'] ?? 0;
+} else {
+    error_log("Count Error: " . $mysqli->error);
+    $message = "Lỗi đếm dữ liệu: " . $mysqli->error;
+    $messageType = 'danger';
+}
+
+// Lấy dữ liệu
+$invoices = [];
+if ($total > 0) {
+    $query = "SELECT i.*, b.booking_id, b.customer_id, c.full_name
+        FROM invoice i 
+        LEFT JOIN booking b ON i.booking_id = b.booking_id
+        LEFT JOIN customer c ON b.customer_id = c.customer_id
+        $where 
+        $orderBy 
+        LIMIT $perPage OFFSET $offset";
+    
+    $result = $mysqli->query($query);
+    if (!$result) {
+        error_log("Query Error: " . $mysqli->error);
+        $message = "Lỗi truy vấn: " . $mysqli->error;
+        $messageType = 'danger';
+    } else {
+        $invoices = $result->fetch_all(MYSQLI_ASSOC);
+    }
+}
+
+// Build base URL for pagination
+$baseUrl = "index.php?page=invoice-manager";
+if ($search) $baseUrl .= "&search=" . urlencode($search);
+if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
+if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
+?>
+
+?>
+
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Hóa Đơn</h1>
