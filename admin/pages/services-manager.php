@@ -121,7 +121,7 @@ $total = $totalResult->fetch_assoc()['total'];
 $countStmt->close();
 
 // Lấy dữ liệu
-$query = "SELECT * FROM service s  ORDER BY s.service_id ASC LIMIT 10 OFFSET 0";
+$query = "SELECT * FROM service s  ORDER BY s.service_id ASC LIMIT 5 OFFSET 0";
 
 $result = $mysqli->query($query);
 $services = $result->fetch_all(MYSQLI_ASSOC);
@@ -234,7 +234,9 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                         <tr>
                             <td><?php echo $service['service_id']; ?></td>
                             <td><?php echo h($service['service_name']); ?></td>
-                            <td><span class="badge bg-info"><?php echo h($service['service_type']); ?></span></td>
+                            <td>
+                                <span class="badge bg-info"><?php echo h($service['service_type']); ?></span>
+                            </td>
                             <td><?php echo h($service['unit'] ?: '-'); ?></td>
                             <td><?php echo formatCurrency($service['price']); ?></td>
                             <td>

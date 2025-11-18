@@ -1,7 +1,7 @@
 <?php
 session_start();
 require 'includes/connect.php';
-$page = isset($_GET['page']) ? trim($_GET['page']) : 'home';
+$pageName = isset($_GET['page']) ? trim($_GET['page']) : 'home';
 include 'includes/header.php';
 include 'includes/sidebar.php';
 $allowed = [
@@ -16,8 +16,8 @@ $allowed = [
     'blogs-manager' => 'pages/blogs-manager.php',
 ];
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'home';
-if (isset($allowed[$page])) {
-    include $allowed[$page];
+if (isset($allowed[$pageName])) {
+    include $allowed[$pageName];
 } else {
     include 'pages/404.php';
 }  
