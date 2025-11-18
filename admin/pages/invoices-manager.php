@@ -95,11 +95,10 @@ if ($action == 'edit' && isset($_GET['id'])) {
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'newest';
-$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
-$perPage = 10;
-
-if ($page < 1) $page = 1;
-$offset = ($page - 1) * $perPage;
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum);
+$perPage = 5;
+$offset = ($pageNum - 1) * $perPage;
 
 // Xây dựng WHERE clause
 $where = "WHERE i.deleted IS NULL";
@@ -302,6 +301,9 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             </table>
         </div>
     </div>
+
+    <!-- pagination -->
+    <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 
     <!-- View Invoice Modal - Một modal duy nhất cho tất cả invoices -->
     <div class="modal fade" id="viewInvoiceModal" tabindex="-1">

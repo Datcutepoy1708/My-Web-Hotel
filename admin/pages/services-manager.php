@@ -80,12 +80,12 @@ if ($action == 'edit' && isset($_GET['id'])) {
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $type_filter = isset($_GET['type']) ? trim($_GET['type']) : '';
-$tab = isset($_GET['tab']) ? $_GET['tab'] : 'all';
-$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
-$perPage = 10;
-$offset = ($page - 1) * $perPage;
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum); // Đảm bảo pageNum >= 1
+$perPage = 5;
+$offset = ($pageNum - 1) * $perPage;
 
-// Xây dựng query
+// Xây dựng WHERE clause
 $where = "WHERE s.deleted IS NULL";
 $params = [];
 $types = '';
@@ -120,26 +120,24 @@ $totalResult = $countStmt->get_result();
 $total = $totalResult->fetch_assoc()['total'];
 $countStmt->close();
 
-// Lấy dữ liệu
-$query = "SELECT * FROM service s  ORDER BY s.service_id ASC LIMIT 5 OFFSET 0";
+// Lấy dữ liệu - FIX: Áp dụng $where, $params, $offset, $perPage
+$query = "SELECT * FROM service s 
+    $where
+    ORDER BY s.service_id ASC 
+    LIMIT $perPage OFFSET $offset";
 
-$result = $mysqli->query($query);
-$services = $result->fetch_all(MYSQLI_ASSOC);
+$stmt = $mysqli->prepare($query);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
 
-
-// $query = "SELECT r.*, rt.room_type_name, rt.base_price, rt.capacity, rt.area, rt.amenities 
-//     FROM room r 
-//     LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id 
-//     WHERE r.deleted IS NULL
-//     ORDER BY r.room_number ASC 
-//     LIMIT 10 OFFSET 0";
-
-// $result = $mysqli->query($query);
-// if (!$result) {
-//     die("Lỗi query: " . $mysqli->error);
-// }
-
-// $rooms = $result->fetch_all(MYSQLI_ASSOC);
+if ($stmt->execute()) {
+    $result = $stmt->get_result();
+    $services = $result->fetch_all(MYSQLI_ASSOC);
+} else {
+    die("Lỗi query: " . $stmt->error);
+}
+$stmt->close();
 
 // Lấy danh sách service types
 $typesResult = $mysqli->query("SELECT DISTINCT service_type FROM service WHERE deleted IS NULL ORDER BY service_type");
@@ -262,7 +260,7 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
     </div>
 
     <!-- Pagination -->
-    <?php echo getPagination($total, $perPage, $page, $baseUrl); ?>
+    <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 </div>
 
 <!-- Modal Thêm/Sửa Dịch Vụ -->
