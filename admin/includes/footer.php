@@ -11,6 +11,7 @@
     if ($page == 'reports-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/reports-manager.js"></script>';
     if ($page == 'blogs-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/blogs-manager.js"></script>';
     if ($page == 'invoices-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/invoices-manager.js"></script>';
+    if ($page == 'booking-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/booking-manager.js"></script>';
 ?>
 </body>
 

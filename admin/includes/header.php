@@ -37,6 +37,8 @@
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/services-manager.css?v=<?php echo time(); ?>">';
     if ($current_page == 'invoices-manager') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/invoices-manager.css?v=<?php echo time(); ?>">';
+    if ($current_page == 'booking-manager') echo '
+    <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/booking-manager.css?v=<?php echo time(); ?>">';
     if ($current_page == 'customers-manager') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/customers-manager.css?v=<?php echo time(); ?>">';
     if ($current_page == 'staff-manager') echo '

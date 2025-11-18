@@ -118,7 +118,7 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
                     <p>Doanh Thu Tháng</p>
                     <?php if ($revenue_growth != 0): ?>
                     <small class="<?php echo $revenue_growth > 0 ? 'text-success' : 'text-danger'; ?>">
-                        <i class="fas fa-arrow-<?php echo $revenue_growth > 0 ? 'up' : 'down'; ?>"></i> 
+                        <i class="fas fa-arrow-<?php echo $revenue_growth > 0 ? 'up' : 'down'; ?>"></i>
                         <?php echo number_format(abs($revenue_growth), 1); ?>% so với tháng trước
                     </small>
                     <?php endif; ?>
@@ -153,7 +153,9 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
     <div class="row g-4">
         <div class="col-lg-8">
             <div class="chart-card">
-                <div class="card-title">Đặt Phòng Gần Đây</div>
+                <div class="card-header">
+                    <h5>Phòng đặt gần đây</h5>
+                </div>
                 <div class="table-container">
                     <table class="table table-hover">
                         <thead>
@@ -298,7 +300,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' VNĐ';
+                                return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN').format(context
+                                    .parsed.y) + ' VNĐ';
                             }
                         }
                     }

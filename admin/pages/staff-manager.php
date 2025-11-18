@@ -1,5 +1,3 @@
-
-
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Nhân Viên</h1>
@@ -223,13 +221,17 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">Số Điện Thoại *</label>
                                 <input type="text" class="form-control" placeholder="0912345678" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">Email *</label>
                                 <input type="email" class="form-control" placeholder="email@hotel.com" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Password *</label>
+                                <input type="password" class="form-control" placeholder="Thêm mật khẩu" required>
                             </div>
                         </div>
 
@@ -337,10 +339,10 @@
 
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <strong>Số điện thoại:</strong> 0912345678
+                            <strong>Email:</strong> nguyenvana@hotel.com
                         </div>
                         <div class="col-md-6">
-                            <strong>Email:</strong> nguyenvana@hotel.com
+                            <strong>Mật Khẩu:</strong> abc123
                         </div>
                     </div>
 
@@ -361,11 +363,14 @@
                             <strong>Ngày vào làm:</strong> 01/01/2020
                         </div>
                     </div>
-
-                    <div class="mb-3">
-                        <strong>Địa chỉ:</strong> 123 Đường ABC, Quận 1, TP.HCM
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Số điện thoại:</strong> 0912345678
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Địa chỉ:</strong> 123 Đường ABC, Quận 1, TP.HCM
+                        </div>
                     </div>
-
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <strong>Lương cơ bản:</strong> 15,000,000 VNĐ

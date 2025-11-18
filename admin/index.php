@@ -9,6 +9,7 @@ $allowed = [
     'room-manager' => 'pages/room-manager.php',
     'services-manager' => 'pages/services-manager.php',
     'invoices-manager' => 'pages/invoices-manager.php',
+    'booking-manager' => 'pages/booking-manager.php',
     'customers-manager' => 'pages/customers-manager.php',
     'staff-manager' => 'pages/staff-manager.php',
     'reports-manager' => 'pages/reports-manager.php',

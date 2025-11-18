@@ -21,6 +21,10 @@
                 data-page="invoices-manager">
                 <i class="fa-solid fa-coins"></i><span>Hóa Đơn</span>
             </div>
+            <div class="menu-item <?php echo $current_page==='booking-manager' ? 'active' : '';?>"
+                data-page="booking-manager">
+                <i class="fa-solid fa-calendar-days"></i><span>Booking</span>
+            </div>
             <div class="menu-item <?php echo $current_page==='customers-manager' ? 'active' : '';?>"
                 data-page="customers-manager">
                 <i class="fas fa-users"></i><span>Khách Hàng</span>

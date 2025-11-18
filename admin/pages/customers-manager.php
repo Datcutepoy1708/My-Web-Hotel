@@ -187,13 +187,20 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Khách Hàng</h1>
+        <div class="row m-3">
+            <div class="col-md-12">
+                <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addCustomerModal" onclick="resetForm()">
+                    <i class="fas fa-plus"></i> Thêm Khách Hàng
+                </button>
+            </div>
+        </div>
     </div>
 
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo h($message); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <?php endif; ?>
 
     <!-- Filter Section -->
@@ -204,23 +211,28 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" name="search" placeholder="Tìm kiếm khách hàng..." value="<?php echo h($search); ?>">
+                        <input type="text" name="search" placeholder="Tìm kiếm khách hàng..."
+                            value="<?php echo h($search); ?>">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="type">
                         <option value="">Tất cả hạng</option>
-                        <option value="Regular" <?php echo $type_filter == 'Regular' ? 'selected' : ''; ?>>Regular</option>
+                        <option value="Regular" <?php echo $type_filter == 'Regular' ? 'selected' : ''; ?>>Regular
+                        </option>
                         <option value="VIP" <?php echo $type_filter == 'VIP' ? 'selected' : ''; ?>>VIP</option>
-                        <option value="Corporate" <?php echo $type_filter == 'Corporate' ? 'selected' : ''; ?>>Corporate</option>
+                        <option value="Corporate" <?php echo $type_filter == 'Corporate' ? 'selected' : ''; ?>>Corporate
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="sort">
                         <option value="newest" <?php echo $sort == 'newest' ? 'selected' : ''; ?>>Mới nhất</option>
                         <option value="oldest" <?php echo $sort == 'oldest' ? 'selected' : ''; ?>>Cũ nhất</option>
-                        <option value="name_asc" <?php echo $sort == 'name_asc' ? 'selected' : ''; ?>>Tên (A → Z)</option>
-                        <option value="name_desc" <?php echo $sort == 'name_desc' ? 'selected' : ''; ?>>Tên (Z → A)</option>
+                        <option value="name_asc" <?php echo $sort == 'name_asc' ? 'selected' : ''; ?>>Tên (A → Z)
+                        </option>
+                        <option value="name_desc" <?php echo $sort == 'name_desc' ? 'selected' : ''; ?>>Tên (Z → A)
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -228,13 +240,6 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 </div>
             </div>
         </form>
-        <div class="row mt-3">
-            <div class="col-md-12">
-                <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addCustomerModal" onclick="resetForm()">
-                    <i class="fas fa-plus"></i> Thêm Khách Hàng
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Table -->
@@ -252,96 +257,110 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             </thead>
             <tbody>
                 <?php if (empty($customers)): ?>
-                    <tr>
-                        <td colspan="6" class="text-center">Không có dữ liệu</td>
-                    </tr>
+                <tr>
+                    <td colspan="6" class="text-center">Không có dữ liệu</td>
+                </tr>
                 <?php else: ?>
-                    <?php foreach ($customers as $customer): ?>
-                        <tr>
-                            <td>
-                                <div class="employee-info">
-                                    <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($customer['full_name']); ?>&background=d4b896&color=fff"
-                                        alt="Avatar" class="employee-avatar">
-                                    <div>
-                                        <p class="employee-name"><?php echo h($customer['full_name']); ?></p>
-                                        <p class="employee-id">ID: <?php echo $customer['customer_id']; ?></p>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <?php
+                <?php foreach ($customers as $customer): ?>
+                <tr>
+                    <td>
+                        <div class="employee-info">
+                            <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($customer['full_name']); ?>&background=d4b896&color=fff"
+                                alt="Avatar" class="employee-avatar">
+                            <div>
+                                <p class="employee-name"><?php echo h($customer['full_name']); ?></p>
+                                <p class="employee-id">ID: <?php echo $customer['customer_id']; ?></p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <?php
                                 $badgeClass = 'badge';
                                 if ($customer['customer_type'] == 'VIP') $badgeClass = 'badge badge-diamond';
                                 elseif ($customer['customer_type'] == 'Corporate') $badgeClass = 'badge badge-gold';
                                 ?>
-                                <span class="<?php echo $badgeClass; ?>"><?php echo h($customer['customer_type']); ?></span>
-                            </td>
-                            <td><?php echo h($customer['phone'] ?: '-'); ?></td>
-                            <td><?php echo h($customer['email']); ?></td>
-                            <td>
-                                <span class="badge <?php echo $customer['account_status'] == 'Active' ? 'bg-success' : 'bg-danger'; ?>">
-                                    <?php echo h($customer['account_status']); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
-                                    data-bs-target="#viewCustomerModal<?php echo $customer['customer_id']; ?>" title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning" onclick="editCustomer(<?php echo $customer['customer_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomer(<?php echo $customer['customer_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
+                        <span class="<?php echo $badgeClass; ?>"><?php echo h($customer['customer_type']); ?></span>
+                    </td>
+                    <td><?php echo h($customer['phone'] ?: '-'); ?></td>
+                    <td><?php echo h($customer['email']); ?></td>
+                    <td>
+                        <span
+                            class="badge <?php echo $customer['account_status'] == 'Active' ? 'bg-success' : 'bg-danger'; ?>">
+                            <?php echo h($customer['account_status']); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                            data-bs-target="#viewCustomerModal<?php echo $customer['customer_id']; ?>"
+                            title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editCustomer(<?php echo $customer['customer_id']; ?>)" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteCustomer(<?php echo $customer['customer_id']; ?>)" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
 
-                        <!-- View Modal for each customer -->
-                        <div class="modal fade" id="viewCustomerModal<?php echo $customer['customer_id']; ?>" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title"><i class="fas fa-user"></i> Thông Tin Khách Hàng</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- View Modal for each customer -->
+                <div class="modal fade" id="viewCustomerModal<?php echo $customer['customer_id']; ?>" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-user"></i> Thông Tin Khách Hàng</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="text-center mb-4">
+                                    <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($customer['full_name']); ?>&background=d4b896&color=fff&size=120"
+                                        alt="Avatar" class="avatar-preview">
+                                    <h5 class="mt-2"><?php echo h($customer['full_name']); ?></h5>
+                                    <p class="text-muted">ID: <?php echo $customer['customer_id']; ?></p>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6"><strong>Email:</strong> <?php echo h($customer['email']); ?>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="text-center mb-4">
-                                            <img src="https://ui-avatars.com/api/?name=<?php echo urlencode($customer['full_name']); ?>&background=d4b896&color=fff&size=120"
-                                                alt="Avatar" class="avatar-preview">
-                                            <h5 class="mt-2"><?php echo h($customer['full_name']); ?></h5>
-                                            <p class="text-muted">ID: <?php echo $customer['customer_id']; ?></p>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Email:</strong> <?php echo h($customer['email']); ?></div>
-                                            <div class="col-md-6"><strong>Số điện thoại:</strong> <?php echo h($customer['phone'] ?: '-'); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Ngày sinh:</strong> <?php echo formatDate($customer['date_of_birth']); ?></div>
-                                            <div class="col-md-6"><strong>Giới tính:</strong> <?php echo h($customer['gender']); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Quốc tịch:</strong> <?php echo h($customer['nationality'] ?: '-'); ?></div>
-                                            <div class="col-md-6"><strong>CMND/CCCD:</strong> <?php echo h($customer['id_card'] ?: '-'); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Hạng:</strong> <?php echo h($customer['customer_type']); ?></div>
-                                            <div class="col-md-6"><strong>Trạng thái:</strong> <?php echo h($customer['account_status']); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Ngày tạo:</strong> <?php echo formatDateTime($customer['created_at']); ?></div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                                        <button type="button" class="btn btn-primary" onclick="editCustomer(<?php echo $customer['customer_id']; ?>)">
-                                            <i class="fas fa-edit"></i> Chỉnh Sửa
-                                        </button>
-                                    </div>
+                                    <div class="col-md-6"><strong>Số điện thoại:</strong>
+                                        <?php echo h($customer['phone'] ?: '-'); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6"><strong>Ngày sinh:</strong>
+                                        <?php echo formatDate($customer['date_of_birth']); ?></div>
+                                    <div class="col-md-6"><strong>Giới tính:</strong>
+                                        <?php echo h($customer['gender']); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6"><strong>Quốc tịch:</strong>
+                                        <?php echo h($customer['nationality'] ?: '-'); ?></div>
+                                    <div class="col-md-6"><strong>CMND/CCCD:</strong>
+                                        <?php echo h($customer['id_card'] ?: '-'); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6"><strong>Hạng:</strong>
+                                        <?php echo h($customer['customer_type']); ?></div>
+                                    <div class="col-md-6"><strong>Trạng thái:</strong>
+                                        <?php echo h($customer['account_status']); ?></div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6"><strong>Ngày tạo:</strong>
+                                        <?php echo formatDateTime($customer['created_at']); ?></div>
                                 </div>
                             </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                <button type="button" class="btn btn-primary"
+                                    onclick="editCustomer(<?php echo $customer['customer_id']; ?>)">
+                                    <i class="fas fa-edit"></i> Chỉnh Sửa
+                                </button>
+                            </div>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -355,7 +374,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> <span id="modalTitle">Thêm Khách Hàng</span></h5>
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> <span id="modalTitle">Thêm Khách
+                            Hàng</span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form method="POST" id="customerForm">
@@ -440,58 +460,58 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 </div>
 
 <script>
-    function resetForm() {
-        document.getElementById('customerForm').reset();
-        document.getElementById('customer_id').value = '';
-        document.getElementById('username').readOnly = false;
-        document.getElementById('password').required = true;
-        document.getElementById('passwordRequired').style.display = 'inline';
-        document.getElementById('modalTitle').textContent = 'Thêm Khách Hàng';
-        document.getElementById('submitBtn').textContent = 'Thêm Khách Hàng';
-        document.getElementById('submitBtn').name = 'add_customer';
+function resetForm() {
+    document.getElementById('customerForm').reset();
+    document.getElementById('customer_id').value = '';
+    document.getElementById('username').readOnly = false;
+    document.getElementById('password').required = true;
+    document.getElementById('passwordRequired').style.display = 'inline';
+    document.getElementById('modalTitle').textContent = 'Thêm Khách Hàng';
+    document.getElementById('submitBtn').textContent = 'Thêm Khách Hàng';
+    document.getElementById('submitBtn').name = 'add_customer';
+}
+
+function editCustomer(id) {
+    window.location.href = 'index.php?page=customers-manager&action=edit&id=' + id;
+}
+
+function deleteCustomer(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = '<input type="hidden" name="customer_id" value="' + id + '">' +
+            '<input type="hidden" name="delete_customer" value="1">';
+        document.body.appendChild(form);
+        form.submit();
     }
+}
 
-    function editCustomer(id) {
-        window.location.href = 'index.php?page=customers-manager&action=edit&id=' + id;
-    }
+<?php if ($editCustomer): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    // Điền dữ liệu vào form
+    document.getElementById('customer_id').value = '<?php echo $editCustomer['customer_id']; ?>';
+    document.getElementById('full_name').value = '<?php echo h($editCustomer['full_name']); ?>';
+    document.getElementById('email').value = '<?php echo h($editCustomer['email']); ?>';
+    document.getElementById('phone').value = '<?php echo h($editCustomer['phone']); ?>';
+    document.getElementById('username').value = '<?php echo h($editCustomer['username']); ?>';
+    document.getElementById('username').readOnly = true;
+    document.getElementById('date_of_birth').value = '<?php echo $editCustomer['date_of_birth']; ?>';
+    document.getElementById('gender').value = '<?php echo $editCustomer['gender']; ?>';
+    document.getElementById('nationality').value = '<?php echo h($editCustomer['nationality']); ?>';
+    document.getElementById('id_card').value = '<?php echo h($editCustomer['id_card']); ?>';
+    document.getElementById('customer_type').value = '<?php echo $editCustomer['customer_type']; ?>';
+    document.getElementById('account_status').value = '<?php echo $editCustomer['account_status']; ?>';
 
-    function deleteCustomer(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="customer_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_customer" value="1">';
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
+    // Cập nhật UI
+    document.getElementById('password').required = false;
+    document.getElementById('passwordRequired').style.display = 'none';
+    document.getElementById('modalTitle').textContent = 'Sửa Khách Hàng';
+    document.getElementById('submitBtn').textContent = 'Cập Nhật Khách Hàng';
+    document.getElementById('submitBtn').name = 'update_customer';
 
-    <?php if ($editCustomer): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Điền dữ liệu vào form
-            document.getElementById('customer_id').value = '<?php echo $editCustomer['customer_id']; ?>';
-            document.getElementById('full_name').value = '<?php echo h($editCustomer['full_name']); ?>';
-            document.getElementById('email').value = '<?php echo h($editCustomer['email']); ?>';
-            document.getElementById('phone').value = '<?php echo h($editCustomer['phone']); ?>';
-            document.getElementById('username').value = '<?php echo h($editCustomer['username']); ?>';
-            document.getElementById('username').readOnly = true;
-            document.getElementById('date_of_birth').value = '<?php echo $editCustomer['date_of_birth']; ?>';
-            document.getElementById('gender').value = '<?php echo $editCustomer['gender']; ?>';
-            document.getElementById('nationality').value = '<?php echo h($editCustomer['nationality']); ?>';
-            document.getElementById('id_card').value = '<?php echo h($editCustomer['id_card']); ?>';
-            document.getElementById('customer_type').value = '<?php echo $editCustomer['customer_type']; ?>';
-            document.getElementById('account_status').value = '<?php echo $editCustomer['account_status']; ?>';
-
-            // Cập nhật UI
-            document.getElementById('password').required = false;
-            document.getElementById('passwordRequired').style.display = 'none';
-            document.getElementById('modalTitle').textContent = 'Sửa Khách Hàng';
-            document.getElementById('submitBtn').textContent = 'Cập Nhật Khách Hàng';
-            document.getElementById('submitBtn').name = 'update_customer';
-
-            // Hiện modal
-            const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
-            modal.show();
-        });
-    <?php endif; ?>
+    // Hiện modal
+    const modal = new bootstrap.Modal(document.getElementById('addCustomerModal'));
+    modal.show();
+});
+<?php endif; ?>
 </script>

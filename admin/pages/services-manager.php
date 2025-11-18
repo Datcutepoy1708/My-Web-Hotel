@@ -155,6 +155,13 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Dịch Vụ</h1>
+        <div class="row m-3">
+            <div class="col-md-12">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                    <i class="fas fa-plus"></i> Thêm Dịch Vụ
+                </button>
+            </div>
+        </div>
     </div>
 
     <?php if ($message): ?>
@@ -172,21 +179,25 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" name="search" placeholder="Tìm kiếm dịch vụ..." value="<?php echo h($search); ?>">
+                        <input type="text" name="search" placeholder="Tìm kiếm dịch vụ..."
+                            value="<?php echo h($search); ?>">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="Active" <?php echo $status_filter == 'Active' ? 'selected' : ''; ?>>Đang hoạt động</option>
-                        <option value="Inactive" <?php echo $status_filter == 'Inactive' ? 'selected' : ''; ?>>Tạm dừng</option>
+                        <option value="Active" <?php echo $status_filter == 'Active' ? 'selected' : ''; ?>>Đang hoạt
+                            động</option>
+                        <option value="Inactive" <?php echo $status_filter == 'Inactive' ? 'selected' : ''; ?>>Tạm dừng
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="type">
                         <option value="">Tất cả loại</option>
                         <?php foreach ($serviceTypes as $st): ?>
-                        <option value="<?php echo h($st['service_type']); ?>" <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
+                        <option value="<?php echo h($st['service_type']); ?>"
+                            <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
                             <?php echo h($st['service_type']); ?>
                         </option>
                         <?php endforeach; ?>
@@ -197,13 +208,6 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                 </div>
             </div>
         </form>
-        <div class="row mt-3">
-            <div class="col-md-12">
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceModal">
-                    <i class="fas fa-plus"></i> Thêm Dịch Vụ
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Table -->
@@ -239,10 +243,12 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-outline-warning" onclick="editService(<?php echo $service['service_id']; ?>)" title="Sửa">
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editService(<?php echo $service['service_id']; ?>)" title="Sửa">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteService(<?php echo $service['service_id']; ?>)" title="Xóa">
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteService(<?php echo $service['service_id']; ?>)" title="Xóa">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -270,48 +276,54 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                     <?php if ($editService): ?>
                     <input type="hidden" name="service_id" value="<?php echo $editService['service_id']; ?>">
                     <?php endif; ?>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tên Dịch Vụ *</label>
-                            <input type="text" class="form-control" name="service_name" 
+                            <input type="text" class="form-control" name="service_name"
                                 value="<?php echo h($editService['service_name'] ?? ''); ?>" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Loại Dịch Vụ *</label>
-                            <input type="text" class="form-control" name="service_type" 
-                                value="<?php echo h($editService['service_type'] ?? ''); ?>" 
+                            <input type="text" class="form-control" name="service_type"
+                                value="<?php echo h($editService['service_type'] ?? ''); ?>"
                                 placeholder="VD: Spa, Restaurant, Event..." required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Giá (VNĐ) *</label>
-                            <input type="number" class="form-control" name="price" step="0.01" 
+                            <input type="number" class="form-control" name="price" step="0.01"
                                 value="<?php echo $editService['price'] ?? ''; ?>" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Đơn Vị</label>
-                            <input type="text" class="form-control" name="unit" 
-                                value="<?php echo h($editService['unit'] ?? ''); ?>" 
+                            <input type="text" class="form-control" name="unit"
+                                value="<?php echo h($editService['unit'] ?? ''); ?>"
                                 placeholder="VD: Suất, Gói, Lần...">
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô Tả</label>
-                        <textarea class="form-control" name="description" rows="3"><?php echo h($editService['description'] ?? ''); ?></textarea>
+                        <textarea class="form-control" name="description"
+                            rows="3"><?php echo h($editService['description'] ?? ''); ?></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Trạng Thái *</label>
                         <select class="form-select" name="status" required>
-                            <option value="Active" <?php echo ($editService['status'] ?? 'Active') == 'Active' ? 'selected' : ''; ?>>Đang hoạt động</option>
-                            <option value="Inactive" <?php echo ($editService['status'] ?? '') == 'Inactive' ? 'selected' : ''; ?>>Tạm dừng</option>
+                            <option value="Active"
+                                <?php echo ($editService['status'] ?? 'Active') == 'Active' ? 'selected' : ''; ?>>Đang
+                                hoạt động</option>
+                            <option value="Inactive"
+                                <?php echo ($editService['status'] ?? '') == 'Inactive' ? 'selected' : ''; ?>>Tạm dừng
+                            </option>
                         </select>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary" name="<?php echo $editService ? 'update_service' : 'add_service'; ?>">
+                    <button type="submit" class="btn btn-primary"
+                        name="<?php echo $editService ? 'update_service' : 'add_service'; ?>">
                         <?php echo $editService ? 'Cập nhật' : 'Thêm'; ?> Dịch Vụ
                     </button>
                 </div>
@@ -330,7 +342,7 @@ function deleteService(id) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.innerHTML = '<input type="hidden" name="service_id" value="' + id + '">' +
-                       '<input type="hidden" name="delete_service" value="1">';
+            '<input type="hidden" name="delete_service" value="1">';
         document.body.appendChild(form);
         form.submit();
     }
