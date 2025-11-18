@@ -12,10 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $price = floatval($_POST['price']);
         $unit = trim($_POST['unit'] ?? '');
         $status = $_POST['status'] ?? 'Active';
-        
+
         $stmt = $mysqli->prepare("INSERT INTO service (service_name, description, service_type, price, unit, status) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sssdss", $service_name, $description, $service_type, $price, $unit, $status);
-        
+
         if ($stmt->execute()) {
             $message = 'Thêm dịch vụ thành công!';
             $messageType = 'success';
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['update_service'])) {
         $service_id = intval($_POST['service_id']);
         $service_name = trim($_POST['service_name']);
@@ -34,10 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $price = floatval($_POST['price']);
         $unit = trim($_POST['unit'] ?? '');
         $status = $_POST['status'] ?? 'Active';
-        
+
         $stmt = $mysqli->prepare("UPDATE service SET service_name=?, description=?, service_type=?, price=?, unit=?, status=? WHERE service_id=? AND deleted IS NULL");
         $stmt->bind_param("sssdssi", $service_name, $description, $service_type, $price, $unit, $status, $service_id);
-        
+
         if ($stmt->execute()) {
             $message = 'Cập nhật dịch vụ thành công!';
             $messageType = 'success';
@@ -47,12 +47,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['delete_service'])) {
         $service_id = intval($_POST['service_id']);
         $stmt = $mysqli->prepare("UPDATE service SET deleted = NOW() WHERE service_id = ?");
         $stmt->bind_param("i", $service_id);
-        
+
         if ($stmt->execute()) {
             $message = 'Xóa dịch vụ thành công!';
             $messageType = 'success';
@@ -122,8 +122,8 @@ $countStmt->close();
 
 // Lấy dữ liệu
 $query = "SELECT * FROM service s  ORDER BY s.service_id ASC LIMIT 10 OFFSET 0";
-    
-$result=$mysqli->query($query);
+
+$result = $mysqli->query($query);
 $services = $result->fetch_all(MYSQLI_ASSOC);
 
 
@@ -165,10 +165,10 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
     </div>
 
     <?php if ($message): ?>
-    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-        <?php echo h($message); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+            <?php echo h($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     <?php endif; ?>
 
     <!-- Filter Section -->
@@ -196,10 +196,10 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                     <select class="form-select" name="type">
                         <option value="">Tất cả loại</option>
                         <?php foreach ($serviceTypes as $st): ?>
-                        <option value="<?php echo h($st['service_type']); ?>"
-                            <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
-                            <?php echo h($st['service_type']); ?>
-                        </option>
+                            <option value="<?php echo h($st['service_type']); ?>"
+                                <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
+                                <?php echo h($st['service_type']); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -226,34 +226,34 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
             </thead>
             <tbody>
                 <?php if (empty($services)): ?>
-                <tr>
-                    <td colspan="7" class="text-center">Không có dữ liệu</td>
-                </tr>
+                    <tr>
+                        <td colspan="7" class="text-center">Không có dữ liệu</td>
+                    </tr>
                 <?php else: ?>
-                <?php foreach ($services as $service): ?>
-                <tr>
-                    <td><?php echo $service['service_id']; ?></td>
-                    <td><?php echo h($service['service_name']); ?></td>
-                    <td><span class="badge bg-info"><?php echo h($service['service_type']); ?></span></td>
-                    <td><?php echo h($service['unit'] ?: '-'); ?></td>
-                    <td><?php echo formatCurrency($service['price']); ?></td>
-                    <td>
-                        <span class="badge <?php echo $service['status'] == 'Active' ? 'bg-success' : 'bg-danger'; ?>">
-                            <?php echo h($service['status']); ?>
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-warning"
-                            onclick="editService(<?php echo $service['service_id']; ?>)" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger"
-                            onclick="deleteService(<?php echo $service['service_id']; ?>)" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
+                    <?php foreach ($services as $service): ?>
+                        <tr>
+                            <td><?php echo $service['service_id']; ?></td>
+                            <td><?php echo h($service['service_name']); ?></td>
+                            <td><span class="badge bg-info"><?php echo h($service['service_type']); ?></span></td>
+                            <td><?php echo h($service['unit'] ?: '-'); ?></td>
+                            <td><?php echo formatCurrency($service['price']); ?></td>
+                            <td>
+                                <span class="badge <?php echo $service['status'] == 'Active' ? 'bg-success' : 'bg-danger'; ?>">
+                                    <?php echo h($service['status']); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-warning"
+                                    onclick="editService(<?php echo $service['service_id']; ?>)" title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                    onclick="deleteService(<?php echo $service['service_id']; ?>)" title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -274,7 +274,7 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
             <form method="POST">
                 <div class="modal-body">
                     <?php if ($editService): ?>
-                    <input type="hidden" name="service_id" value="<?php echo $editService['service_id']; ?>">
+                        <input type="hidden" name="service_id" value="<?php echo $editService['service_id']; ?>">
                     <?php endif; ?>
 
                     <div class="row">
@@ -285,9 +285,15 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Loại Dịch Vụ *</label>
-                            <input type="text" class="form-control" name="service_type"
-                                value="<?php echo h($editService['service_type'] ?? ''); ?>"
-                                placeholder="VD: Spa, Restaurant, Event..." required>
+                            <select class="form-select" name="type">
+                                <option value="" disabled>Tất cả loại</option>
+                                <?php foreach ($serviceTypes as $st): ?>
+                                    <option value="<?php echo h($st['service_type']); ?>"
+                                        <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
+                                        <?php echo h($st['service_type']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                     </div>
                     <div class="row">
@@ -333,25 +339,25 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
 </div>
 
 <script>
-function editService(id) {
-    window.location.href = 'index.php?page=services-manager&action=edit&id=' + id;
-}
-
-function deleteService(id) {
-    if (confirm('Bạn có chắc chắn muốn xóa dịch vụ này?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="service_id" value="' + id + '">' +
-            '<input type="hidden" name="delete_service" value="1">';
-        document.body.appendChild(form);
-        form.submit();
+    function editService(id) {
+        window.location.href = 'index.php?page=services-manager&action=edit&id=' + id;
     }
-}
 
-<?php if ($editService): ?>
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
-    modal.show();
-});
-<?php endif; ?>
+    function deleteService(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa dịch vụ này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="service_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_service" value="1">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    <?php if ($editService): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+            modal.show();
+        });
+    <?php endif; ?>
 </script>
