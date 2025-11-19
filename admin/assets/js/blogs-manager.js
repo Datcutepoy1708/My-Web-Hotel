@@ -112,8 +112,8 @@ function saveBlog() {
   console.log("Blog content:", content);
   alert(
     "Đã lưu bài viết thành công!\n\nNội dung:\n" +
-      content.substring(0, 100) +
-      "..."
+    content.substring(0, 100) +
+    "..."
   );
   // Here you would send data to server
   const modal = bootstrap.Modal.getInstance(
@@ -240,3 +240,4 @@ document.querySelectorAll(".share-btn").forEach((btn) => {
     }
   });
 });
+

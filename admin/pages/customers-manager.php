@@ -98,12 +98,10 @@ if ($action == 'edit' && isset($_GET['id'])) {
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $type_filter = isset($_GET['type']) ? trim($_GET['type']) : '';
 $sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'newest';
-$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
-$perPage = 10;
-
-// Bảo vệ $page để tránh negative offset
-if ($page < 1) $page = 1;
-$offset = ($page - 1) * $perPage;
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum);
+$perPage = 5;
+$offset = ($pageNum - 1) * $perPage;
 
 // Xây dựng WHERE clause
 $where = "WHERE c.deleted IS NULL";
@@ -367,7 +365,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     </div>
 
     <!-- Pagination -->
-    <?php echo getPagination($total, $perPage, $page, $baseUrl); ?>
+    <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 
     <!-- Modal: Thêm/Sửa khách hàng -->
     <div class="modal fade" id="addCustomerModal" tabindex="-1">

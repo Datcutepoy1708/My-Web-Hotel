@@ -5,7 +5,8 @@ $message = '';
 $messageType = '';
 
 // Tạo slug từ title
-function createSlug($title) {
+function createSlug($title)
+{
     $slug = strtolower(trim($title));
     $slug = preg_replace('/[^a-z0-9-]/', '-', $slug);
     $slug = preg_replace('/-+/', '-', $slug);
@@ -20,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $content = trim($_POST['content']);
         $category = trim($_POST['category'] ?? '');
         $status = $_POST['status'] ?? 'Draft';
-        
+
         // Kiểm tra slug unique
         $checkStmt = $mysqli->prepare("SELECT blog_id FROM blog WHERE slug = ? AND deleted IS NULL");
         $checkStmt->bind_param("s", $slug);
@@ -29,10 +30,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $slug .= '-' . time();
         }
         $checkStmt->close();
-        
+
         $stmt = $mysqli->prepare("INSERT INTO blog (title, slug, description, content, category, status) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("ssssss", $title, $slug, $description, $content, $category, $status);
-        
+
         if ($stmt->execute()) {
             $message = 'Thêm bài viết thành công!';
             $messageType = 'success';
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['update_blog'])) {
         $blog_id = intval($_POST['blog_id']);
         $title = trim($_POST['title']);
@@ -51,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $content = trim($_POST['content']);
         $category = trim($_POST['category'] ?? '');
         $status = $_POST['status'] ?? 'Draft';
-        
+
         // Kiểm tra slug unique (trừ chính nó)
         $checkStmt = $mysqli->prepare("SELECT blog_id FROM blog WHERE slug = ? AND blog_id != ? AND deleted IS NULL");
         $checkStmt->bind_param("si", $slug, $blog_id);
@@ -60,10 +61,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $slug .= '-' . time();
         }
         $checkStmt->close();
-        
+
         $stmt = $mysqli->prepare("UPDATE blog SET title=?, slug=?, description=?, content=?, category=?, status=? WHERE blog_id=? AND deleted IS NULL");
         $stmt->bind_param("ssssssi", $title, $slug, $description, $content, $category, $status, $blog_id);
-        
+
         if ($stmt->execute()) {
             $message = 'Cập nhật bài viết thành công!';
             $messageType = 'success';
@@ -73,12 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['delete_blog'])) {
         $blog_id = intval($_POST['blog_id']);
         $stmt = $mysqli->prepare("UPDATE blog SET deleted = NOW() WHERE blog_id = ?");
         $stmt->bind_param("i", $blog_id);
-        
+
         if ($stmt->execute()) {
             $message = 'Xóa bài viết thành công!';
             $messageType = 'success';
@@ -106,11 +107,12 @@ if ($action == 'edit' && isset($_GET['id'])) {
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $category_filter = isset($_GET['category']) ? trim($_GET['category']) : '';
-$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
-$perPage = 10;
-$offset = ($page - 1) * $perPage;
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum); // Đảm bảo pageNum >= 1
+$perPage = 2;
+$offset = ($pageNum - 1) * $perPage;
 
-// Xây dựng query
+// Xây dựng WHERE clause
 $where = "WHERE b.deleted IS NULL";
 $params = [];
 $types = '';
@@ -145,21 +147,23 @@ $totalResult = $countStmt->get_result();
 $total = $totalResult->fetch_assoc()['total'];
 $countStmt->close();
 
-// Lấy dữ liệu
-$query = "SELECT * FROM blog b $where ORDER BY b.created_at DESC LIMIT ? OFFSET ?";
-    
+// Lấy dữ liệu - FIX: Hardcode LIMIT và OFFSET
+$query = "SELECT * FROM blog b 
+    $where 
+    ORDER BY b.created_at DESC 
+    LIMIT $perPage OFFSET $offset";
+
 $stmt = $mysqli->prepare($query);
 if (!empty($params)) {
-    $types .= 'ii';
-    $params[] = $perPage;
-    $params[] = $offset;
     $stmt->bind_param($types, ...$params);
-} else {
-    $stmt->bind_param("ii", $perPage, $offset);
 }
-$stmt->execute();
-$result = $stmt->get_result();
-$blogs = $result->fetch_all(MYSQLI_ASSOC);
+
+if ($stmt->execute()) {
+    $result = $stmt->get_result();
+    $blogs = $result->fetch_all(MYSQLI_ASSOC);
+} else {
+    die("Lỗi query: " . $stmt->error);
+}
 $stmt->close();
 
 // Lấy danh sách categories
@@ -181,8 +185,6 @@ if ($search) $baseUrl .= "&search=" . urlencode($search);
 if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
 if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
 ?>
-
-
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Nội Dung</h1>
@@ -212,28 +214,28 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                         <i class="fas fa-newspaper"></i>
                     </div>
                     <div class="stat-label">Tổng Bài Viết</div>
-                    <div class="stat-value">48</div>
+                    <div class="stat-value"><?php echo $stats['total']; ?></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green">
                         <i class="fas fa-check-circle"></i>
                     </div>
                     <div class="stat-label">Đã Xuất Bản</div>
-                    <div class="stat-value">35</div>
+                    <div class="stat-value"><?php echo $stats['published']; ?></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon orange">
                         <i class="fas fa-edit"></i>
                     </div>
                     <div class="stat-label">Bản Nháp</div>
-                    <div class="stat-value">13</div>
+                    <div class="stat-value"><?php echo $stats['draft']; ?></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon purple">
                         <i class="fas fa-eye"></i>
                     </div>
                     <div class="stat-label">Lượt Xem</div>
-                    <div class="stat-value">12.5K</div>
+                    <div class="stat-value"><?php echo number_format($stats['total_views']); ?></div>
                 </div>
             </div>
 
@@ -252,124 +254,75 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="Tìm kiếm bài viết..." />
                     </div>
-                    <select class="form-select" style="width: 200px">
+                    <select class="form-select" style="width: 200px" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="published">Đã xuất bản</option>
-                        <option value="draft">Bản nháp</option>
+                        <option value="Published" <?php echo $status_filter == 'Published' ? 'selected' : ''; ?>>Đã xuất bản</option>
+                        <option value="Draft" <?php echo $status_filter == 'Draft' ? 'selected' : ''; ?>>Bản nháp</option>
+                        <option value="Archived" <?php echo $status_filter == 'Archived' ? 'selected' : ''; ?>>Đã lưu trữ</option>
                     </select>
                     <select class="form-select" style="width: 200px">
                         <option value="">Tất cả danh mục</option>
-                        <option value="news">Tin tức</option>
-                        <option value="promotion">Khuyến mãi</option>
-                        <option value="guide">Hướng dẫn</option>
-                        <option value="event">Sự kiện</option>
+                        <?php foreach ($categories as $cat): ?>
+                            <option value="<?php echo h($cat['category']); ?>" <?php echo $category_filter == $cat['category'] ? 'selected' : ''; ?>>
+                                <?php echo h($cat['category']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
 
                 <!-- Blog Items -->
-                <div class="content-item">
-                    <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400" alt="Blog"
-                        class="content-thumbnail" />
-                    <div class="content-details">
-                        <div class="content-title">
-                            Khám Phá Những Trải Nghiệm Tuyệt Vời Tại OceanPearl Hotel
-                        </div>
-                        <div class="content-meta">
-                            <span><i class="fas fa-user"></i> Admin</span>
-                            <span><i class="fas fa-calendar"></i> 25/10/2025</span>
-                            <span><i class="fas fa-eye"></i> 1,250 lượt xem</span>
-                            <span class="category-badge">Tin tức</span>
-                            <span class="badge-status badge-published">Đã xuất bản</span>
-                        </div>
-                        <div class="content-excerpt">
-                            Khách sạn OceanPearl mang đến cho bạn những trải nghiệm nghỉ
-                            dưỡng đẳng cấp với hệ thống phòng hiện đại, dịch vụ chuyên
-                            nghiệp và vị trí thuận lợi ngay trung tâm thành phố...
-                        </div>
-                        <div class="content-actions">
-                            <button class="btn-sm-custom view" data-bs-toggle="modal" data-bs-target="#viewBlogModal"
-                                onclick="loadBlogPreview(1)">
-                                <i class="fas fa-eye"></i> Xem
-                            </button>
-                            <button class="btn-sm-custom edit" onclick="editBlog(1)">
-                                <i class="fas fa-edit"></i> Sửa
-                            </button>
-                            <button class="btn-sm-custom delete" onclick="deleteBlog(1)">
-                                <i class="fas fa-trash"></i> Xóa
-                            </button>
-                        </div>
+                <?php if (empty($blogs)): ?>
+                    <div class="text-center py-5">
+                        <p class="text-muted">Không có bài viết nào</p>
                     </div>
-                </div>
-
-                <div class="content-item">
-                    <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400" alt="Blog"
-                        class="content-thumbnail" />
-                    <div class="content-details">
-                        <div class="content-title">
-                            Ưu Đãi Đặc Biệt Mùa Thu - Giảm Giá Lên Đến 30%
+                <?php else: ?>
+                    <?php foreach ($blogs as $blog): ?>
+                        <div class="content-item">
+                            <div class="image">
+                                <img src=<?php echo $blog['thumbnail']; ?> alt="Blog"
+                                    class="content-thumbnail" />
+                            </div>
+                            <div class="content-details">
+                                <div class="content-title">
+                                    <?php echo h($blog['title']); ?>
+                                </div>
+                                <div class="content-meta">
+                                    <span><i class="fas fa-user"></i> Admin</span>
+                                    <span><i class="fas fa-calendar"></i> <?php echo formatDate($blog['created_at']); ?></span>
+                                    <span><i class="fas fa-eye"></i> <?php echo number_format($blog['view_count']); ?> lượt xem</span>
+                                    <span class="category-badge"><?php echo h($blog['category'] ?: 'Chưa phân loại'); ?></span>
+                                    <span class="badge-status <?php
+                                                                echo $blog['status'] == 'Published' ? 'badge-published' : ($blog['status'] == 'Draft' ? 'badge-draft' : 'badge-archived');
+                                                                ?>">
+                                        <?php
+                                        echo $blog['status'] == 'Published' ? 'Đã xuất bản' : ($blog['status'] == 'Draft' ? 'Bản nháp' : 'Đã lưu trữ');
+                                        ?>
+                                    </span>
+                                </div>
+                                <div class="content-excerpt">
+                                    <?php echo h(mb_substr($blog['description'], 0, 150)); ?>...
+                                </div>
+                                <div class="content-actions">
+                                    <button class="btn-sm-custom view" data-bs-toggle="modal" data-bs-target="#viewBlogModal"
+                                        onclick="loadBlogPreview(<?php echo $blog['blog_id']; ?>)">
+                                        <i class="fas fa-eye"></i> Xem
+                                    </button>
+                                    <button class="btn-sm-custom edit" onclick="editBlog(<?php echo $blog['blog_id']; ?>)">
+                                        <i class="fas fa-edit"></i> Sửa
+                                    </button>
+                                    <button class="btn-sm-custom delete" onclick="deleteBlog(<?php echo $blog['blog_id']; ?>)">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="content-meta">
-                            <span><i class="fas fa-user"></i> Admin</span>
-                            <span><i class="fas fa-calendar"></i> 20/10/2025</span>
-                            <span><i class="fas fa-eye"></i> 2,850 lượt xem</span>
-                            <span class="category-badge">Khuyến mãi</span>
-                            <span class="badge-status badge-published">Đã xuất bản</span>
-                        </div>
-                        <div class="content-excerpt">
-                            Chào mừng mùa thu, OceanPearl Hotel tri ân khách hàng với
-                            chương trình ưu đãi đặc biệt. Giảm giá lên đến 30% cho tất cả
-                            các loại phòng khi đặt từ 3 đêm trở lên...
-                        </div>
-                        <div class="content-actions">
-                            <button class="btn-sm-custom view" data-bs-toggle="modal" data-bs-target="#viewBlogModal"
-                                onclick="loadBlogPreview(2)">
-                                <i class="fas fa-eye"></i> Xem
-                            </button>
-                            <button class="btn-sm-custom edit" onclick="editBlog(2)">
-                                <i class="fas fa-edit"></i> Sửa
-                            </button>
-                            <button class="btn-sm-custom delete" onclick="deleteBlog(2)">
-                                <i class="fas fa-trash"></i> Xóa
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-item">
-                    <img src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=400" alt="Blog"
-                        class="content-thumbnail" />
-                    <div class="content-details">
-                        <div class="content-title">
-                            Hướng Dẫn Check-in Online Nhanh Chóng
-                        </div>
-                        <div class="content-meta">
-                            <span><i class="fas fa-user"></i> Admin</span>
-                            <span><i class="fas fa-calendar"></i> 15/10/2025</span>
-                            <span><i class="fas fa-eye"></i> 980 lượt xem</span>
-                            <span class="category-badge">Hướng dẫn</span>
-                            <span class="badge-status badge-draft">Bản nháp</span>
-                        </div>
-                        <div class="content-excerpt">
-                            Tiết kiệm thời gian với hệ thống check-in online của
-                            OceanPearl Hotel. Chỉ với vài thao tác đơn giản, bạn có thể
-                            hoàn tất thủ tục và nhận phòng ngay khi đến...
-                        </div>
-                        <div class="content-actions">
-                            <button class="btn-sm-custom view" data-bs-toggle="modal" data-bs-target="#viewBlogModal"
-                                onclick="loadBlogPreview(3)">
-                                <i class="fas fa-eye"></i> Xem
-                            </button>
-                            <button class="btn-sm-custom edit" onclick="editBlog(3)">
-                                <i class="fas fa-edit"></i> Sửa
-                            </button>
-                            <button class="btn-sm-custom delete" onclick="deleteBlog(3)">
-                                <i class="fas fa-trash"></i> Xóa
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
         </div>
+
+        <!-- Pagination -->
+        <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 
         <!-- Review Panel -->
         <div class="tab-pane fade" id="review-panel" role="tabpanel">
@@ -590,11 +543,10 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
             <div class="modal-body" style="max-height: 80vh; overflow-y: auto">
                 <!-- Blog Preview Content -->
                 <div id="blogPreviewContent">
-                    <!-- Content will be loaded dynamically -->
                     <div class="blog-preview-header">
                         <span class="blog-preview-category" id="previewCategory">Tin tức</span>
                         <h1 class="blog-preview-title" id="previewTitle">
-                            Khám Phá Những Trải Nghiệm Tuyệt Vời Tại OceanPearl Hotel
+                            Tiêu đề bài viết
                         </h1>
                         <div class="blog-preview-meta">
                             <span><i class="fas fa-user"></i>
@@ -602,7 +554,7 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                             <span><i class="fas fa-calendar"></i>
                                 <span id="previewDate">25/10/2025</span></span>
                             <span><i class="fas fa-eye"></i>
-                                <span id="previewViews">1,250</span> lượt xem</span>
+                                <span id="previewViews">0</span> lượt xem</span>
                         </div>
                     </div>
 
@@ -610,48 +562,23 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                         class="blog-preview-image" id="previewImage" />
 
                     <div class="blog-preview-body" id="previewBody">
-                        <p>
-                            <strong>Chào mừng bạn đến với OceanPearl Hotel</strong> - điểm
-                            đến lý tưởng cho những ai đang tìm kiếm một kỳ nghỉ dưỡng đẳng
-                            cấp tại trung tâm thành phố. Với vị trí thuận lợi, thiết kế
-                            hiện đại và dịch vụ chuyên nghiệp, chúng tôi cam kết mang đến
-                            cho bạn những trải nghiệm khó quên.
-                        </p>
+                        <!-- Content will be loaded dynamically -->
+                    </div>
 
-                        <h2>Phòng Nghỉ Đẳng Cấp</h2>
-                        <p>
-                            OceanPearl Hotel tự hào sở hữu 48 phòng được thiết kế tinh tế,
-                            kết hợp giữa phong cách hiện đại và sự thoải mái tối đa. Mỗi
-                            phòng đều được trang bị đầy đủ tiện nghi cao cấp bao gồm:
-                        </p>
-
-                        <ul>
-                            <li>Giường king-size/queen-size với nệm cao cấp</li>
-                            <li>
-                                TV màn hình phẳng 55 inch với kênh truyền hình quốc tế
-                            </li>
-                            <li>Hệ thống điều hòa không khí thông minh</li>
-                            <li>Minibar với đầy đủ đồ uống cao cấp</li>
-                            <li>Két sắt an toàn</li>
-                            <li>Wifi tốc độ cao miễn phí</li>
-                        </ul>
-                        <div class="blog-preview-tags">
-                            <strong>Tags:</strong>
-                            <span class="blog-preview-tag">Khách sạn</span>
-                            <span class="blog-preview-tag">Du lịch</span>
-                            <span class="blog-preview-tag">Nghỉ dưỡng</span>
-                            <span class="blog-preview-tag">OceanPearl</span>
-                        </div>
+                    <div class="blog-preview-tags" id="previewTags">
+                        <!-- Tags will be loaded dynamically -->
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Đóng
-                    </button>
-                    <button type="button" class="btn-primary-custom" onclick="editFromPreview()">
-                        <i class="fas fa-edit"></i> Chỉnh Sửa
-                    </button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Đóng
+                </button>
+                <button type="button" class="btn-primary-custom" onclick="editFromPreview()">
+                    <i class="fas fa-edit"></i> Chỉnh Sửa
+                </button>
             </div>
         </div>
     </div>
+</div>
+    

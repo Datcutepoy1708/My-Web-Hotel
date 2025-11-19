@@ -6,7 +6,6 @@
 <?php
     if ($page == 'home') echo '<script src="/My-Web-Hotel/admin/assets/js/home.js"></script>';
     if ($page == 'room-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/room-manager.js"></script>';
-    if ($page == 'services-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/services-manager.js"></script>';
     if ($page == 'staff-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/staff-manager.js"></script>';
     if ($page == 'reports-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/reports-manager.js"></script>';
     if ($page == 'blogs-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/blogs-manager.js"></script>';
