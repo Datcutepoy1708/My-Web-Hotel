@@ -195,12 +195,36 @@ $totalResultReview = $countStmt1->get_result();
 $totalReview = $totalResultReview->fetch_assoc()['total'];
 $countStmt1->close();
 
+// Lấy ra thông tin tổng số các đánh giá và trung bình rating
 $statsResultReview = $mysqli->query("SELECT 
     COUNT(*) as total,
     ROUND(AVG(rating), 1) as avg_rating
     FROM review WHERE deleted IS NULL");
-$review = $statsResultReview->fetch_assoc();
+$reviewCount = $statsResultReview->fetch_assoc();
 
+// Lây dữ liệu review
+$reviews = [];
+if ($totalReview > 0) {
+    $query = "SELECT r.*,c.full_name,d.room_number,rt.room_type_name
+     FROM review r
+    INNER JOIN booking b ON r.booking_id=b.booking_id
+    INNER JOIN customer c ON c.customer_id=b.customer_id
+    INNER JOIN room d ON d.room_id=b.room_id
+    INNER JOIN room_type rt ON rt.room_type_id= d.room_type_id
+    $where
+    GROUP BY r.review_id
+    ORDER BY r.created_at DESC
+    LIMIT $perPage OFFSET $offset
+    ";
+    $result = $mysqli->query($query);
+    if (!$result) {
+        error_log("Query Error: " . $mysqli->error);
+        $message = "Lỗi truy vấn: " . $mysqli->error;
+        $messageType = 'danger';
+    } else {
+        $reviews = $result->fetch_all(MYSQLI_ASSOC);
+    }
+}
 
 
 // Build base URL for pagination
@@ -424,14 +448,14 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                         <i class="fas fa-comments"></i>
                     </div>
                     <div class="stat-label">Tổng Đánh Giá</div>
-                    <div class="stat-value"><?php echo $review['total']; ?></div>
+                    <div class="stat-value"><?php echo $reviewCount['total']; ?></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon purple">
                         <i class="fas fa-star"></i>
                     </div>
                     <div class="stat-label">Đánh Giá TB</div>
-                    <div class="stat-value"><?php  echo  $review['avg_rating'];?></div>
+                    <div class="stat-value"><?php echo  $reviewCount['avg_rating']; ?></div>
                 </div>
             </div>
 
@@ -458,77 +482,54 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                 </div>
 
                 <!-- Review Items -->
-                <div class="review-card">
-                    <div class="review-header">
-                        <div class="reviewer-info">
-                            <div class="reviewer-avatar">NA</div>
-                            <div>
-                                <div class="reviewer-name">Nguyễn Văn A</div>
-                                <div class="review-date">25/10/2025 - Phòng 301 Suite</div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="rating-stars">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                            </div>
-                        </div>
+                <?php if (empty($reviews)): ?>
+                    <div class="text-center py-5">
+                        <p class="text-muted">Không có đánh giá nào</p>
                     </div>
-                    <div class="review-content">
-                        Khách sạn rất tuyệt vời! Phòng ốc sạch sẽ, rộng rãi và trang bị
-                        đầy đủ tiện nghi. Nhân viên phục vụ nhiệt tình, chu đáo. Vị trí
-                        thuận lợi ngay trung tâm. Tôi và gia đình rất hài lòng với
-                        chuyến nghỉ dưỡng này. Chắc chắn sẽ quay lại!
-                    </div>
-                    <div class="review-actions">
-                        <button class="btn-sm-custom view">
-                            <i class="fas fa-eye"></i> Xem chi tiết
-                        </button>
-                        <button class="btn-sm-custom delete" onclick="deleteReview(2)">
-                            <i class="fas fa-trash"></i> Xóa
-                        </button>
-                    </div>
-                </div>
+                <?php else: ?>
+                    <?php foreach ($reviews as $review): ?>
+                        <div class="review-card">
+                            <div class="review-header">
+                                <div class="reviewer-info">
+                                    <div class="reviewer-avatar">NA</div>
+                                    <div>
+                                        <div class="reviewer-name"><?php echo $review['full_name']; ?></div>
+                                        <div class="review-date"><?php echo formatDate($review['created_at']); ?> - Phòng <?php echo $review['room_number']; ?> <?php echo $review['room_type_name']; ?></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="rating-stars">
+                                        <?php
+                                        $rating = $review['rating']; // Giả sử rating từ 1-5
 
-                <div class="review-card">
-                    <div class="review-header">
-                        <div class="reviewer-info">
-                            <div class="reviewer-avatar">LC</div>
-                            <div>
-                                <div class="reviewer-name">Lê Văn C</div>
-                                <div class="review-date">
-                                    18/10/2025 - Phòng 101 Standard
+                                        // Vòng lặp hiển thị sao đầy
+                                        for ($i = 1; $i <= 5; $i++) {
+                                            if ($i <= $rating) {
+                                                echo '<i class="fas fa-star"></i>'; // Sao đầy
+                                            } else {
+                                                echo '<i class="far fa-star"></i>'; // Sao rỗng
+                                            }
+                                        }
+                                        ?>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div>
-                            <div class="rating-stars">
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
-                                <i class="fas fa-star"></i>
+                            <div class="review-content">
+                                <?php echo $review['comment']; ?>
+                            </div>
+                            <div class="review-actions">
+                                <button class="btn-sm-custom view">
+                                    <i class="fas fa-eye"></i> Xem chi tiết
+                                </button>
+                                <button class="btn-sm-custom delete" onclick="deleteReview(2)">
+                                    <i class="fas fa-trash"></i> Xóa
+                                </button>
                             </div>
                         </div>
-                    </div>
-                    <div class="review-content">
-                        Trải nghiệm tuyệt vời! Phòng sạch sẽ, nhân viên thân thiện. Giá
-                        cả hợp lý. Sẽ giới thiệu cho bạn bè và người thân. Cảm ơn
-                        OceanPearl Hotel!
-                    </div>
-                    <div class="review-actions">
-                        <button class="btn-sm-custom view">
-                            <i class="fas fa-eye"></i> Xem chi tiết
-                        </button>
-                        <button class="btn-sm-custom delete" onclick="deleteReview(3)">
-                            <i class="fas fa-trash"></i> Xóa
-                        </button>
-                    </div>
-                </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </div>
+            <?php echo getPagination($totalReview, $perPage, $pageNum, $baseUrl); ?>
         </div>
     </div>
 </div>
