@@ -99,9 +99,10 @@ if ($action == 'edit' && isset($_GET['id'])) {
 $search = trim($_GET['search'] ?? '');
 $status_filter = trim($_GET['status'] ?? '');
 $type_filter = intval($_GET['type'] ?? 0);
-$page = isset($_GET['page']) ? intval($_GET['page']) : 1;
-$perPage = 10;
-$offset = ($page - 1) * $perPage;
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum);
+$perPage = 5;
+$offset = ($pageNum - 1) * $perPage;
 
 // Xây dựng query
 $where = "WHERE r.deleted IS NULL";
@@ -144,16 +145,21 @@ $countStmt->close();
 $query = "SELECT r.*, rt.room_type_name, rt.base_price, rt.capacity, rt.area, rt.amenities 
     FROM room r 
     LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id 
-    WHERE r.deleted IS NULL
+    $where
     ORDER BY r.room_number ASC 
-    LIMIT 10 OFFSET 0";
+    LIMIT $perPage OFFSET $offset";
 
-$result = $mysqli->query($query);
-if (!$result) {
-    die("Lỗi query: " . $mysqli->error);
+$stmt = $mysqli->prepare($query);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
-
-$rooms = $result->fetch_all(MYSQLI_ASSOC);
+if ($stmt->execute()) {
+    $result = $stmt->get_result();
+    $rooms = $result->fetch_all(MYSQLI_ASSOC);
+} else {
+    die("Lỗi query: " . $stmt->error);
+}
+$stmt->close();
 
 
 // Lấy danh sách room types
@@ -173,17 +179,17 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     <div class="content-header">
         <h1>Quản Lý Phòng</h1>
         <?php
-            $current_panel = isset($panel) ? $panel : (isset($_GET['panel']) ? $_GET['panel'] : 'room-panel');
+        $current_panel = isset($panel) ? $panel : (isset($_GET['panel']) ? $_GET['panel'] : 'room-panel');
         ?>
         <ul class="nav nav-pills mb-3" role="tablist">
             <li class="nav-item" role="presentation">
-                <a class="<?php echo ($current_panel=='room-panel') ? 'nav-link active' : 'nav-link'; ?>"
+                <a class="<?php echo ($current_panel == 'room-panel') ? 'nav-link active' : 'nav-link'; ?>"
                     href="/My-Web-Hotel/admin/index.php?page=room-manager&panel=room-panel">
                     <span>Phòng</span>
                 </a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="<?php echo ($current_panel=='roomType-panel') ? 'nav-link active' : 'nav-link'; ?>"
+                <a class="<?php echo ($current_panel == 'roomType-panel') ? 'nav-link active' : 'nav-link'; ?>"
                     href="/My-Web-Hotel/admin/index.php?page=room-manager&panel=roomType-panel">
                     <span>Loại Phòng</span>
                 </a>
@@ -191,48 +197,50 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         </ul>
     </div>
     <?php if ($message): ?>
-    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-        <?php echo h($message); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+            <?php echo h($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     <?php endif; ?>
 
     <!-- content -->
     <div class="tab-content">
         <?php
-            $panel = isset($_GET['panel']) ? trim($_GET['panel']) : 'room-panel';
-            $panelAllowed = [
-                'room-panel' => 'pages/room-panel.php',
-                'roomType-panel' => 'pages/roomType-panel.php',
-            ];
-            if (isset($panelAllowed[$panel])) {
-                include $panelAllowed[$panel];
-            } else {
-                include 'pages/404.php';
-            }  
+        $panel = isset($_GET['panel']) ? trim($_GET['panel']) : 'room-panel';
+        $panelAllowed = [
+            'room-panel' => 'pages/room-panel.php',
+            'roomType-panel' => 'pages/roomType-panel.php',
+        ];
+        if (isset($panelAllowed[$panel])) {
+            include $panelAllowed[$panel];
+        } else {
+            include 'pages/404.php';
+        }
         ?>
 
     </div>
     <script>
-    function editRoom(id) {
-        window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
-    }
-
-    function deleteRoom(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_room" value="1">';
-            document.body.appendChild(form);
-            form.submit();
+        function editRoom(id) {
+            window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
         }
-    }
 
-    <?php if ($editRoom): ?>
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
-        modal.show();
-    });
-    <?php endif; ?>
+        function deleteRoom(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
+                    '<input type="hidden" name="delete_room" value="1">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
     </script>
+
+    <?php if ($action == 'edit' && $editRoom): ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+                modal.show();
+            });
+        </script>
+    <?php endif; ?>

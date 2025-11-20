@@ -216,7 +216,7 @@
         </table>
     </div>
     <!-- Pagination -->
-    <?php echo getPagination($total, $perPage, $page, $baseUrl); ?>
+    <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 </div>
 <!-- Modal Thêm/Sửa Phòng -->
 <div class="modal fade" id="addRoomModal" tabindex="-1">
