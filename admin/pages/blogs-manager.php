@@ -103,6 +103,7 @@ if ($action == 'edit' && isset($_GET['id'])) {
     $stmt->close();
 }
 
+
 // Phân trang và tìm kiếm
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
@@ -166,11 +167,15 @@ if ($stmt->execute()) {
 }
 $stmt->close();
 
+// Đếm tổng số đánh giá
+
+
 // Lấy danh sách categories
 $categoriesResult = $mysqli->query("SELECT DISTINCT category FROM blog WHERE deleted IS NULL AND category IS NOT NULL AND category != '' ORDER BY category");
 $categories = $categoriesResult->fetch_all(MYSQLI_ASSOC);
 
-// Thống kê
+
+// Thống kê bài viết 
 $statsResult = $mysqli->query("SELECT 
     COUNT(*) as total,
     SUM(CASE WHEN status = 'Published' THEN 1 ELSE 0 END) as published,
@@ -179,6 +184,22 @@ $statsResult = $mysqli->query("SELECT
     FROM blog WHERE deleted IS NULL");
 $stats = $statsResult->fetch_assoc();
 
+// Đếm tổng số review 
+$countQuery1 = "SELECT COUNT(*) as total FROM review b $where";
+$countStmt1 = $mysqli->prepare($countQuery1);
+if (!empty($params)) {
+    $countStmt1->bind_param($types, ...$params);
+}
+$countStmt1->execute();
+$totalResultReview = $countStmt1->get_result();
+$totalReview = $totalResultReview->fetch_assoc()['total'];
+$countStmt1->close();
+
+$statsResultReview = $mysqli->query("SELECT 
+    COUNT(*) as total,
+    ROUND(AVG(rating), 1) as avg_rating
+    FROM review WHERE deleted IS NULL");
+$review = $statsResultReview->fetch_assoc();
 
 
 
@@ -388,11 +409,11 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
 
                     <?php endforeach; ?>
                 <?php endif; ?>
+                <!-- Pagination -->
+                <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
             </div>
         </div>
 
-        <!-- Pagination -->
-        <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 
         <!-- Review Panel -->
         <div class="tab-pane fade" id="review-panel" role="tabpanel">
@@ -403,14 +424,14 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                         <i class="fas fa-comments"></i>
                     </div>
                     <div class="stat-label">Tổng Đánh Giá</div>
-                    <div class="stat-value">185</div>
+                    <div class="stat-value"><?php echo $review['total']; ?></div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon purple">
                         <i class="fas fa-star"></i>
                     </div>
                     <div class="stat-label">Đánh Giá TB</div>
-                    <div class="stat-value">4.8</div>
+                    <div class="stat-value"><?php  echo  $review['avg_rating'];?></div>
                 </div>
             </div>
 
