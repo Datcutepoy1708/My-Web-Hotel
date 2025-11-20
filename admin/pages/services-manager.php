@@ -285,7 +285,7 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Loại Dịch Vụ *</label>
-                            <select class="form-select" name="type">
+                            <select class="form-select" name="service_type">
                                 <option value="" disabled>Tất cả loại</option>
                                 <?php foreach ($serviceTypes as $st): ?>
                                     <option value="<?php echo h($st['service_type']); ?>"
