@@ -48,27 +48,43 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
 
     <!-- Filter -->
     <div class="filter-section">
-        <div class="search-box">
-            <i class="fas fa-search"></i>
-            <input type="text" placeholder="Tìm kiếm bài viết..." />
-        </div>
-        <select class="form-select" style="width: 200px" name="status">
-            <option value="">Tất cả trạng thái</option>
-            <option value="Published" <?php echo $status_filter == 'Published' ? 'selected' : ''; ?>>Đã xuất bản
-            </option>
-            <option value="Draft" <?php echo $status_filter == 'Draft' ? 'selected' : ''; ?>>Bản nháp</option>
-            <option value="Archived" <?php echo $status_filter == 'Archived' ? 'selected' : ''; ?>>Đã lưu trữ
-            </option>
-        </select>
-        <select class="form-select" style="width: 200px">
-            <option value="">Tất cả danh mục</option>
-            <?php foreach ($categories as $cat): ?>
-            <option value="<?php echo h($cat['category']); ?>"
-                <?php echo $category_filter == $cat['category'] ? 'selected' : ''; ?>>
-                <?php echo h($cat['category']); ?>
-            </option>
-            <?php endforeach; ?>
-        </select>
+        <form>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Tìm kiếm bài viết..." />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" name="status">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Published" <?php echo $status_filter == 'Published' ? 'selected' : ''; ?>>Đã xuất
+                            bản
+                        </option>
+                        <option value="Draft" <?php echo $status_filter == 'Draft' ? 'selected' : ''; ?>>Bản nháp
+                        </option>
+                        <option value="Archived" <?php echo $status_filter == 'Archived' ? 'selected' : ''; ?>>Đã lưu
+                            trữ
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select">
+                        <option value="">Tất cả danh mục</option>
+                        <?php foreach ($categories as $cat): ?>
+                        <option value="<?php echo h($cat['category']); ?>"
+                            <?php echo $category_filter == $cat['category'] ? 'selected' : ''; ?>>
+                            <?php echo h($cat['category']); ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Tìm kiếm</button>
+                </div>
+            </div>
+        </form>
     </div>
 
     <!-- Blog Items -->
@@ -162,11 +178,9 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                             <div class="blog-preview-tags">
                                 <strong>Trạng thái:</strong>
                                 <span class="blog-preview-tag">
-                                    <span class="badge-status <?php
-                                                                                    echo $blog['status'] == 'Published' ? 'badge-published' : ($blog['status'] == 'Draft' ? 'badge-draft' : 'badge-archived');
+                                    <span class="badge-status <?php echo $blog['status'] == 'Published' ? 'badge-published' : ($blog['status'] == 'Draft' ? 'badge-draft' : 'badge-archived');
                                                                                     ?>">
-                                        <?php
-                                                            echo $blog['status'] == 'Published' ? 'Đã xuất bản' : ($blog['status'] == 'Draft' ? 'Bản nháp' : 'Đã lưu trữ');
+                                        <?php echo $blog['status'] == 'Published' ? 'Đã xuất bản' : ($blog['status'] == 'Draft' ? 'Bản nháp' : 'Đã lưu trữ');
                                                             ?>
                                     </span>
                                 </span>

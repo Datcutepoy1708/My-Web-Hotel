@@ -31,20 +31,30 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
 
     <!-- Filter -->
     <div class="filter-section">
-        <div class="search-box">
-            <i class="fas fa-search"></i>
-            <input type="text" placeholder="Tìm kiếm đánh giá..." />
-        </div>
-        <select class="form-select" style="width: 200px">
-            <option value="">Tất cả đánh giá</option>
-            <option value="5">5 sao</option>
-            <option value="4">4 sao</option>
-            <option value="3">3 sao</option>
-            <option value="2">2 sao</option>
-            <option value="1">1 sao</option>
-        </select>
+        <form>
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Tìm kiếm đánh giá..." />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select">
+                        <option value="">Tất cả đánh giá</option>
+                        <option value="5">5 sao</option>
+                        <option value="4">4 sao</option>
+                        <option value="3">3 sao</option>
+                        <option value="2">2 sao</option>
+                        <option value="1">1 sao</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Tìm kiếm</button>
+                </div>
+            </div>
+        </form>
     </div>
-
     <!-- Review Items -->
     <?php if (empty($reviews)): ?>
     <div class="text-center py-5">
@@ -78,6 +88,7 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                                         ?>
                 </div>
             </div>
+
         </div>
         <div class="review-content">
             <?php echo $review['comment']; ?>

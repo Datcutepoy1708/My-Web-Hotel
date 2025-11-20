@@ -89,43 +89,55 @@
   background-color: #c5a878;
 }
 
-/* Filter Section */
 .filter-section {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
 }
-
+.filter-section .row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+}
 .search-box {
   position: relative;
-  flex: 1;
-  min-width: 250px;
 }
-
 .search-box i {
   position: absolute;
-  left: 12px;
+  left: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: #999;
-  z-index: 10;
+  color: #666;
 }
-
 .search-box input {
   width: 100%;
-  padding: 10px 10px 10px 38px;
+  height: 44px;
+  border-radius: 10px;
+  padding-left: 44px;
   border: 1px solid #ddd;
-  border-radius: 6px;
-  height: 42px;
+  font-size: 1rem;
 }
-
 .form-select {
+  height: 44px;
+  border-radius: 10px;
   border: 1px solid #ddd;
-  border-radius: 6px;
-  height: 42px;
+}
+.row .btn {
+  height: 44px;
+  border-radius: 8px;
+  margin-right: 8px;
+}
+.btn-primary {
+  background: #deb666;
+  border-color: #deb666;
 }
 
+.btn-primary:hover {
+  background: #d4a853;
+  border-color: #d4a853;
+}
 /* Blog/Review Item */
 .content-item {
   display: flex;
