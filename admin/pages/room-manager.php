@@ -173,6 +173,8 @@ $baseUrl = "index.php?page=room-manager";
 if ($search) $baseUrl .= "&search=" . urlencode($search);
 if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
 if ($type_filter) $baseUrl .= "&type=" . $type_filter;
+
+
 ?>
 
 <div class="main-content">
@@ -234,13 +236,11 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 form.submit();
             }
         }
-    </script>
 
-    <?php if ($action == 'edit' && $editRoom): ?>
-        <script>
+        <?php if ($editRoom): ?>
             document.addEventListener('DOMContentLoaded', function() {
                 const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
                 modal.show();
             });
-        </script>
-    <?php endif; ?>
+        <?php endif; ?>
+    </script>

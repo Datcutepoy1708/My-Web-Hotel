@@ -1,7 +1,7 @@
 // JavaScript functions for room management
 function editRoom(roomId) {
   // Logic to edit room
-  console.log("Edit room:", roomId);
+ window.location.href = 'index.php?page=room-manager&action=edit&id=' + roomId;
   // You can implement edit functionality here
 }
 
