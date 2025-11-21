@@ -161,15 +161,42 @@ if ($stmt->execute()) {
 }
 $stmt->close();
 
+// lấy ra tổng số loại phòng
+$countQueryRoomTypes = "SELECT COUNT(*) as total FROM room_type r 
+    $where";
+$countStmtRoomTypes = $mysqli->prepare($countQueryRoomTypes);
+if (!empty($params)) {
+    $countStmtRoomTypes->bind_param($types, ...$params);
+}
+$countStmtRoomTypes->execute();
+$totalResultRoomTypes = $countStmtRoomTypes->get_result();
+$totalRoomTypes = $totalResultRoomTypes->fetch_assoc()['total'];
+$countStmtRoomTypes->close();
 
-// Lấy danh sách room types
-$roomTypesResult = $mysqli->query("SELECT * FROM room_type WHERE deleted IS NULL ORDER BY room_type_name");
+
+// Lấy danh sách room types cho room-manager
+$roomTypesResult = $mysqli->query("SELECT * FROM room_type WHERE deleted IS NULL ");
+
 $roomTypes = $roomTypesResult->fetch_all(MYSQLI_ASSOC);
 
-//Lấy danh sách rooms
+//Lây danh sách room types cho room_type
+$queryRoomTypes = "SELECT r.* FROM room_type r $where LIMIT $perPage OFFSET $offset";
+$stmtRoomTypes = $mysqli->prepare($queryRoomTypes);
+if (!empty($params)) {
+    $stmtRoomTypes->bind_param($types, ...$params);
+}
+if ($stmtRoomTypes->execute()) {
+    $result = $stmtRoomTypes->get_result();
+    $roomTypesAll = $result->fetch_all(MYSQLI_ASSOC);
+} else {
+    die("Lỗi query: " . $stmtRoomTypes->error);
+}
+$stmtRoomTypes->close();
+
+
 
 // Build base URL for pagination
-$baseUrl = "index.php?page=room-manager";
+$baseUrl = "index.php?page=room-manager&panel=room-panel";
 if ($search) $baseUrl .= "&search=" . urlencode($search);
 if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
 if ($type_filter) $baseUrl .= "&type=" . $type_filter;

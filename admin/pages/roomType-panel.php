@@ -43,50 +43,121 @@
                     <th>ID</th>
                     <th>Tên Loại</th>
                     <th>Diện Tích</th>
+                    <th>Tiện nghi</th>
+                    <th>Sức chứa</th>
                     <th>Trạng Thái</th>
                     <th>Hành Động</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>01</td>
-                    <td>Don</td>
-                    <td>45m²</td>
-                    <td><span class="badge bg-danger">Dừng hoạt động</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>01</td>
-                    <td>Don</td>
-                    <td>45m²</td>
-                    <td><span class="badge bg-success">Đang hoạt động</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
+                <?php if (empty($roomTypesAll)): ?>
+                    <tr>
+                        <td colspan="9" class="text-center">Không có dữ liệu</td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($roomTypesAll as $rt): ?>
+                        <tr>
+                            <td><?php echo $rt['room_type_id']; ?></td>
+                            <td><?php echo $rt['room_type_name']; ?></td>
+                            <td><?php echo floatval($rt['area']) . ' m²'; ?></td>
+                            <td><?php echo $rt['amenities']; ?></td>
+                            <td><?php echo $rt['capacity']; ?></td>
+                            <td>
+                                <?php
+                                $statusClass = 'bg-secondary';
+                                $statusText = $rt['status'];
+                                switch ($rt['status']) {
+                                    case 'active':
+                                        $statusClass = 'bg-success';
+                                        $statusText = 'Đang hoạt động';
+                                        break;
+                                    case 'mantainance':
+                                        $statusClass = 'bg-warning';
+                                        $statusText = 'Đang bảo trì';
+                                        break;
+                                    case 'inactive':
+                                        $statusClass = 'bg-error';
+                                        $statusText = 'Dừng hoạt động';
+                                        break;
+                                }
+                                ?>
+                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                    data-bs-target="#viewRoomTypeModal<?php echo $rt['room_type_id']; ?>" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning"
+                                    onclick="editRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                    onclick="deleteRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- View Modal -->
+                        <div class="modal fade" id="viewRoomTypeModal<?php echo $rt['room_type_id']; ?>" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Chi Tiết Loại Phòng</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <?php if ($rt['image']): ?>
+                                                    <img src="<?php echo h($rt['image']); ?>" class="img-fluid rounded"
+                                                        alt="Room Image">
+                                                <?php else: ?>
+                                                    <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
+                                                        alt="Room Image">
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <p><strong>Tên loại phòng:</strong>
+                                                    <?php echo h($rt['room_type_name'] ?? '-'); ?></p>
+                                                <p><strong>Mô tả:</strong> <?php echo $rt['description']; ?></p>
+                                                <p><strong>Giá/đêm:</strong>
+                                                    <?php echo formatCurrency($rt['base_price'] ?? 0) ; ?></p>
+                                                <p><strong>Diện tích:</strong>
+                                                    <?php echo $rt['area'] ? $rt['area'] . 'm²' : '-'; ?></p>
+                                                <p><strong>Sức chứa:</strong>
+                                                    <?php echo $rt['capacity'] ?? '-'; ?>
+                                                    người
+                                                </p>
+                                                <p><strong>Trạng thái:</strong>
+                                                    <span
+                                                        class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                                </p>
+                                                <?php if ($rt['amenities']): ?>
+                                                    <p><strong>Tiện nghi:</strong> <?php echo h($rt['amenities']); ?>
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="editRoomFromView(<?php echo $room['room_id']; ?>)">
+                                            Chỉnh Sửa
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
     <!-- Pagination -->
-    <?php echo getPagination($total, $perPage, $page, $baseUrl); ?>
+    <?php echo getPagination($totalRoomTypes, $perPage, $pageNum, $baseUrl); ?>
 </div>
 <!-- Modal Thêm Loại Phòng -->
 <div class="modal fade" id="addRoomTypeModal" tabindex="-1">
