@@ -1,7 +1,87 @@
+<?php
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    if (isset($_POST['update_room_type'])) {
+        $room_type_id = intval($_POST['room_type_id']);
+        $room_type_name = trim($_POST['room_type_name']);
+        $description = trim($_POST['description'] ?? '');
+        $base_price = floatval($_POST['base_price']);
+        $capacity = intval($_POST['capacity']);
+        $amenities = trim($_POST['amenities'] ?? '');
+        $area = floatval($_POST['area'] ?? 0);
+        $status = $_POST['status'] ?? 'active';
+
+        // Sửa lại câu UPDATE
+        $stmt = $mysqli->prepare("UPDATE room_type 
+                              SET room_type_name=?, 
+                                  description=?, 
+                                  base_price=?, 
+                                  capacity=?, 
+                                  status=?, 
+                                  amenities=?, 
+                                  area=? 
+                              WHERE room_type_id=? 
+                              AND deleted IS NULL");
+
+        // Đúng thứ tự: s s d i s s d i (8 tham số)
+        $stmt->bind_param(
+            "ssdissdi",
+            $room_type_name,    // s - string
+            $description,       // s - string
+            $base_price,        // d - double
+            $capacity,          // i - integer
+            $status,            // s - string
+            $amenities,         // s - string
+            $area,              // d - double
+            $room_type_id       // i - integer (WHERE clause)
+        );
+
+        if ($stmt->execute()) {
+            $message = 'Cập nhật loại phòng thành công!';
+            $messageType = 'success';
+        } else {
+            $message = 'Lỗi: ' . $stmt->error;
+            $messageType = 'danger';
+        }
+        $stmt->close();
+    }
+    if (isset($_POST['delete_room_type'])) {
+        $room_type_id = intval($_POST['room_type_id']);
+        $stmt = $mysqli->prepare("UPDATE room_type SET deleted=NOW() WHERE room_type_id=?");
+        $stmt->bind_param("i", $room_type_id);
+        if ($stmt->execute()) {
+            $message = 'Xóa  loại phòng thành công';
+            $messageType = 'success';
+        } else {
+            $message = 'Lỗi: ' . $stmt->error;
+            $messageType = 'danger';
+        }
+        $stmt->close();
+    }
+}
+// Lấy ra thông tin loại phòng để edit
+$editRoomTypes = null;
+if ($action == 'edit' && isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+    $stmt = $mysqli->prepare("SELECT * FROM room_type WHERE room_type_id = ? AND deleted IS NULL");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $editRoomTypes = $result->fetch_assoc();
+    $stmt->close();
+}
+
+
+
+// Build base URL for pagination
+$baseUrl = "index.php?page=room-manager&panel=roomType-panel";
+if ($search) $baseUrl .= "&search=" . urlencode($search);
+if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
+if ($type_filter) $baseUrl .= "&type=" . $type_filter;
+?>
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Loại Phòng</h3>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
             <i class="fas fa-plus"></i> Thêm Loại Phòng
         </button>
     </div>
@@ -19,6 +99,7 @@
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
                         <option value="">Đang Hoạt Động</option>
+                        <option value="">Đang bảo trì</option>
                         <option value="">Dừng Hoạt Động</option>
                     </select>
                 </div>
@@ -76,7 +157,7 @@
                                         $statusText = 'Đang bảo trì';
                                         break;
                                     case 'inactive':
-                                        $statusClass = 'bg-error';
+                                        $statusClass = 'bg-danger';
                                         $statusText = 'Dừng hoạt động';
                                         break;
                                 }
@@ -123,7 +204,7 @@
                                                     <?php echo h($rt['room_type_name'] ?? '-'); ?></p>
                                                 <p><strong>Mô tả:</strong> <?php echo $rt['description']; ?></p>
                                                 <p><strong>Giá/đêm:</strong>
-                                                    <?php echo formatCurrency($rt['base_price'] ?? 0) ; ?></p>
+                                                    <?php echo formatCurrency($rt['base_price'] ?? 0); ?></p>
                                                 <p><strong>Diện tích:</strong>
                                                     <?php echo $rt['area'] ? $rt['area'] . 'm²' : '-'; ?></p>
                                                 <p><strong>Sức chứa:</strong>
@@ -144,7 +225,7 @@
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
                                         <button type="button" class="btn btn-primary"
-                                            onclick="editRoomFromView(<?php echo $room['room_id']; ?>)">
+                                            onclick="editRoomTypeFromView(<?php echo $rt['room_type_id']; ?>)">
                                             Chỉnh Sửa
                                         </button>
                                     </div>
@@ -164,46 +245,103 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Thêm Loại Phòng</h5>
+                <h5 class="modal-title"><?php echo $editRoomTypes ? 'Sửa' : 'Thêm'; ?> Loại Phòng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
                 <div class="modal-body">
+                    <?php if ($editRoomTypes): ?>
+                        <input type="hidden" name="room_type_id" value="<?php echo $editRoomTypes['room_type_id']; ?>">
+                    <?php endif; ?>
+
                     <div class="mb-3">
                         <label class="form-label">Tên loại phòng *</label>
-                        <input type="text" class="form-control" name="room_type_name" required>
+                        <input type="text" class="form-control" name="room_type_name" required value="<?php echo $editRoomTypes['room_type_name']; ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
+                        <textarea class="form-control" name="description" rows="3">
+                            <?php echo $editRoomTypes['description']; ?>
+                        </textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Giá cơ bản (VNĐ) *</label>
-                            <input type="number" class="form-control" name="base_price" step="0.01" required>
+                            <input type="number" class="form-control" name="base_price" step="0.01" required value="<?php echo h($editRoomTypes['base_price']); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Sức chứa (người) *</label>
-                            <input type="number" class="form-control" name="capacity" required>
+                            <input type="number" class="form-control" name="capacity" required value="<?php echo h($editRoomTypes['capacity']); ?>">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Diện tích (m²)</label>
-                            <input type="number" class="form-control" name="area" step="0.01">
+                            <input type="number" class="form-control" name="area" step="0.01" value="<?php echo h($editRoomTypes['area']); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tiện nghi</label>
                             <input type="text" class="form-control" name="amenities"
-                                placeholder="VD: WiFi, TV, Điều hòa...">
+                                placeholder="VD: WiFi, TV, Điều hòa..." value="<?php echo $editRoomTypes['amenities']; ?>">
+
                         </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Trạng thái *</label>
+                        <select class="form-select" name="status" required>
+                            <option value="active" <?php echo ($editRoomTypes['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>
+                                Đang hoạt động</option>
+                            <option value="inactive" <?php echo ($editRoomTypes['status'] ?? 'inactive') == 'inactive' ? 'selected' : ''; ?>>Dừng hoạt động
+                            </option>
+                            <option value="maintenance" value="inactive" <?php echo ($editRoomTypes['status'] ?? 'maintainance') == 'maintainance' ? 'selected' : ''; ?>>
+                                Bảo
+                                trì</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary" name="add_room_type">Thêm Loại Phòng</button>
+                    <button type="submit" class="btn btn-primary"
+                        name="<?php echo $editRoom ? 'update_room_type' : 'add_room_type'; ?>">
+                        <?php echo $editRoom ? 'Cập nhật' : 'Thêm'; ?> Phòng
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+<script>
+    function editRoomTypes(id) {
+        window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
+    }
+    <?php if ($editRoomTypes): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addRoomTypeModal'));
+            modal.show();
+        });
+    <?php endif; ?>
+
+    function editRoomTypeFromView(id) {
+        // Đóng view modal (có ID động)
+        const viewModal = bootstrap.Modal.getInstance(
+            document.getElementById("viewRoomTypeModal" + id)
+        );
+        if (viewModal) {
+            viewModal.hide();
+        }
+
+        // Chuyển đến trang edit
+        window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
+    }
+
+    function deleteRoomTypes(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="room_type_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_room_type" value="1">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>

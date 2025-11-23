@@ -1,3 +1,10 @@
+<?php
+// Build base URL for pagination
+$baseUrl = "index.php?page=room-manager&panel=room-panel";
+if ($search) $baseUrl .= "&search=" . urlencode($search);
+if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
+if ($type_filter) $baseUrl .= "&type=" . $type_filter;
+?>
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Phòng</h3>
@@ -40,10 +47,10 @@
                     <select class="form-select" name="type" id="typeFilter">
                         <option value="0">Tất cả loại phòng</option>
                         <?php foreach ($roomTypes as $rt): ?>
-                            <option value="<?php echo $rt['room_type_id']; ?>"
-                                <?php echo $type_filter == $rt['room_type_id'] ? 'selected' : ''; ?>>
-                                <?php echo h($rt['room_type_name']); ?>
-                            </option>
+                        <option value="<?php echo $rt['room_type_id']; ?>"
+                            <?php echo $type_filter == $rt['room_type_id'] ? 'selected' : ''; ?>>
+                            <?php echo h($rt['room_type_name']); ?>
+                        </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -77,17 +84,17 @@
             </thead>
             <tbody>
                 <?php if (empty($rooms)): ?>
-                    <tr>
-                        <td colspan="9" class="text-center">Không có dữ liệu</td>
-                    </tr>
+                <tr>
+                    <td colspan="9" class="text-center">Không có dữ liệu</td>
+                </tr>
                 <?php else: ?>
-                    <?php foreach ($rooms as $room): ?>
-                        <tr>
-                            <td><?php echo $room['room_id']; ?></td>
-                            <td><?php echo h($room['room_number']); ?></td>
-                            <td><?php echo $room['floor']; ?></td>
-                            <td>
-                                <?php
+                <?php foreach ($rooms as $room): ?>
+                <tr>
+                    <td><?php echo $room['room_id']; ?></td>
+                    <td><?php echo h($room['room_number']); ?></td>
+                    <td><?php echo $room['floor']; ?></td>
+                    <td>
+                        <?php
                                 $statusClass = 'bg-secondary';
                                 $roomText = $room['room_type_name'];
                                 switch ($room['room_type_name']) {
@@ -113,11 +120,11 @@
                                         break;
                                 }
                                 ?>
-                                <span class="badge <?php echo $statusClass; ?>"><?php echo $roomText; ?></span>
-                            </td>
-                            <td><?php echo formatCurrency($room['base_price'] ?? 0); ?></td>
-                            <td>
-                                <?php
+                        <span class="badge <?php echo $statusClass; ?>"><?php echo $roomText; ?></span>
+                    </td>
+                    <td><?php echo formatCurrency($room['base_price'] ?? 0); ?></td>
+                    <td>
+                        <?php
                                 $statusClass = 'bg-secondary';
                                 $statusText = $room['status'];
                                 switch ($room['status']) {
@@ -143,80 +150,80 @@
                                         break;
                                 }
                                 ?>
-                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                            </td>
-                            <td><?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></td>
-                            <td><?php echo $room['capacity'] ?? '-'; ?></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
-                                    data-bs-target="#viewRoomModal<?php echo $room['room_id']; ?>" title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editRoom(<?php echo $room['room_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deleteRoom(<?php echo $room['room_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
+                        <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                    </td>
+                    <td><?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></td>
+                    <td><?php echo $room['capacity'] ?? '-'; ?></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                            data-bs-target="#viewRoomModal<?php echo $room['room_id']; ?>" title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editRoom(<?php echo $room['room_id']; ?>)" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteRoom(<?php echo $room['room_id']; ?>)" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
 
-                        <!-- View Modal -->
-                        <div class="modal fade" id="viewRoomModal<?php echo $room['room_id']; ?>" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Chi Tiết Phòng</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- View Modal -->
+                <div class="modal fade" id="viewRoomModal<?php echo $room['room_id']; ?>" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Chi Tiết Phòng</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <?php if ($room['image']): ?>
+                                        <img src="<?php echo h($room['image']); ?>" class="img-fluid rounded"
+                                            alt="Room Image">
+                                        <?php else: ?>
+                                        <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
+                                            alt="Room Image">
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
-                                                <?php if ($room['image']): ?>
-                                                    <img src="<?php echo h($room['image']); ?>" class="img-fluid rounded"
-                                                        alt="Room Image">
-                                                <?php else: ?>
-                                                    <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
-                                                        alt="Room Image">
-                                                <?php endif; ?>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <h4>Phòng <?php echo h($room['room_number']); ?></h4>
-                                                <p><strong>Loại phòng:</strong>
-                                                    <?php echo h($room['room_type_name'] ?? '-'); ?></p>
-                                                <p><strong>Tầng:</strong> <?php echo $room['floor']; ?></p>
-                                                <p><strong>Giá/đêm:</strong>
-                                                    <?php echo formatCurrency($room['base_price'] ?? 0); ?></p>
-                                                <p><strong>Diện tích:</strong>
-                                                    <?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></p>
-                                                <p><strong>Sức chứa:</strong>
-                                                    <?php echo $room['capacity'] ?? '-'; ?>
-                                                    người
-                                                </p>
-                                                <p><strong>Trạng thái:</strong>
-                                                    <span
-                                                        class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                                                </p>
-                                                <?php if ($room['amenities']): ?>
-                                                    <p><strong>Tiện nghi:</strong> <?php echo h($room['amenities']); ?>
-                                                    </p>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                                        <button type="button" class="btn btn-primary"
-                                            onclick="editRoomFromView(<?php echo $room['room_id']; ?>)">
-                                            Chỉnh Sửa
-                                        </button>
+                                    <div class="col-md-6">
+                                        <h4>Phòng <?php echo h($room['room_number']); ?></h4>
+                                        <p><strong>Loại phòng:</strong>
+                                            <?php echo h($room['room_type_name'] ?? '-'); ?></p>
+                                        <p><strong>Tầng:</strong> <?php echo $room['floor']; ?></p>
+                                        <p><strong>Giá/đêm:</strong>
+                                            <?php echo formatCurrency($room['base_price'] ?? 0); ?></p>
+                                        <p><strong>Diện tích:</strong>
+                                            <?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></p>
+                                        <p><strong>Sức chứa:</strong>
+                                            <?php echo $room['capacity'] ?? '-'; ?>
+                                            người
+                                        </p>
+                                        <p><strong>Trạng thái:</strong>
+                                            <span
+                                                class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                        </p>
+                                        <?php if ($room['amenities']): ?>
+                                        <p><strong>Tiện nghi:</strong> <?php echo h($room['amenities']); ?>
+                                        </p>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                <button type="button" class="btn btn-primary"
+                                    onclick="editRoomFromView(<?php echo $room['room_id']; ?>)">
+                                    Chỉnh Sửa
+                                </button>
+                            </div>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -235,7 +242,7 @@
             <form method="POST">
                 <div class="modal-body">
                     <?php if ($editRoom): ?>
-                        <input type="hidden" name="room_id" value="<?php echo $editRoom['room_id']; ?>">
+                    <input type="hidden" name="room_id" value="<?php echo $editRoom['room_id']; ?>">
                     <?php endif; ?>
 
                     <div class="row">
@@ -256,10 +263,10 @@
                             <select class="form-select" name="room_type_id" required>
                                 <option value="">Chọn loại phòng</option>
                                 <?php foreach ($roomTypes as $rt): ?>
-                                    <option value="<?php echo $rt['room_type_id']; ?>"
-                                        <?php echo ($editRoom['room_type_id'] ?? '') == $rt['room_type_id'] ? 'selected' : ''; ?>>
-                                        <?php echo h($rt['room_type_name']); ?>
-                                    </option>
+                                <option value="<?php echo $rt['room_type_id']; ?>"
+                                    <?php echo ($editRoom['room_type_id'] ?? '') == $rt['room_type_id'] ? 'selected' : ''; ?>>
+                                    <?php echo h($rt['room_type_name']); ?>
+                                </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>

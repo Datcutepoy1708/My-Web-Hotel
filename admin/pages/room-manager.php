@@ -12,9 +12,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_room_type'])) {
     $capacity = intval($_POST['capacity']);
     $amenities = trim($_POST['amenities'] ?? '');
     $area = floatval($_POST['area'] ?? 0);
+    $status = $_POST['status'] ?? 'active';
 
-    $stmt = $mysqli->prepare("INSERT INTO room_type (room_type_name, description, base_price, capacity, amenities, area) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssdiss", $room_type_name, $description, $base_price, $capacity, $amenities, $area);
+
+    $stmt = $mysqli->prepare("INSERT INTO room_type (room_type_name, description, base_price, capacity,status, amenities, area) VALUES (?, ?, ?, ?, ?,?, ?)");
+    $stmt->bind_param("ssdisss", $room_type_name, $description, $base_price, $capacity,$status, $amenities, $area);
 
     if ($stmt->execute()) {
         $message = 'Thêm loại phòng thành công!';
@@ -162,7 +164,7 @@ if ($stmt->execute()) {
 $stmt->close();
 
 // lấy ra tổng số loại phòng
-$countQueryRoomTypes = "SELECT COUNT(*) as total FROM room_type r 
+$countQueryRoomTypes = "SELECT COUNT(*) as total FROM room_type r
     $where";
 $countStmtRoomTypes = $mysqli->prepare($countQueryRoomTypes);
 if (!empty($params)) {
@@ -193,15 +195,6 @@ if ($stmtRoomTypes->execute()) {
 }
 $stmtRoomTypes->close();
 
-
-
-// Build base URL for pagination
-$baseUrl = "index.php?page=room-manager&panel=room-panel";
-if ($search) $baseUrl .= "&search=" . urlencode($search);
-if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
-if ($type_filter) $baseUrl .= "&type=" . $type_filter;
-
-
 ?>
 
 <div class="main-content">
@@ -226,10 +219,10 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         </ul>
     </div>
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo h($message); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <?php endif; ?>
 
     <!-- content -->
@@ -249,25 +242,25 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 
     </div>
     <script>
-        function editRoom(id) {
-            window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
-        }
+    function editRoom(id) {
+        window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
+    }
 
-        function deleteRoom(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
-                    '<input type="hidden" name="delete_room" value="1">';
-                document.body.appendChild(form);
-                form.submit();
-            }
+    function deleteRoom(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_room" value="1">';
+            document.body.appendChild(form);
+            form.submit();
         }
+    }
 
-        <?php if ($editRoom): ?>
-            document.addEventListener('DOMContentLoaded', function() {
-                const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
-                modal.show();
-            });
-        <?php endif; ?>
+    <?php if ($editRoom): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+        modal.show();
+    });
+    <?php endif; ?>
     </script>
