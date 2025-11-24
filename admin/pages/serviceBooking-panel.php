@@ -207,14 +207,218 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 // Lấy ra thông tin booking service để edit
-$editBookingSerivce = null;
+$editBookingService = null;
+$editError = '';
+
 if ($action == 'edit' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    $stmt = $mysqli->prepare(
-        "SELECT  "
-    );
+    if ($id <= 0) {
+        $editError = 'ID không hợp lệ';
+        $action = '';
+    } else {
+        $stmt = $mysqli->prepare(
+            "SELECT bs.*,
+            c.customer_id,c.phone,c.full_name,c.email,
+            s.service_id,s.service_name,s.price as service_price ,s.description
+            b.booking_id,b.check_in_date,b.check_out_date,
+            r.room_number
+            FROM booking_service bs
+            LEFT JOIN customer c ON bs.customer_id=c.customer_id
+            LEFT JOIN service s ON bs.service_id=s.service_id
+            LEFT JOIN booking b ON bs.booking_id=b.booking_id
+            LEFT JOIN room r ON r.room_id=r.room_id
+            WHERE bs.booking_service_id=? AND bs.deleted IS NULL
+            "
+        );
+        if ($stmt) {
+            $stmt->bind_param("i", $id);
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+                if ($result->num_rows > 0) {
+                    $editBookingService = $result->fetch_assoc();
+
+                    if ($editBookingService['booking_id']) {
+                        // Trường hợp có booking phòng
+                        $invoice_stmt = $mysqli->prepare(
+                            "SELECT invoice_id, status, total_amount
+                            FROM invoice 
+                            WHERE booking_id=? AND deleted IS NULL
+                            LIMIT 1
+                            "
+                        );
+                        $invoice_stmt->bind_param("i", $editBookingService['booking_id']);
+                    } else {
+                        // Trường hợp chỉ có dịch vụ không có booking phòng
+                        $invoice_stmt = $mysqli->prepare(
+                            "SELECT invoice_id,status, total_amount
+                            FROM invoice 
+                            WHERE customer_id=?  AND booking_id IS NULL AND deleted IS NULL
+                            LIMIT 1"
+                        );
+                        $invoice_stmt->bind_param("i", $editBookingService['customer_id']);
+                    }
+                    $invoice_stmt->execute();
+                    $invoice_result = $invoice_stmt->get_result();
+                    $editBookingService['invoice'] = $invoice_result->fetch_assoc();
+                    $invoice_stmt->close();
+
+                    // Thêm flag để biết có phòng hay không
+                    $editBookingService['has_room_booking'] = !empty($editBookingService['booking_id']);
+                } else {
+                    $editError = 'Không tìm thấy booking service này hoặc đã bị xóa';
+                    $action = '';
+                }
+            } else {
+                $editError = 'Lỗi thực thi query: ' . $stmt->error;
+                $action = '';
+            }
+            $stmt->close();
+        } else {
+            $editError = 'Lỗi chuẩn bị query: ' . $stmt->error();
+            $action = '';
+        }
+    }
+}
+if ($editError && empty($message)) {
+    $message = $editError;
+    $messageType = 'danger';
 }
 
+// Lấy danh sách customer 
+$customersResult = $mysqli->query(
+    "SELECT customer_id, full_name, phone, email 
+     FROM customer 
+     WHERE deleted IS NULL 
+     ORDER BY full_name ASC"
+);
+$customers = $customersResult->fetch_all(MYSQLI_ASSOC);
+
+// Lấy ra danh sách các dịch vụ 
+$serviceResult = $mysqli->query(
+    "SELECT service_id, service_name,price
+    FROM service
+    WHERE deleted IS NULL
+    "
+);
+$services = $serviceResult->fetch_all(MYSQLI_ASSOC);
+
+// Phân trang và tìm kiếm
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status_filter = isset($GET['status']) ? trim($_GET['status']) : '';
+$type_filter = intval($_GET['type'] ?? 0);
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum);
+$perPage = 5;
+$offset = ($pageNum - 1) * $perPage;
+
+// Xây dụng query
+
+$where = "WHERE bs.deleted IS NULL";
+$params = [];
+$types = '';
+
+if ($search) {
+    $where .= " AND (C.full_name LIKE ? OR bs.booking_service_id LIKE ?)";
+    $searchParam = "%$search%";
+    $params = array_merge($params, [$searchParam, $searchParam]);
+    $types .= 'ss';
+}
+
+if ($status_filter) {
+    $where .= " AND bs.status=?";
+    $params[] = $status_filter;
+    $types .= 's';
+}
+if ($type_filter) {
+    $where .= " AND s.service_id = ?";
+    $params[] = $type_filter;
+    $types .= 'i';
+}
+// Đếm tổng số các booking dịch vụ
+$counstSql = "SELECT COUNT(*) as total
+          FROM booking_service bs
+          LEFT JOIN customer c ON bs.customer_id=c.customer_id
+          LEFT JOIN service s ON s.service_id=bs.service_id
+          LEFT JOIN booking b ON b.booking_id=bs.booking_id
+          $where
+          ";
+$countStmt = $mysqli->prepare($counstSql);
+if (!empty($params)) {
+    $countStmt->bind_param($types, ...$params);
+}
+$countStmt->execute();
+$totalResult = $countStmt->get_result();
+$totalBookingService = $totalResult->fetch_assoc()['total'];
+$countStmt->close();
+
+// Get booking service data
+$sql = "SELECT 
+       bs.booking_service_id,
+       bs.booking_id,
+       bs.customer_id,
+       bs.service_id,
+       bs.quantity,
+       bs.unit_price,
+       bs.amount,
+       bs.usage_date,
+       bs.usage_time,
+       bs.notes,
+       bs.status,
+       bs.unit,
+       bs.created_at,
+       bs.deleted,
+       c.full_name,
+       c.phone,
+       c.email,
+       s.service_name,
+       s.price,
+       s.description,
+       b.booking_id,
+       b.check_in_date,
+       b.check_out_date,
+       b.status as booking_status,
+       r.room_id,
+       r.room_number,
+       rt.room_type_name,
+       i.invoice_id,
+       i.status as invoice_status,
+       i.total_amount,
+       CASE
+          WHEN bs.booking_id IS NOT NULL THEN 1
+          ELSE 0
+        END as has_room_booking
+        FROM booking_service bs
+        INNER JOIN customer c ON bs.customer_id=c.customer_id
+        INNER JOIN service s ON bs.service_id=s.service_id
+        LEFT JOIN booking b ON b.booking_id=bs.booking_id
+        LEFT JOIN room r ON b.room_id=r.room_id
+        LEFT JOIN room_type rt ON r.room_type_id=rt.room_type_id
+        LEFT JOIN invoice i ON(
+        (i.booking_id =bs.booking_id AND bs.booking_id IS NOT NULL)
+        OR
+        (i.customer_id =bs.customer_id AND i.booking_id IS NULL)
+        ) 
+        $where
+        ORDER BY bs.created_at DESC
+        LIMIT ? OFFSET ?";
+$params[] = $perPage;
+$params[] = $offset;
+$types .= 'ii';
+
+$stmt = $mysqli->prepare($sql);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
+$stmt->execute();
+$result = $stmt->get_result();
+$booking_service = $result->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// Build baase URL for pagination
+$baseUrl = "index.php?page=booking-manager&panel=serviceBooking-panel";
+if ($search) $baseUrl .= "&search=" . urlencode($search);
+if ($status_filter) $baseUrl .= "&status=" . urldecode($status_filter);
+if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 ?>
 
 <div class="content-card">
@@ -225,30 +429,43 @@ if ($action == 'edit' && isset($_GET['id'])) {
         </button>
     </div>
 
+    <?php if ($message): ?>
+        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+            <?php echo h($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <?php endif; ?>
+
+
     <!-- Filter -->
     <div class="filter-section">
-        <form>
+        <form method="GET" action="index.php">
+            <input type="hidden" name="page" value="booking-manager">
+            <input type="hidden" name="panel" value="serviceBooking-panel">
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" name="search" placeholder="Tìm tên khách hoặc phòng..." />
+                        <input type="text" name="search" placeholder="Tìm tên khách hoặc mã booking dịch vụ..." />
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <select class="form-select">
-                        <option>Tất cả trạng thái</option>
-                        <option>Chờ xác nhận</option>
-                        <option>Đã xác nhận</option>
-                        <option>Hoàn thành</option>
+                    <select class="form-select" name="status" id="statusFilter">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="Confirmed" <?php echo $status_filter == 'Confirmed' ? 'selected' : ''; ?>>Đã xác nhận</option>
+                        <option value="Pending" <?php echo $status_filter == 'Pending' ? 'selected' : ''; ?>>Chưa thanh toán</option>
+                        <option value="Cancelled" <?php echo $status_filter == 'Cancelled' ? 'selected' : ''; ?>>Đã hủy</option>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <select class="form-select">
-                        <option>Tất cả dịch vụ</option>
-                        <option>Spa & Massage</option>
-                        <option>Nhà Hàng</option>
-                        <option>Gym & Fitness</option>
+                    <select class="form-select" name="type" id="typeFilter">
+                        <option value="0">Tất cả các dịch vụ</option>
+                        <?php foreach ($services as $service): ?>
+                            <option value="<?php echo $service['service_id']; ?>"
+                                <?php echo $type_filter == $service['service_id'] ? 'selected' : ''; ?>>
+                                <?php echo h($service['service_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -276,82 +493,87 @@ if ($action == 'edit' && isset($_GET['id'])) {
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>#SV001</td>
-                    <td><strong>Phạm Thị D</strong><br><small>0934567890</small></td>
-                    <td><span class="badge bg-info">Spa & Massage</span></td>
-                    <td>16/11/2025</td>
-                    <td>14:00</td>
-                    <td>1 người</td>
-                    <td><strong>1,200,000 VNĐ</strong></td>
-                    <td><span class="badge-status badge-approved">Đã xác nhận</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#SV002</td>
-                    <td><strong>Hoàng Văn E</strong><br><small>0945678901</small></td>
-                    <td><span class="badge bg-info">Nhà Hàng</span></td>
-                    <td>18/11/2025</td>
-                    <td>19:00</td>
-                    <td>10 người</td>
-                    <td><strong>8,500,000 VNĐ</strong></td>
-                    <td><span class="badge-status badge-pending">Chờ xác nhận</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-                <tr>
-                    <td>#SV003</td>
-                    <td><strong>Đỗ Thị F</strong><br><small>0956789012</small></td>
-                    <td><span class="badge bg-info">Tour Du Lịch</span></td>
-                    <td>22/11/2025</td>
-                    <td>07:00</td>
-                    <td>4 người</td>
-                    <td><strong>6,800,000 VNĐ</strong></td>
-                    <td><span class="badge-status badge-approved">Đã xác nhận</span></td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-warning" title="Sửa">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger" title="Xóa">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
+                <?php if (empty($booking_service)): ?>
+                    <tr>
+                        <td colspan="9" class="text-center">Không có dữ liệu</td>
+                    </tr>
+                <?php else: ?>
+                    <?php foreach ($booking_service as $bk): ?>
+                        <tr>
+                            <td><?php echo h($bk['booking_service_id']); ?></td>
+                            <td><strong><?php echo h($bk['full_name']); ?></strong><br><small><?php echo $bk['phone']; ?></small></td>
+                            <td>
+                                <?php
+                                $statusClass = 'bg-secondary text-white';
+                                $statusText = $bk['service_name'];
+
+                                switch ($bk['service_name']) {
+                                    case 'Spa & Massage':
+                                        $statusClass = 'bg-primary text-white';
+                                        $statusText = 'Spa & Massage';
+                                        break;
+                                    case 'Room Service':
+                                        $statusClass = 'bg-success text-white';
+                                        $statusText = 'Room Service';
+                                        break;
+                                    case 'Gym & Fitness':
+                                        $statusClass = 'bg-info text-white';
+                                        $statusText = 'Gym & Fitness';
+                                        break;
+                                    case 'Tour Guide':
+                                        $statusClass = 'bg-warning text-dark';
+                                        $statusText = 'Tour Guide';
+                                        break;
+                                    case 'Airport Transfer':
+                                        $statusClass = 'bg-danger text-white';
+                                        $statusText = 'Airport Transfer';
+                                        break;
+                                }
+                                ?>
+                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                            </td>
+                            <td><?php echo h($bk['usage_date']); ?></td>
+                            <td><?php echo h($bk['usage_time']); ?></td>
+                            <td><?php echo h($bk['quantity']); ?> người</td>
+                            <td><strong><?php echo h(number_format($bk['price'] * $bk['amount'], 0, ',', '.')); ?> VNĐ</strong></td>
+                            <td>
+                                <?php
+                                $statusClass = 'bg-secondary';
+                                $statusText = $bk['status'];
+                                switch ($statusText) {
+                                    case 'confirmed':
+                                        $statusClass = 'bg-success';
+                                        $statusText = 'Đã hoàn thành';
+                                        break;
+                                    case 'pending':
+                                        $statusClass = 'bg-danger';
+                                        $statusText = 'Chưa hoàn thành';
+                                    case 'cancelled':
+                                        $statusClass = 'bg-warning';
+                                        $statusText = 'Đã hủy';
+                                }
+                                ?>
+                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning" title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>
     <!-- Pagination -->
-    <nav>
-        <ul class="pagination justify-content-center">
-            <li class="page-item disabled"><a class="page-link">Trước</a></li>
-            <li class="page-item active"><a class="page-link">1</a></li>
-            <li class="page-item"><a class="page-link">2</a></li>
-            <li class="page-item"><a class="page-link">3</a></li>
-            <li class="page-item"><a class="page-link">Sau</a></li>
-        </ul>
-    </nav>
+    <?php echo getPagination($totalBookingService, $perPage, $pageNum, $baseUrl); ?>
 </div>
 <!-- Modal Thêm Booking Dịch Vụ -->
 <div class="modal fade" id="addServiceModal" tabindex="-1">
