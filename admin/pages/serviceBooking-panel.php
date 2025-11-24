@@ -3,14 +3,218 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
 
-// thêm booking dịch vụ
+// Thêm booking dịch vụ
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_booking_service'])) {
         $customer_id = intval($_POST['customer_id']);
         $service_id = intval($_POST['service_id']);
         $quantity = intval($_POST['quantity']);
+        $usage_date = $_POST['usage_date'];
+        $usage_time = $_POST['usage_time'];
+        $booking_id = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null; // Cho phép NULL
+        $amount = floatval($_POST['amount']); // Nên dùng floatval thay vì intval cho tiền
+        $notes = trim($_POST['note'] ?? '');
+        $status = $_POST['status'] ?? 'confirmed';
+
+        // Xử lý validate dữ liệu
+        $errors = [];
+        if (empty($customer_id)) {
+            $errors[] = "Khách hàng không được để trống";
+        }
+        if (empty($service_id)) {
+            $errors[] = "Dịch vụ không được để trống";
+        }
+        if (empty($quantity) || $quantity <= 0) {
+            $errors[] = "Số lượng phải lớn hơn 0";
+        }
+        if (empty($usage_date)) {
+            $errors[] = "Ngày sử dụng không được để trống";
+        }
+        if (empty($usage_time)) {
+            $errors[] = "Giờ sử dụng không được để trống";
+        }
+        if (empty($amount) || $amount <= 0) {
+            $errors[] = "Số tiền phải lớn hơn 0";
+        }
+
+        // Nếu có booking_id, kiểm tra xem booking có tồn tại không
+        if ($booking_id) {
+            $check_booking = $mysqli->prepare("SELECT booking_id FROM booking WHERE booking_id = ?");
+            $check_booking->bind_param("i", $booking_id);
+            $check_booking->execute();
+            $result = $check_booking->get_result();
+            if ($result->num_rows == 0) {
+                $errors[] = "Booking ID không tồn tại";
+            }
+            $check_booking->close();
+        }
+
+        if (empty($errors)) {
+            // INSERT với booking_id có thể NULL
+            $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, booking_id, amount, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->bind_param("iiissidss", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $booking_id, $amount, $notes, $status);
+
+            if ($stmt->execute()) {
+                $message = 'Thêm booking dịch vụ thành công!';
+                $messageType = 'success';
+
+                // Nếu không có booking_id (chỉ booking dịch vụ), tự động tạo invoice
+                if (!$booking_id) {
+                    $booking_service_id = $stmt->insert_id;
+
+                    // Tạo invoice cho dịch vụ này
+                    $invoice_stmt = $mysqli->prepare("INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, payment_method, status, created_at) VALUES (NULL, ?, 0, ?, 0, 0, ?, 'Cash', 'Unpaid', NOW())");
+                    $invoice_stmt->bind_param("idd", $customer_id, $amount, $amount);
+                    $invoice_stmt->execute();
+                    $invoice_stmt->close();
+
+                    $message .= ' Đã tự động tạo hóa đơn!';
+                }
+
+                $action = '';
+            } else {
+                $message = 'Lỗi: ' . $stmt->error;
+                $messageType = 'danger';
+            }
+            $stmt->close();
+        } else {
+            $message = implode('<br>', $errors);
+            $messageType = 'danger';
+        }
+    }
+    if (isset($_POST['update_booking_service'])) {
+        $booking_service_id = intval($_POST['booking_service_id']);
+        $customer_id = intval($_POST['customer_id']);
+        $service_id = intval($_POST['service_id']);
+        $quantity = intval($_POST['quantity']);
+        $usage_date = $_POST['usage_date'];
+        $usage_time = $_POST['usage_time'];
+        $booking_id = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null;
+        $amount = floatval($_POST['amount']);
+        $notes = trim($_POST['note'] ?? '');
+        $status = $_POST['status'] ?? 'confirmed';
+
+        // Validate dữ liệu
+        $errors = [];
+        if (empty($customer_id)) {
+            $errors[] = "Khách hàng không được để trống";
+        }
+        if (empty($service_id)) {
+            $errors[] = "Dịch vụ không được để trống";
+        }
+        if (empty($quantity) || $quantity <= 0) {
+            $errors[] = "Số lượng phải lớn hơn 0";
+        }
+        if (empty($usage_date)) {
+            $errors[] = "Ngày sử dụng không được để trống";
+        }
+        if (empty($usage_time)) {
+            $errors[] = "Giờ sử dụng không được để trống";
+        }
+        if (empty($amount) || $amount <= 0) {
+            $errors[] = "Số tiền phải lớn hơn 0";
+        }
+
+        // Nếu có booking_id, kiểm tra xem booking có tồn tại không
+        if ($booking_id) {
+            $check_booking = $mysqli->prepare("SELECT booking_id FROM booking WHERE booking_id = ?");
+            $check_booking->bind_param("i", $booking_id);
+            $check_booking->execute();
+            $result = $check_booking->get_result();
+            if ($result->num_rows == 0) {
+                $errors[] = "Booking ID không tồn tại";
+            }
+            $check_booking->close();
+        }
+
+        if (empty($errors)) {
+            // UPDATE với booking_id có thể NULL
+            $stmt = $mysqli->prepare("UPDATE booking_service SET customer_id=?, service_id=?, quantity=?, usage_date=?, usage_time=?, booking_id=?, amount=?, notes=?, status=? WHERE booking_service_id=? AND deleted IS NULL");
+            $stmt->bind_param("iiissidssi", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $booking_id, $amount, $notes, $status, $booking_service_id);
+
+            if ($stmt->execute()) {
+                $message = 'Cập nhật booking dịch vụ thành công!';
+                $messageType = 'success';
+                $action = '';
+                header("Location: index.php?page=booking-services-manager&success=1");
+                exit;
+            } else {
+                $message = 'Lỗi: ' . $stmt->error;
+                $messageType = 'danger';
+            }
+            $stmt->close();
+        } else {
+            $message = implode('<br>', $errors);
+            $messageType = 'danger';
+        }
+    }
+    if (isset($_POST['delete_booking_service'])) {
+        $booking_service_id = intval($_POST['booking_service_id']);
+        // Kiểm tra booking_service có liên kết đến invoice hay ko
+        $check_stmt = $mysqli->prepare("
+        SELECT i.status, i.invoice_id
+        FROM booking_service bs
+        LEFT JOIN inovice i ON(i.booking_id=bs.booking_id OR i.customer_id=bs.customer_id)
+        WHERE bs.booking_service_id = ? AND i.deleted IS NULL
+        ");
+        $check_stmt->bind_param("i", $booking_service_id);
+        $check_stmt->execute();
+        $result = $check_stmt->get_result();
+        $invoice_data = $result->fetch_assoc();
+        $check_stmt->close();
+
+        if ($invoice_data && $invoice_data['status'] == 'Paid') {
+            $messageType = 'Không thể xóa!Dịch vụ này đã có hóa đơn thanh toán';
+            $messageType = 'warning';
+        } else {
+            // Soft delete booking_service
+            $stmt = $mysqli->prepare("UPDATE booking_service SET deleted=NOW() WHERE booking_service_id=?");
+            $stmt->bind_param("i", $booking_service_id);
+            if ($stmt->execute()) {
+                $message = 'Xóa booking dịch vụ thành công';
+                $messageType = 'success';
+
+                if ($invoice_data && $invoice_data['status'] == 'Unpaid') {
+                    $invoice_id = $invoice_data['invoice_id'];
+                    $update_invoice = $mysqli->prepare("
+                UPDATE invoice i 
+                SET i.service_charge = (
+                SELECT COALESCE(SUM(bs.amount),0)
+                FROM booking_service bs
+                WHERE (bs.booking_id=i.booking_id OR bs.customer_id=i.customer_id)
+                AND bs.deleted IS NULL
+                ),
+                i.total_amount = i.room_charge + (
+                 SELECT COALESCE(SUM(bs.amount),0)
+                 FROM booking_service bs
+                 WHERE (bs.booking_id=i.booking_id OR bs.customer_id=i.customer_id)
+                 AND bs.deleted IS NULL
+                ) + i.vat +i.orther_fees
+                 WHERE i.invoice_id=?
+                ");
+                    $update_invoice->bind_param("i", $invoice_id);
+                    $update_invoice->execute();
+                    $update_invoice->close();
+
+                    $message = 'Hóa đơn đã được cập nhật lại tổng tiền';
+                }
+            } else {
+                $message = 'Lỗi: ' . $stmt->error;
+                $messageType = 'danger';
+            }
+            $stmt->close();
+        }
     }
 }
+// Lấy ra thông tin booking service để edit
+$editBookingSerivce = null;
+if ($action == 'edit' && isset($_GET['id'])) {
+    $id = intval($_GET['id']);
+    $stmt = $mysqli->prepare(
+        "SELECT  "
+    );
+}
+
 ?>
 
 <div class="content-card">
