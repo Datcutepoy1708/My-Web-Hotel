@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
     }
-    if (isset($_POST['update_booking_service'])) {
+    if (isset($_POST['update_service_booking'])) {
         $booking_service_id = intval($_POST['booking_service_id']);
         $customer_id = intval($_POST['customer_id']);
         $service_id = intval($_POST['service_id']);
@@ -136,8 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $message = 'Cập nhật booking dịch vụ thành công!';
                 $messageType = 'success';
                 $action = '';
-                header("Location: index.php?page=booking-services-manager&success=1");
-                exit;
             } else {
                 $message = 'Lỗi: ' . $stmt->error;
                 $messageType = 'danger';
@@ -164,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $check_stmt->close();
 
         if ($invoice_data && $invoice_data['status'] == 'Paid') {
-            $messageType = 'Không thể xóa!Dịch vụ này đã có hóa đơn thanh toán';
+            $message = 'Không thể xóa!Dịch vụ này đã có hóa đơn thanh toán';
             $messageType = 'warning';
         } else {
             // Soft delete booking_service
@@ -189,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                  FROM booking_service bs
                  WHERE (bs.booking_id=i.booking_id OR bs.customer_id=i.customer_id)
                  AND bs.deleted IS NULL
-                ) + i.vat +i.orther_fees
+                ) + i.vat +i.other_fees
                  WHERE i.invoice_id=?
                 ");
                     $update_invoice->bind_param("i", $invoice_id);
@@ -219,14 +217,14 @@ if ($action == 'edit' && isset($_GET['id'])) {
         $stmt = $mysqli->prepare(
             "SELECT bs.*,
             c.customer_id,c.phone,c.full_name,c.email,
-            s.service_id,s.service_name,s.price as service_price ,s.description
+            s.service_id,s.service_name,s.price as price ,s.description,
             b.booking_id,b.check_in_date,b.check_out_date,
             r.room_number
             FROM booking_service bs
             LEFT JOIN customer c ON bs.customer_id=c.customer_id
             LEFT JOIN service s ON bs.service_id=s.service_id
             LEFT JOIN booking b ON bs.booking_id=b.booking_id
-            LEFT JOIN room r ON r.room_id=r.room_id
+            LEFT JOIN room r ON r.room_id=b.room_id
             WHERE bs.booking_service_id=? AND bs.deleted IS NULL
             "
         );
@@ -304,7 +302,7 @@ $services = $serviceResult->fetch_all(MYSQLI_ASSOC);
 
 // Phân trang và tìm kiếm
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$status_filter = isset($GET['status']) ? trim($_GET['status']) : '';
+$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $type_filter = intval($_GET['type'] ?? 0);
 $pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
 $pageNum = max(1, $pageNum);
@@ -425,7 +423,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Booking Dịch Vụ</h3>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addBookingServiceModal">
+        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addServiceBookingModal">
             <i class="fas fa-plus"></i> Thêm Booking Dịch Vụ
         </button>
     </div>
@@ -547,9 +545,11 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                     case 'pending':
                                         $statusClass = 'bg-danger';
                                         $statusText = 'Chưa hoàn thành';
+                                        break;
                                     case 'cancelled':
                                         $statusClass = 'bg-warning';
                                         $statusText = 'Đã hủy';
+                                        break;
                                 }
                                 ?>
                                 <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
@@ -677,7 +677,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     <?php echo getPagination($totalBookingService, $perPage, $pageNum, $baseUrl); ?>
 </div>
 <!-- Modal Thêm Booking Dịch Vụ -->
-<div class="modal fade" id="addBookingServiceModal" tabindex="-1">
+<div class="modal fade" id="addServiceBookingModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -714,10 +714,22 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                 readonly>
                         </div>
                     </div>
+
+                    <?php if ($editBookingService && $editBookingService['has_room_booking']): ?>
+                        <div class="alert alert-info">
+                            <strong>Liên kết với booking phòng:</strong><br>
+                            Phòng: <?php echo h($editBookingService['room_number']); ?><br>
+                            Check-in: <?php echo date('d/m/Y', strtotime($editBookingService['check_in_date'])); ?>
+                        </div>
+                        <input type="hidden" name="booking_id" value="<?php echo $editBookingService['booking_id']; ?>">
+                    <?php else: ?>
+                        <input type="hidden" name="booking_id" value="">
+                    <?php endif; ?>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Dịch Vụ *</label>
-                            <select class="form-select" required id="serviceSelect">
+                            <select class="form-select" required id="serviceSelect" name="service_id">
                                 <option value="0">Tất cả các dịch vụ</option>
                                 <?php foreach ($services as $service): ?>
                                     <option value="<?php echo $service['service_id']; ?>"
@@ -729,23 +741,23 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Số Người *</label>
-                            <input type="number" class="form-control" min="1" value="<?php echo  $editBookingService ? h($editBookingService['quantity']) : '1'; ?>" required>
+                            <input type="number" name="quantity" class="form-control" min="1" value="<?php echo  $editBookingService ? h($editBookingService['quantity']) : '1'; ?>" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Ngày Sử Dụng *</label>
-                            <input type="date" class="form-control" required value="<?php $editBookingService ? $editBookingService['usage_date'] : ''; ?>">
+                            <input type="date" name="usage_date" class="form-control" required value="<?php echo $editBookingService ? $editBookingService['usage_date'] : ''; ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Giờ Sử Dụng *</label>
-                            <input type="time" class="form-control" required value="<?php $editBookingService ? $editBookingService['usage_time'] : ''; ?>">
+                            <input type="time" name="usage_time" class="form-control" required value="<?php echo $editBookingService ? $editBookingService['usage_time'] : ''; ?>">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"> Số lượng *</label>
-                            <input type="number" min="1" class="form-control" id="amount" required value="<?php $editBookingService ? $editBookingService['amount'] : '1'; ?>">
+                            <input type="number" name="amount" min="1" class="form-control" id="amount" required value="<?php echo $editBookingService ? $editBookingService['amount'] : '1'; ?>">
                         </div>
 
                         <div class="col-md-6 mb-3">
@@ -753,7 +765,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                             <input type="number"
                                 class="form-control"
                                 id="unitPrice"
-                                value="<?php echo $editBookingService ? $editBookingService['price'] : '0'; ?>"
+                                value="<?php echo $editBookingService['price'] ?? 0; ?>"
                                 readonly>
                         </div>
                     </div>
@@ -761,7 +773,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tổng Tiền (VNĐ) *</label>
                             <input type="number" class="form-control" step="1000" required id="totalAmount"
-                                value="<?php echo $editBookingService ? ($editBookingService['price'] * $editBookingService['amount']) : '0'; ?>"
+                                value="<?php echo h($editBookingService['price'] * $editBookingService['amount']); ?>"
                                 readonly>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -793,6 +805,14 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 </div>
 
 <script>
+    // Tự động mở modal edit khi có action=edit
+    <?php if ($editBookingService): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addServiceBookingModal'));
+            modal.show();
+        });
+    <?php endif; ?>
+
     // Tự động điền số điện thoại
     document.getElementById('customerSelect')?.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
@@ -815,4 +835,20 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         const total = unitPrice * amount;
         document.getElementById('totalAmount').value = total;
     }
+
+    function editServiceBooking(id) {
+        window.location.href = 'index.php?page=booking-manager&panel=serviceBooking-panel&action=edit&id=' + id;
+    }
+
+    function deleteServiceBooking(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="booking_service_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_booking_service" value="1">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
 </script>
