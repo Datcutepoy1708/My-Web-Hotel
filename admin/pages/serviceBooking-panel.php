@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $check_stmt = $mysqli->prepare("
         SELECT i.status, i.invoice_id
         FROM booking_service bs
-        LEFT JOIN inovice i ON(i.booking_id=bs.booking_id OR i.customer_id=bs.customer_id)
+        LEFT JOIN invoice i ON(i.booking_id=bs.booking_id OR i.customer_id=bs.customer_id)
         WHERE bs.booking_service_id = ? AND i.deleted IS NULL
         ");
         $check_stmt->bind_param("i", $booking_service_id);
@@ -372,6 +372,7 @@ $sql = "SELECT
        c.email,
        s.service_name,
        s.price,
+       s.service_type,
        s.description,
        b.booking_id,
        b.check_in_date,
@@ -424,7 +425,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Booking Dịch Vụ</h3>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addBookingServiceModal">
             <i class="fas fa-plus"></i> Thêm Booking Dịch Vụ
         </button>
     </div>
@@ -483,7 +484,8 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 <tr>
                     <th>ID</th>
                     <th>Tên Khách</th>
-                    <th>Dịch Vụ</th>
+                    <th>Loại Dịch Vụ</th>
+                    <th>Tên dịch vụ</th>
                     <th>Ngày</th>
                     <th>Giờ</th>
                     <th>Số Người</th>
@@ -505,33 +507,30 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                             <td>
                                 <?php
                                 $statusClass = 'bg-secondary text-white';
-                                $statusText = $bk['service_name'];
+                                $statusText = $bk['service_type'];
 
-                                switch ($bk['service_name']) {
-                                    case 'Spa & Massage':
+                                switch ($bk['service_type']) {
+                                    case 'Wellness':
                                         $statusClass = 'bg-primary text-white';
-                                        $statusText = 'Spa & Massage';
+                                        $statusText = 'Wellness';
                                         break;
-                                    case 'Room Service':
+                                    case 'Food & Beverage':
                                         $statusClass = 'bg-success text-white';
-                                        $statusText = 'Room Service';
+                                        $statusText = 'Food & Beverage';
                                         break;
-                                    case 'Gym & Fitness':
+                                    case 'Transportation':
                                         $statusClass = 'bg-info text-white';
-                                        $statusText = 'Gym & Fitness';
+                                        $statusText = 'Transportation';
                                         break;
-                                    case 'Tour Guide':
+                                    case 'Tour':
                                         $statusClass = 'bg-warning text-dark';
-                                        $statusText = 'Tour Guide';
-                                        break;
-                                    case 'Airport Transfer':
-                                        $statusClass = 'bg-danger text-white';
-                                        $statusText = 'Airport Transfer';
+                                        $statusText = 'Tour';
                                         break;
                                 }
                                 ?>
                                 <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
                             </td>
+                            <td><?php echo $bk['service_name']; ?></td>
                             <td><?php echo h($bk['usage_date']); ?></td>
                             <td><?php echo h($bk['usage_time']); ?></td>
                             <td><?php echo h($bk['quantity']); ?> người</td>
@@ -556,17 +555,119 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                 <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
                             </td>
                             <td>
-                                <button class="btn btn-sm btn-outline-info" title="Xem chi tiết">
+                                <button class="btn btn-sm btn-outline-info"
+                                    title="Xem chi tiết"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#viewBookingServiceModal<?php echo $bk['booking_service_id']; ?>">
                                     <i class="fas fa-eye"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-warning" title="Sửa">
+                                <button class="btn btn-sm btn-outline-warning" title="Sửa"
+                                    onclick="editServiceBooking(<?php echo $bk['booking_service_id']; ?>)">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" title="Xóa">
+                                <button class="btn btn-sm btn-outline-danger" title="Xóa" onclick="deleteServiceBooking(<?php echo $bk['booking_service_id']; ?>)">
                                     <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
+
+                        <!-- View Detail Modal -->
+                        <div class="modal fade" id="viewBookingServiceModal<?php echo $bk['booking_service_id']; ?>" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Chi tiết booking dịch vụ #<?php echo $bk['booking_service_id']; ?></h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6"><strong>Mã Booking : </strong><?php echo h($bk['booking_service_id']); ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-4"><strong>Tên khách hàng: </strong><?php echo h($bk['full_name']); ?></div>
+                                            <div class="col-md-4"><strong>Số điện thoại: </strong><?php echo $bk['phone']; ?></div>
+                                            <div class="col-md-4"><strong>Email: </strong><?php echo $bk['email']; ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6"><strong>Loại dịch vụ : </strong>
+                                                <?php
+                                                $statusClass = 'bg-secondary text-white';
+                                                $statusText = $bk['service_type'];
+
+                                                switch ($bk['service_type']) {
+                                                    case 'Wellness':
+                                                        $statusClass = 'bg-primary text-white';
+                                                        $statusText = 'Wellness';
+                                                        break;
+                                                    case 'Food & Beverage':
+                                                        $statusClass = 'bg-success text-white';
+                                                        $statusText = 'Food & Beverage';
+                                                        break;
+                                                    case 'Transportation':
+                                                        $statusClass = 'bg-info text-white';
+                                                        $statusText = 'Transportation';
+                                                        break;
+                                                    case 'Tour':
+                                                        $statusClass = 'bg-warning text-dark';
+                                                        $statusText = 'Tour';
+                                                        break;
+                                                }
+                                                ?>
+                                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                            </div>
+                                            <div class="col-md-6"><strong>Tên dịch vụ:</strong><?php echo $bk['service_name']; ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6"><strong>Ngày sử dụng: </strong><?php echo $bk['usage_date']; ?></div>
+                                            <div class="col-md-6"><strong>Giờ sử dụng: </strong><?php echo $bk['usage_time']; ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-12"><strong>Số người sử dụng: </strong><?php echo h($bk['quantity']); ?> người</div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-4"><strong>Số lượng: </strong><?php echo h($bk['amount']); ?> <?php echo $bk['unit']; ?> </div>
+                                            <div class="col-md-4"><strong>Đơn giá: </strong><?php echo $bk['price']; ?> VNĐ</div>
+                                            <div class="col-md-4"><strong>Thành tiền: </strong><?php echo h(number_format($bk['price'] * $bk['amount'], 0, ',', '.')); ?> VNĐ</div>
+
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-12"><strong>Ghi chú: </strong><?php echo $bk['notes']; ?></div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-12"><strong>Trạng thái: </strong>
+                                                <?php
+                                                $statusClass = 'bg-secondary';
+                                                $statusText = $bk['status'];
+                                                switch ($statusText) {
+                                                    case 'confirmed':
+                                                        $statusClass = 'bg-success';
+                                                        $statusText = 'Đã hoàn thành';
+                                                        break;
+                                                    case 'pending':
+                                                        $statusClass = 'bg-danger';
+                                                        $statusText = 'Chưa hoàn thành';
+                                                    case 'cancelled':
+                                                        $statusClass = 'bg-warning';
+                                                        $statusText = 'Đã hủy';
+                                                }
+                                                ?>
+                                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                        <a href="index.php?page=booking-manager&panel=serviceBooking-panel&action=edit&id=<?php echo $bk['booking_service_id']; ?>"
+                                            class="btn btn-primary">
+                                            Chỉnh sửa
+                                        </a>
+                                    </div>
+                                    <div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
@@ -576,79 +677,142 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     <?php echo getPagination($totalBookingService, $perPage, $pageNum, $baseUrl); ?>
 </div>
 <!-- Modal Thêm Booking Dịch Vụ -->
-<div class="modal fade" id="addServiceModal" tabindex="-1">
+<div class="modal fade" id="addBookingServiceModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Thêm Booking Dịch Vụ</h5>
+                <h5 class="modal-title"><?php echo $editBookingService ? 'Sửa' : 'Thêm'; ?> Booking dịch vụ</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form>
+            <form method="POST" id="bookingServiceForm">
+                <?php if ($editBookingService): ?>
+                    <input type="hidden" name="booking_service_id" value="<?php echo $editBookingService['booking_service_id']; ?>">
+                <?php endif; ?>
                 <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tên Khách Hàng *</label>
-                            <input type="text" class="form-control" required>
+                            <select class="form-select" name="customer_id" required id="customerSelect">
+                                <option value="">-- Chọn khách hàng --</option>
+                                <?php foreach ($customers as $customer): ?>
+                                    <option value="<?php echo $customer['customer_id']; ?>"
+                                        <?php echo ($editBookingService && $editBookingService['customer_id'] == $customer['customer_id']) ? 'selected' : ''; ?> data-phone="<?php echo h($customer['phone']); ?>"
+                                        data-email="<?php echo h($customer['email']); ?>">
+                                        <?php echo h($customer['full_name']); ?> - <?php echo h($customer['phone']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Số Điện Thoại *</label>
-                            <input type="tel" class="form-control" required>
+                            <input type="tel"
+                                class="form-control"
+                                name="phone"
+                                id="customerPhone"
+                                value="<?php echo $editBookingService ? $editBookingService['phone'] : ''; ?>"
+                                required
+                                readonly>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Loại Dịch Vụ *</label>
-                            <select class="form-select" required>
-                                <option>-- Chọn dịch vụ --</option>
-                                <option>Spa & Massage</option>
-                                <option>Nhà Hàng</option>
-                                <option>Gym & Fitness</option>
+                            <label class="form-label">Dịch Vụ *</label>
+                            <select class="form-select" required id="serviceSelect">
+                                <option value="0">Tất cả các dịch vụ</option>
+                                <?php foreach ($services as $service): ?>
+                                    <option value="<?php echo $service['service_id']; ?>"
+                                        <?php echo ($editBookingService && $editBookingService['service_id'] == $service['service_id']) ? 'selected' : ''; ?> data-price="<?php echo $service['price']; ?>">
+                                        <?php echo $service['service_name']; ?> - <?php echo $service['price']; ?> VNĐ
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Số Người *</label>
-                            <input type="number" class="form-control" min="1" value="1" required>
+                            <input type="number" class="form-control" min="1" value="<?php echo  $editBookingService ? h($editBookingService['quantity']) : '1'; ?>" required>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Ngày Sử Dụng *</label>
-                            <input type="date" class="form-control" required>
+                            <input type="date" class="form-control" required value="<?php $editBookingService ? $editBookingService['usage_date'] : ''; ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Giờ Sử Dụng *</label>
-                            <input type="time" class="form-control" required>
+                            <input type="time" class="form-control" required value="<?php $editBookingService ? $editBookingService['usage_time'] : ''; ?>">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label"> Số lượng *</label>
-                            <input type="number" class="form-control" required>
+                            <input type="number" min="1" class="form-control" id="amount" required value="<?php $editBookingService ? $editBookingService['amount'] : '1'; ?>">
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Đơn giá (VNĐ)</label>
+                            <input type="number"
+                                class="form-control"
+                                id="unitPrice"
+                                value="<?php echo $editBookingService ? $editBookingService['price'] : '0'; ?>"
+                                readonly>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tổng Tiền (VNĐ) *</label>
-                            <input type="number" class="form-control" step="1000" required>
+                            <input type="number" class="form-control" step="1000" required id="totalAmount"
+                                value="<?php echo $editBookingService ? ($editBookingService['price'] * $editBookingService['amount']) : '0'; ?>"
+                                readonly>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Trạng Thái *</label>
                             <select class="form-select" required>
-                                <option>Chờ xác nhận</option>
-                                <option>Đã xác nhận</option>
+                                <option value="pending" <?php echo ($editBookingService && $editBookingService['status'] == 'pending') ? 'selected' : ''; ?>>Chưa thanh toán</option>
+                                <option value="confirmed" <?php echo ($editBookingService && $editBookingService['status'] == 'confirm') ? 'selected' : ''; ?>>Đã thanh toán</option>
+                                <option value="cancelled" <?php echo ($editBookingService && $editBookingService['status'] == 'cancelled') ? 'selected' : ''; ?>>Đã hủy</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ghi Chú</label>
-                        <textarea class="form-control" rows="3"></textarea>
+                        <textarea class="form-control" rows="3">
+                            <?php echo $editBookingService ? h($editBookingService['notes']) : ''; ?>
+                        </textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn-primary-custom">Thêm Booking</button>
+                    <button type="submit" class="btn-primary-custom"
+                        name="<?php echo $editBookingService ? 'update_service_booking' : 'add_service_booking'; ?>">
+                        <?php echo $editBookingService ? 'Cập nhật' : 'Thêm'; ?> Booking dịch vụ
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+    // Tự động điền số điện thoại
+    document.getElementById('customerSelect')?.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const phone = selectedOption.getAttribute('data-phone');
+        document.getElementById('customerPhone').value = phone || '';
+    });
+    // Tự động tính tổng tiền
+    document.getElementById('serviceSelect')?.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const price = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+        document.getElementById('unitPrice').value = price;
+        calculateTotal();
+    });
+
+    document.getElementById('amount')?.addEventListener('input', calculateTotal);
+
+    function calculateTotal() {
+        const unitPrice = parseFloat(document.getElementById('unitPrice')?.value) || 0;
+        const amount = parseFloat(document.getElementById('amount')?.value) || 0;
+        const total = unitPrice * amount;
+        document.getElementById('totalAmount').value = total;
+    }
+</script>
