@@ -1,5 +1,7 @@
 <?php
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+
+
     if (isset($_POST['update_room_type'])) {
         $room_type_id = intval($_POST['room_type_id']);
         $room_type_name = trim($_POST['room_type_name']);
@@ -70,8 +72,6 @@ if ($action == 'edit' && isset($_GET['id'])) {
     $stmt->close();
 }
 
-
-
 // Build base URL for pagination
 $baseUrl = "index.php?page=room-manager&panel=roomType-panel";
 if ($search) $baseUrl .= "&search=" . urlencode($search);
@@ -81,13 +81,14 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Loại Phòng</h3>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
+        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal" name="add_room_type">
             <i class="fas fa-plus"></i> Thêm Loại Phòng
         </button>
     </div>
     <div class="filter-section">
         <form method="GET" action="">
             <input type="hidden" name="page" value="room-manager">
+            <input type="hidden" name="panel" value="roomType-panel">
             <div class="row">
                 <div class="col-md-4">
                     <div class="search-box">
@@ -98,16 +99,16 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 <div class="col-md-3">
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="">Đang Hoạt Động</option>
-                        <option value="">Đang bảo trì</option>
-                        <option value="">Dừng Hoạt Động</option>
+                        <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang Hoạt Động</option>
+                        <option value="maintainace" <?php echo $status_filter == 'maintainance' ? 'selected' : '';  ?>>Đang bảo trì</option>
+                        <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>Dừng Hoạt Động</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="sort">
-                        <option value="0">Tất cả</option>
-                        <option value="0">Diện Tích Tăng Dần</option>
-                        <option value="0">Diện tích Giảm Dần</option>
+                        <option value="">Tất cả</option>
+                        <option value="asc" <?php echo $sort == 'asc' ? 'selected' : ''; ?>>Diện Tích Tăng Dần</option>
+                        <option value="desc" <?php echo $sort = 'desc' ? 'selected' : ''; ?>>Diện tích Giảm Dần</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -256,12 +257,12 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 
                     <div class="mb-3">
                         <label class="form-label">Tên loại phòng *</label>
-                        <input type="text" class="form-control" name="room_type_name" required value="<?php echo $editRoomTypes['room_type_name']; ?>">
+                        <input type="text" class="form-control" name="room_type_name" required value="<?php echo $editRoomTypes ? $editRoomTypes['room_type_name'] : ''; ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
                         <textarea class="form-control" name="description" rows="3">
-                            <?php echo $editRoomTypes['description']; ?>
+                            <?php echo $editRoomTypes ? $editRoomTypes['description'] : '';  ?>
                         </textarea>
                     </div>
                     <div class="row">
@@ -282,7 +283,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tiện nghi</label>
                             <input type="text" class="form-control" name="amenities"
-                                placeholder="VD: WiFi, TV, Điều hòa..." value="<?php echo $editRoomTypes['amenities']; ?>">
+                                placeholder="VD: WiFi, TV, Điều hòa..." value="<?php echo $editRoomTypes ? $editRoomTypes['amenities'] : '' ?>">
 
                         </div>
                     </div>
@@ -293,7 +294,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                 Đang hoạt động</option>
                             <option value="inactive" <?php echo ($editRoomTypes['status'] ?? 'inactive') == 'inactive' ? 'selected' : ''; ?>>Dừng hoạt động
                             </option>
-                            <option value="maintenance" value="inactive" <?php echo ($editRoomTypes['status'] ?? 'maintainance') == 'maintainance' ? 'selected' : ''; ?>>
+                            <option value="maintenance" <?php echo ($editRoomTypes['status'] ?? 'maintainance') == 'maintainance' ? 'selected' : ''; ?>>
                                 Bảo
                                 trì</option>
                         </select>
@@ -311,15 +312,90 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     </div>
 </div>
 <script>
+    // ==== Helper Functions ============
+    // Hàm reset form tổng quát
+    function resetFormFields(form) {
+        if (!form) return;
+
+        form.reset();
+
+        // Xóa input hidden (trừ page và panel)
+        form.querySelectorAll('input[type="hidden"]').forEach(input => {
+            if (input.name !== 'page' && input.name !== 'panel') {
+                input.remove();
+            }
+        });
+
+        // Reset text/number/tel/email inputs
+        form.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"],select').forEach(input => {
+            input.value = '';
+        });
+
+        // Reset textarea
+        form.querySelectorAll('textarea').forEach(textarea => {
+            textarea.value = '';
+        });
+
+        // Reset date về hôm nay
+        const today = new Date().toISOString().split('T')[0];
+        form.querySelectorAll('input[type="date"]').forEach(input => {
+            input.value = today;
+        });
+
+        // Clear readonly fields
+        form.querySelectorAll('input[readonly]').forEach(input => {
+            input.value = '';
+        });
+    }
+    // Hàm xóa query string edit
+    function clearEditQueryString() {
+        const url = new URL(window.location);
+        url.searchParams.delete('action');
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
+    }
+    // Hàm force cleanup backdrop
+    function forceCleanupBackdrop() {
+        const openModals = document.querySelectorAll('.modal.show');
+        if (openModals.length === 0) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    }
+    // Hàm reset modal về trạng thái "Thêm mới"
+    function resetModalToAddMode(modalElement, form) {
+        if (!modalElement || !form) return;
+
+        const modalId = modalElement.id;
+        const modalTitle = modalElement.querySelector('.modal-title');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        // Config cho từng modal
+        const modalConfig = {
+            'addRoomTypeModal': {
+                title: 'Thêm Loại Phòng',
+                buttonName: 'add_room_type',
+                buttonHTML: '<i class="fas fa-save"></i> Thêm Loại Phòng'
+            },
+        };
+
+        const config = modalConfig[modalId];
+        if (config) {
+            if (modalTitle) modalTitle.textContent = config.title;
+            if (submitBtn) {
+                submitBtn.name = config.buttonName;
+                submitBtn.innerHTML = config.buttonHTML;
+            }
+        }
+    }
+
+
+    // ==================== ROOM TYPES FUNCTIONS ====================
     function editRoomTypes(id) {
         window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
     }
-    <?php if ($editRoomTypes): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = new bootstrap.Modal(document.getElementById('addRoomTypeModal'));
-            modal.show();
-        });
-    <?php endif; ?>
 
     function editRoomTypeFromView(id) {
         // Đóng view modal (có ID động)
@@ -344,4 +420,6 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             form.submit();
         }
     }
+    // ==================== MODAL AUTO-RESET ====================
+    
 </script>

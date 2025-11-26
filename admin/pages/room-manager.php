@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_room_type'])) {
 
 
     $stmt = $mysqli->prepare("INSERT INTO room_type (room_type_name, description, base_price, capacity,status, amenities, area) VALUES (?, ?, ?, ?, ?,?, ?)");
-    $stmt->bind_param("ssdisss", $room_type_name, $description, $base_price, $capacity,$status, $amenities, $area);
+    $stmt->bind_param("ssdisss", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area);
 
     if ($stmt->execute()) {
         $message = 'Thêm loại phòng thành công!';
@@ -101,6 +101,8 @@ if ($action == 'edit' && isset($_GET['id'])) {
 $search = trim($_GET['search'] ?? '');
 $status_filter = trim($_GET['status'] ?? '');
 $type_filter = intval($_GET['type'] ?? 0);
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : 'desc';
+
 $pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
 $pageNum = max(1, $pageNum);
 $perPage = 5;
@@ -149,11 +151,13 @@ $query = "SELECT r.*, rt.room_type_name, rt.base_price, rt.capacity, rt.area, rt
     LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id 
     $where
     ORDER BY r.room_number ASC 
-    LIMIT $perPage OFFSET $offset";
+    LIMIT ? OFFSET ?";
 
 $stmt = $mysqli->prepare($query);
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
+$allParams = array_merge($params, [$perPage, $offset]);
+$allTypes = $types . 'ii';
+if (!empty($allParams)) {
+    $stmt->bind_param($allTypes, ...$allParams);
 }
 if ($stmt->execute()) {
     $result = $stmt->get_result();
@@ -163,30 +167,64 @@ if ($stmt->execute()) {
 }
 $stmt->close();
 
-// lấy ra tổng số loại phòng
-$countQueryRoomTypes = "SELECT COUNT(*) as total FROM room_type r
-    $where";
+$roomTypesResult = $mysqli->query("SELECT * FROM room_type WHERE deleted IS NULL");
+$roomTypes = $roomTypesResult->fetch_all(MYSQLI_ASSOC);
+
+// Xây dựng where clause cho ROOM_TYPE
+$whereRoomType = "WHERE rt.deleted IS NULL";
+$paramsRoomType = [];
+$typesRoomType = '';
+
+
+if ($search) {
+    $whereRoomType .= " AND (rt.room_type_name LIKE ?)";
+    $searchParam = "%$search%";
+    $paramsRoomType[] = $searchParam;
+    $typesRoomType .= 's';
+}
+
+if ($status_filter) {
+    $whereRoomType .= " AND rt.status = ?";
+    $paramsRoomType[] = $status_filter;
+    $typesRoomType .= 's';
+}
+
+$orderBy = " ORDER BY rt.area DESC";
+switch ($sort) {
+    case 'desc':
+        $orderBy = " ORDER BY rt.area DESC";
+        break;
+    case 'asc':
+        $orderBy = " ORDER BY rt.area ASC";
+        break;
+    default:
+        $orderBy = " ";
+        break;
+}
+
+// Đếm tổng số room_type
+$countQueryRoomTypes = "SELECT COUNT(*) as total FROM room_type rt $whereRoomType";
 $countStmtRoomTypes = $mysqli->prepare($countQueryRoomTypes);
-if (!empty($params)) {
-    $countStmtRoomTypes->bind_param($types, ...$params);
+if (!empty($paramsRoomType)) {
+    $countStmtRoomTypes->bind_param($typesRoomType, ...$paramsRoomType);
 }
 $countStmtRoomTypes->execute();
 $totalResultRoomTypes = $countStmtRoomTypes->get_result();
 $totalRoomTypes = $totalResultRoomTypes->fetch_assoc()['total'];
 $countStmtRoomTypes->close();
 
-
-// Lấy danh sách room types cho room-manager
-$roomTypesResult = $mysqli->query("SELECT * FROM room_type WHERE deleted IS NULL ");
-
-$roomTypes = $roomTypesResult->fetch_all(MYSQLI_ASSOC);
-
-//Lây danh sách room types cho room_type
-$queryRoomTypes = "SELECT r.* FROM room_type r $where LIMIT $perPage OFFSET $offset";
+// Lấy danh sách room_type với phân trang
+$queryRoomTypes = "SELECT rt.* FROM room_type rt $whereRoomType $orderBy LIMIT ? OFFSET ?";
 $stmtRoomTypes = $mysqli->prepare($queryRoomTypes);
-if (!empty($params)) {
-    $stmtRoomTypes->bind_param($types, ...$params);
+
+// QUAN TRỌNG: Thêm $perPage và $offset vào array params
+$allParamsRoomType = array_merge($paramsRoomType, [$perPage, $offset]);
+$allTypesRoomType = $typesRoomType . 'ii';
+
+if (!empty($allParamsRoomType)) {
+    $stmtRoomTypes->bind_param($allTypesRoomType, ...$allParamsRoomType);
 }
+
 if ($stmtRoomTypes->execute()) {
     $result = $stmtRoomTypes->get_result();
     $roomTypesAll = $result->fetch_all(MYSQLI_ASSOC);
@@ -219,10 +257,10 @@ $stmtRoomTypes->close();
         </ul>
     </div>
     <?php if ($message): ?>
-    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-        <?php echo h($message); ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+            <?php echo h($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     <?php endif; ?>
 
     <!-- content -->
@@ -242,25 +280,25 @@ $stmtRoomTypes->close();
 
     </div>
     <script>
-    function editRoom(id) {
-        window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
-    }
-
-    function deleteRoom(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_room" value="1">';
-            document.body.appendChild(form);
-            form.submit();
+        function editRoom(id) {
+            window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
         }
-    }
 
-    <?php if ($editRoom): ?>
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
-        modal.show();
-    });
-    <?php endif; ?>
+        function deleteRoom(id) {
+            if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
+                    '<input type="hidden" name="delete_room" value="1">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        <?php if ($editRoom): ?>
+            document.addEventListener('DOMContentLoaded', function() {
+                const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+                modal.show();
+            });
+        <?php endif; ?>
     </script>
