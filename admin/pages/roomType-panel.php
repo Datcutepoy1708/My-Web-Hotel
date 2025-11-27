@@ -93,7 +93,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" name="search" placeholder="Tìm kiếm" value="<?php echo h($search); ?>">
+                        <input type="text" id="searchInput" name="search" placeholder="Tìm kiếm" value="<?php echo h($search); ?>">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -394,7 +394,10 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 
     // ==================== ROOM TYPES FUNCTIONS ====================
     function editRoomTypes(id) {
-        window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
+        const url = new URL(window.location.href);
+        url.searchParams.set('action', 'edit');
+        url.searchParams.set('id', id);
+        window.location.href = url.toString();
     }
 
     function editRoomTypeFromView(id) {
@@ -421,5 +424,72 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         }
     }
     // ==================== MODAL AUTO-RESET ====================
-    
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Tự động mở modal edit nếu có action=edit
+        <?php if ($editRoomTypes): ?>
+            const editModal = new bootstrap.Modal(document.getElementById('addRoomTypeModal'));
+            editModal.show();
+        <?php endif; ?>
+
+        // Danh sách modal cần auto-reset
+        const resettableModals = ['addRoomTypeModal'];
+
+        // Xử lý TỔNG QUÁT cho TẤT CẢ modal
+        document.querySelectorAll('.modal').forEach(modalElement => {
+
+            // Event: Khi modal đã đóng hoàn toàn
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                const form = modalElement.querySelector('form');
+                const modalId = modalElement.id;
+
+                // Chỉ xử lý modal trong danh sách
+                if (resettableModals.includes(modalId)) {
+                    const isEditMode = window.location.search.includes('action=edit');
+
+                    if (isEditMode) {
+                        // Xóa query string edit
+                        clearEditQueryString();
+                    }
+
+                    // Reset form về trạng thái "Thêm mới"
+                    if (form) {
+                        resetFormFields(form);
+                        resetModalToAddMode(modalElement, form);
+                    }
+                }
+
+                // Cleanup backdrop
+                setTimeout(forceCleanupBackdrop, 100);
+            });
+
+            // Event: Khi modal sắp mở
+            modalElement.addEventListener('show.bs.modal', function() {
+                const form = modalElement.querySelector('form');
+                const isEditMode = window.location.search.includes('action=edit');
+
+                // Nếu KHÔNG phải edit mode, reset form
+                if (!isEditMode && form && resettableModals.includes(modalElement.id)) {
+                    resetFormFields(form);
+                }
+            });
+        });
+
+        // Xử lý nút "Thêm mới" - xóa query string edit
+        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const isEditMode = window.location.search.includes('action=edit');
+                if (isEditMode) {
+                    clearEditQueryString();
+                }
+            });
+        });
+
+        // Xử lý ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                setTimeout(forceCleanupBackdrop, 150);
+            }
+        });
+    });
 </script>
