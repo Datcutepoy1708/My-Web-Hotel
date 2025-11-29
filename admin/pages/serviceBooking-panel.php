@@ -1,4 +1,7 @@
 <?php
+// Include helper function để tự động tạo hóa đơn
+require_once __DIR__ . '/../includes/invoice_helper.php';
+
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
@@ -18,10 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // Xử lý validate dữ liệu
         $errors = [];
-        if (empty($customer_id)) {
+        if (empty($customer_id) || $customer_id <= 0) {
             $errors[] = "Khách hàng không được để trống";
         }
-        if (empty($service_id)) {
+        if (empty($service_id) || $service_id <= 0) {
             $errors[] = "Dịch vụ không được để trống";
         }
         if (empty($quantity) || $quantity <= 0) {
@@ -51,24 +54,44 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         if (empty($errors)) {
             // INSERT với booking_id có thể NULL
-            $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, booking_id, amount, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->bind_param("iiissidss", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $booking_id, $amount, $notes, $status);
+            // Lấy unit_price từ service để lưu vào booking_service
+            $service_stmt = $mysqli->prepare("SELECT price, unit FROM service WHERE service_id = ?");
+            $service_stmt->bind_param("i", $service_id);
+            $service_stmt->execute();
+            $service_result = $service_stmt->get_result();
+            $service_data = $service_result->fetch_assoc();
+            $service_stmt->close();
+
+            if (!$service_data) {
+                $errors[] = "Không tìm thấy thông tin dịch vụ";
+            }
+        }
+
+        if (empty($errors)) {
+            $unit_price = $service_data['price'] ?? 0;
+            $unit = $service_data['unit'] ?? '';
+
+            // Xử lý booking_id - nếu không có thì không insert cột booking_id
+            if ($booking_id) {
+                $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, booking_id, amount, unit_price, unit, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                $stmt->bind_param("iiissiddsss", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $booking_id, $amount, $unit_price, $unit, $notes, $status);
+            } else {
+                // Không có booking_id - chỉ booking dịch vụ, không insert cột booking_id
+                $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, amount, unit_price, unit, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                $stmt->bind_param("iiissddsss", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $amount, $unit_price, $unit, $notes, $status);
+            }
 
             if ($stmt->execute()) {
+                $booking_service_id = $stmt->insert_id;
                 $message = 'Thêm booking dịch vụ thành công!';
                 $messageType = 'success';
 
-                // Nếu không có booking_id (chỉ booking dịch vụ), tự động tạo invoice
-                if (!$booking_id) {
-                    $booking_service_id = $stmt->insert_id;
-
-                    // Tạo invoice cho dịch vụ này
-                    $invoice_stmt = $mysqli->prepare("INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, payment_method, status, created_at) VALUES (NULL, ?, 0, ?, 0, 0, ?, 'Cash', 'Unpaid', NOW())");
-                    $invoice_stmt->bind_param("idd", $customer_id, $amount, $amount);
-                    $invoice_stmt->execute();
-                    $invoice_stmt->close();
-
-                    $message .= ' Đã tự động tạo hóa đơn!';
+                // Tự động tạo hóa đơn nếu status = confirmed
+                if ($status === 'confirmed') {
+                    $invoice_id = createInvoiceForServiceBooking($mysqli, $booking_service_id);
+                    if ($invoice_id) {
+                        $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
+                    }
                 }
 
                 $action = '';
@@ -96,10 +119,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // Validate dữ liệu
         $errors = [];
-        if (empty($customer_id)) {
+        if (empty($customer_id) || $customer_id <= 0) {
             $errors[] = "Khách hàng không được để trống";
         }
-        if (empty($service_id)) {
+        if (empty($service_id) || $service_id <= 0) {
             $errors[] = "Dịch vụ không được để trống";
         }
         if (empty($quantity) || $quantity <= 0) {
@@ -128,13 +151,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         if (empty($errors)) {
-            // UPDATE với booking_id có thể NULL
-            $stmt = $mysqli->prepare("UPDATE booking_service SET customer_id=?, service_id=?, quantity=?, usage_date=?, usage_time=?, booking_id=?, amount=?, notes=?, status=? WHERE booking_service_id=? AND deleted IS NULL");
-            $stmt->bind_param("iiissidssi", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $booking_id, $amount, $notes, $status, $booking_service_id);
+            // Lấy unit_price từ service để cập nhật vào booking_service
+            $service_stmt = $mysqli->prepare("SELECT price, unit FROM service WHERE service_id = ?");
+            $service_stmt->bind_param("i", $service_id);
+            $service_stmt->execute();
+            $service_result = $service_stmt->get_result();
+            $service_data = $service_result->fetch_assoc();
+            $service_stmt->close();
+
+            $unit_price = $service_data['price'] ?? 0;
+            $unit = $service_data['unit'] ?? '';
+
+            // UPDATE - không thay đổi booking_id nếu đã có, chỉ cập nhật các trường khác
+            // Nếu booking_id đã tồn tại trong record, giữ nguyên; nếu không có thì không set
+            $stmt = $mysqli->prepare("UPDATE booking_service SET customer_id=?, service_id=?, quantity=?, usage_date=?, usage_time=?, amount=?, unit_price=?, unit=?, notes=?, status=? WHERE booking_service_id=? AND deleted IS NULL");
+            $stmt->bind_param("iiissddsssi", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $amount, $unit_price, $unit, $notes, $status, $booking_service_id);
 
             if ($stmt->execute()) {
                 $message = 'Cập nhật booking dịch vụ thành công!';
                 $messageType = 'success';
+                
+                // Tự động tạo hóa đơn nếu status = confirmed và chưa có hóa đơn
+                if ($status === 'confirmed') {
+                    $invoice_id = createInvoiceForServiceBooking($mysqli, $booking_service_id);
+                    if ($invoice_id) {
+                        $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
+                    }
+                }
+                
                 $action = '';
             } else {
                 $message = 'Lỗi: ' . $stmt->error;
@@ -272,7 +316,7 @@ if ($action == 'edit' && isset($_GET['id'])) {
             }
             $stmt->close();
         } else {
-            $editError = 'Lỗi chuẩn bị query: ' . $stmt->error();
+            $editError = 'Lỗi chuẩn bị query: ';
             $action = '';
         }
     }
@@ -540,7 +584,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                 switch ($statusText) {
                                     case 'confirmed':
                                         $statusClass = 'bg-success';
-                                        $statusText = 'Đã hoàn thành';
+                                        $statusText = 'Đã xác nhận';
                                         break;
                                     case 'pending':
                                         $statusClass = 'bg-danger';
@@ -692,7 +736,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tên Khách Hàng *</label>
-                            <select class="form-select" name="customer_id" required id="customerSelect">
+                            <select class="form-select customer-search" name="customer_id" required id="customerSelect">
                                 <option value="">-- Chọn khách hàng --</option>
                                 <?php foreach ($customers as $customer): ?>
                                     <option value="<?php echo $customer['customer_id']; ?>"
@@ -730,11 +774,11 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Dịch Vụ *</label>
                             <select class="form-select" required id="serviceSelect" name="service_id">
-                                <option value="0">Tất cả các dịch vụ</option>
+                                <option value="">-- Chọn dịch vụ --</option>
                                 <?php foreach ($services as $service): ?>
                                     <option value="<?php echo $service['service_id']; ?>"
                                         <?php echo ($editBookingService && $editBookingService['service_id'] == $service['service_id']) ? 'selected' : ''; ?> data-price="<?php echo $service['price']; ?>">
-                                        <?php echo $service['service_name']; ?> - <?php echo $service['price']; ?> VNĐ
+                                        <?php echo $service['service_name']; ?> - <?php echo number_format($service['price'], 0, ',', '.'); ?> VNĐ
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -778,24 +822,22 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Trạng Thái *</label>
-                            <select class="form-select" required>
+                            <select class="form-select" name="status" required>
                                 <option value="pending" <?php echo ($editBookingService && $editBookingService['status'] == 'pending') ? 'selected' : ''; ?>>Chưa thanh toán</option>
-                                <option value="confirmed" <?php echo ($editBookingService && $editBookingService['status'] == 'confirm') ? 'selected' : ''; ?>>Đã thanh toán</option>
+                                <option value="confirmed" <?php echo ($editBookingService && $editBookingService['status'] == 'confirmed') ? 'selected' : ''; ?>>Đã thanh toán</option>
                                 <option value="cancelled" <?php echo ($editBookingService && $editBookingService['status'] == 'cancelled') ? 'selected' : ''; ?>>Đã hủy</option>
                             </select>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ghi Chú</label>
-                        <textarea class="form-control" rows="3">
-                            <?php echo $editBookingService ? h($editBookingService['notes']) : ''; ?>
-                        </textarea>
+                        <textarea class="form-control" name="note" rows="3"><?php echo $editBookingService ? h($editBookingService['notes']) : ''; ?></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn-primary-custom"
-                        name="<?php echo $editBookingService ? 'update_service_booking' : 'add_service_booking'; ?>">
+                        name="<?php echo $editBookingService ? 'update_service_booking' : 'add_booking_service'; ?>">
                         <?php echo $editBookingService ? 'Cập nhật' : 'Thêm'; ?> Booking dịch vụ
                     </button>
                 </div>
@@ -804,21 +846,125 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     </div>
 </div>
 
+<style>
+    /* Đảm bảo input Select2 có thể gõ được */
+    .select2-search__field {
+        width: 100% !important;
+        border: none !important;
+        outline: none !important;
+        padding: 5px !important;
+        margin: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .select2-search__field:focus {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+    }
+
+    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus {
+        border-color: #86b7fe !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+</style>
+
 <script>
     // Tự động mở modal edit khi có action=edit
     <?php if ($editBookingService): ?>
         document.addEventListener('DOMContentLoaded', function() {
             const modal = new bootstrap.Modal(document.getElementById('addServiceBookingModal'));
             modal.show();
+            // Khởi tạo lại Select2 sau khi modal mở hoàn toàn
+            const modalEl = document.getElementById('addServiceBookingModal');
+            modalEl.addEventListener('shown.bs.modal', function() {
+                setTimeout(initCustomerSelect2, 200);
+            }, {
+                once: true
+            });
         });
     <?php endif; ?>
 
-    // Tự động điền số điện thoại
-    document.getElementById('customerSelect')?.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        const phone = selectedOption.getAttribute('data-phone');
-        document.getElementById('customerPhone').value = phone || '';
+    // Khởi tạo lại Select2 khi modal mở
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('addServiceBookingModal');
+        if (modal) {
+            modal.addEventListener('shown.bs.modal', function() {
+                setTimeout(initCustomerSelect2, 200);
+            });
+        }
+
+        // Khởi tạo lần đầu nếu không trong modal
+        if (typeof jQuery !== 'undefined') {
+            jQuery(document).ready(function() {
+                setTimeout(initCustomerSelect2, 300);
+            });
+        }
     });
+
+    // Hàm khởi tạo Select2 cho customer
+    function initCustomerSelect2() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            return false;
+        }
+
+        const $customerSelect = jQuery('#customerSelect');
+        if (!$customerSelect.length) {
+            return false;
+        }
+
+        // Destroy nếu đã khởi tạo trước đó
+        if ($customerSelect.hasClass('select2-hidden-accessible')) {
+            $customerSelect.select2('destroy');
+        }
+
+        // Lấy modal để set dropdownParent
+        const $modal = jQuery('#addServiceBookingModal');
+        const dropdownParent = $modal.length ? $modal : jQuery('body');
+
+        $customerSelect.select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Chọn khách hàng --',
+            allowClear: true,
+            minimumInputLength: 0,
+            width: '100%',
+            dropdownParent: dropdownParent,
+            language: {
+                noResults: function() {
+                    return "Không tìm thấy khách hàng";
+                },
+                searching: function() {
+                    return "Đang tìm kiếm...";
+                }
+            }
+        });
+
+        // Tự động điền số điện thoại khi chọn khách hàng
+        $customerSelect.off('change.select2-customer').on('change.select2-customer', function() {
+            const selectedOption = jQuery(this).find('option:selected');
+            const phone = selectedOption.data('phone') || '';
+            jQuery('#customerPhone').val(phone);
+        });
+
+        // Đảm bảo input tìm kiếm có thể gõ được
+        $customerSelect.on('select2:open', function() {
+            setTimeout(function() {
+                const $searchField = jQuery('.select2-search__field');
+                $searchField.attr('placeholder', 'Gõ để tìm kiếm...');
+                $searchField.prop('readonly', false);
+                $searchField.prop('disabled', false);
+                $searchField.focus();
+            }, 100);
+        });
+
+        return true;
+    }
     // Tự động tính tổng tiền
     document.getElementById('serviceSelect')?.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
@@ -850,5 +996,4 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             form.submit();
         }
     }
-
 </script>

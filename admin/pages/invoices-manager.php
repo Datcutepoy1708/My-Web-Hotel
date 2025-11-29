@@ -1,4 +1,16 @@
 <?php
+// Phân quyền module Hóa Đơn
+$canViewInvoice   = function_exists('checkPermission') ? checkPermission('invoice.view')   : true;
+$canCreateInvoice = function_exists('checkPermission') ? checkPermission('invoice.create') : true;
+$canEditInvoice   = function_exists('checkPermission') ? checkPermission('invoice.edit')   : true;
+$canDeleteInvoice = function_exists('checkPermission') ? checkPermission('invoice.delete') : true;
+
+if (!$canViewInvoice) {
+    http_response_code(403);
+    echo '<div class="main-content"><div class="alert alert-danger m-4">Bạn không có quyền xem trang hóa đơn.</div></div>';
+    return;
+}
+
 // Xử lý CRUD trong invoice-manager
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
@@ -125,6 +137,26 @@ if ($action == 'edit' && isset($_GET['id'])) {
     $stmt->close();
 }
 
+// Lấy danh sách booking chưa có hóa đơn (chỉ booking phòng)
+$bookingsWithoutInvoice = [];
+$bookingsQuery = $mysqli->query("
+    SELECT b.booking_id, b.check_in_date, b.check_out_date, 
+           c.full_name, c.phone, c.email,
+           r.room_number, rt.room_type_name
+    FROM booking b
+    INNER JOIN customer c ON b.customer_id = c.customer_id
+    INNER JOIN room r ON b.room_id = r.room_id
+    INNER JOIN room_type rt ON r.room_type_id = rt.room_type_id
+    LEFT JOIN invoice i ON b.booking_id = i.booking_id AND i.deleted IS NULL
+    WHERE b.deleted IS NULL 
+    AND i.invoice_id IS NULL
+    AND b.status NOT IN ('Cancelled')
+    ORDER BY b.check_in_date DESC
+");
+if ($bookingsQuery) {
+    $bookingsWithoutInvoice = $bookingsQuery->fetch_all(MYSQLI_ASSOC);
+}
+
 // Phân trang và tìm kiếm
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
@@ -166,7 +198,11 @@ switch ($sort) {
 }
 
 // Đếm tổng số
-$countQuery = "SELECT COUNT(*) as total FROM invoice i LEFT JOIN booking b ON i.booking_id = b.booking_id $where";
+$countQuery = "SELECT COUNT(DISTINCT i.invoice_id) as total 
+    FROM invoice i 
+    LEFT JOIN booking b ON i.booking_id = b.booking_id
+    LEFT JOIN customer c ON i.customer_id = c.customer_id
+    $where";
 $countResult = $mysqli->query($countQuery);
 $total = 0;
 
@@ -182,11 +218,22 @@ if ($countResult) {
 // Lấy dữ liệu
 $invoices = [];
 if ($total > 0) {
-    $query = "SELECT i.*, b.booking_id, b.customer_id, c.full_name
+    // Lấy customer từ invoice.customer_id (vì invoice đã có customer_id)
+    // Và lấy thông tin booking_service qua invoice_service
+    $query = "SELECT i.*, 
+                i.booking_id,
+                b.booking_id as booking_exists,
+                c.full_name,
+                c.customer_id,
+                GROUP_CONCAT(DISTINCT bs.booking_service_id) as booking_service_ids,
+                COUNT(DISTINCT isv.booking_service_id) as service_count
         FROM invoice i 
         LEFT JOIN booking b ON i.booking_id = b.booking_id
-        LEFT JOIN customer c ON b.customer_id = c.customer_id
+        LEFT JOIN customer c ON i.customer_id = c.customer_id
+        LEFT JOIN invoice_service isv ON i.invoice_id = isv.invoice_id
+        LEFT JOIN booking_service bs ON isv.booking_service_id = bs.booking_service_id AND bs.deleted IS NULL
         $where 
+        GROUP BY i.invoice_id
         $orderBy 
         LIMIT $perPage OFFSET $offset";
 
@@ -289,8 +336,16 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                         <?php foreach ($invoices as $invoice): ?>
                             <tr data-invoice-id="<?php echo $invoice['invoice_id']; ?>">
                                 <td><?php echo $invoice['invoice_id']; ?></td>
-                                <td><?php echo $invoice['booking_id']; ?></td>
-                                <td><?php echo h($invoice['full_name']); ?></td>
+                                <td>
+                                    <?php 
+                                    if ($invoice['booking_id']) {
+                                        echo $invoice['booking_id'];
+                                    } else {
+                                        echo '<span class="text-muted">Service Only</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <td><?php echo h($invoice['full_name'] ?? 'N/A'); ?></td>
                                 <td><?php echo number_format($invoice['room_charge'], 0, ',', '.'); ?> VNĐ</td>
                                 <td><?php echo number_format($invoice['service_charge'], 0, ',', '.'); ?> VNĐ</td>
                                 <td><strong><?php echo number_format($invoice['total_amount'], 0, ',', '.'); ?> VNĐ</strong>
@@ -399,6 +454,9 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success" onclick="exportInvoiceToWord()">
+                        <i class="fas fa-file-word"></i> Xuất Word
+                    </button>
                     <button type="button" class="btn btn-primary" onclick="editInvoiceFromView()">
                         <i class="fas fa-edit"></i> Chỉnh Sửa
                     </button>
@@ -728,7 +786,22 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Booking ID *</label>
-                            <input type="number" class="form-control" id="booking_id" name="booking_id" required>
+                            <select class="form-select booking-search" id="booking_id" name="booking_id" required>
+                                <option value="">-- Chọn booking chưa có hóa đơn --</option>
+                                <?php foreach ($bookingsWithoutInvoice as $booking): ?>
+                                    <option value="<?php echo $booking['booking_id']; ?>"
+                                        data-customer-name="<?php echo h($booking['full_name']); ?>"
+                                        data-checkin="<?php echo $booking['check_in_date']; ?>"
+                                        data-checkout="<?php echo $booking['check_out_date']; ?>"
+                                        data-room="<?php echo h($booking['room_number']); ?>">
+                                        Booking #<?php echo $booking['booking_id']; ?> - 
+                                        <?php echo h($booking['full_name']); ?> - 
+                                        Phòng <?php echo h($booking['room_number']); ?> - 
+                                        <?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <small class="text-muted">Hoặc nhập Booking ID thủ công nếu không có trong danh sách</small>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Hình Thức Thanh Toán *</label>
@@ -995,49 +1068,73 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     }
 
     function viewInvoice(invoiceId) {
-        // Lấy dữ liệu từ bảng và đổ vào modal xem chi tiết
-        const row = document.querySelector(`tr[data-invoice-id="${invoiceId}"]`);
-
-        if (!row) {
-            console.error("Không tìm thấy hóa đơn:", invoiceId);
-            return;
-        }
-
-        // Lấy dữ liệu từ các cell của hàng
-        const invoiceId_val = row.cells[0]?.textContent || "-";
-        const bookingId = row.cells[1]?.textContent || "-";
-        const customerName = row.cells[2]?.textContent || "-";
-        const roomCharge = row.cells[3]?.textContent || "0 VNĐ";
-        const serviceCharge = row.cells[4]?.textContent || "0 VNĐ";
-        const totalAmount = row.cells[5]?.textContent || "0 VNĐ";
-        const paymentMethod = row.cells[6]?.textContent || "-";
-        const status = row.cells[7]?.textContent || "-";
-
-        // Set text fields trong modal
-        const viewInvoiceIdEl = document.getElementById("viewInvoiceId");
-        const viewBookingIdEl = document.getElementById("viewBookingId");
-        const viewCustomerNameEl = document.getElementById("viewCustomerName");
-
-        const viewRoomChargeEl = document.getElementById("viewRoomCharge");
-        const viewServiceChargeEl = document.getElementById("viewServiceCharge");
-        const viewTotalAmountEl = document.getElementById("viewTotalAmount");
-        const viewPaymentMethodEl = document.getElementById("viewPaymentMethod");
-        const viewStatusEl = document.getElementById("viewStatus");
-
-        if (viewInvoiceIdEl) viewInvoiceIdEl.textContent = invoiceId_val || "Chưa có mã";
-        if (viewBookingIdEl) viewBookingIdEl.textContent = bookingId || "-";
-        if (viewCustomerNameEl) viewCustomerNameEl.textContent = customerName || "-";
-        if (viewRoomChargeEl) viewRoomChargeEl.textContent = roomCharge || "0 VNĐ";
-        if (viewServiceChargeEl) viewServiceChargeEl.textContent = serviceCharge || "0 VNĐ";
-        if (viewTotalAmountEl) viewTotalAmountEl.textContent = totalAmount || "0 VNĐ";
-        if (viewPaymentMethodEl) viewPaymentMethodEl.textContent = paymentMethod || "-";
-        if (viewStatusEl) viewStatusEl.textContent = status || "-";
-
-        // Show modal
-        const viewModal = new bootstrap.Modal(
-            document.getElementById("viewInvoiceModal")
-        );
-        viewModal.show();
+        // Lấy dữ liệu từ database qua AJAX
+        fetch(`api/invoice-api.php?action=get_invoice&id=${invoiceId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.invoice) {
+                    const inv = data.invoice;
+                    
+                    // Format số tiền
+                    const formatMoney = (amount) => {
+                        return new Intl.NumberFormat('vi-VN').format(amount || 0) + ' VNĐ';
+                    };
+                    
+                    // Format ngày
+                    const formatDate = (dateStr) => {
+                        if (!dateStr || dateStr === '0000-00-00 00:00:00') return '-';
+                        const date = new Date(dateStr);
+                        return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+                    };
+                    
+                    // Format trạng thái
+                    const formatStatus = (status) => {
+                        const statusMap = {
+                            'Paid': 'Đã thanh toán',
+                            'Unpaid': 'Chưa thanh toán',
+                            'Partial': 'Thanh toán một phần'
+                        };
+                        return statusMap[status] || status;
+                    };
+                    
+                    // Set text fields trong modal
+                    const setElement = (id, value) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = value;
+                    };
+                    
+                    setElement('viewInvoiceId', inv.invoice_id || '-');
+                    setElement('viewBookingId', inv.booking_id || '-');
+                    setElement('viewCustomerName', inv.full_name || '-');
+                    setElement('viewRoomCharge', formatMoney(inv.room_charge));
+                    setElement('viewServiceCharge', formatMoney(inv.service_charge));
+                    setElement('viewVat', formatMoney(inv.vat));
+                    setElement('viewOtherFees', formatMoney(inv.other_fees));
+                    setElement('viewTotalAmount', formatMoney(inv.total_amount));
+                    setElement('viewPaymentMethod', inv.payment_method || '-');
+                    setElement('viewStatus', formatStatus(inv.status));
+                    setElement('viewCreatedAt', formatDate(inv.created_at));
+                    setElement('viewPaymentTime', inv.payment_time ? formatDate(inv.payment_time) : '-');
+                    
+                    const noteEl = document.getElementById('viewNote');
+                    if (noteEl) noteEl.textContent = inv.note || '-';
+                    
+                    // Lưu invoice data để xuất Word
+                    window.currentInvoiceData = inv;
+                    
+                    // Show modal
+                    const viewModal = new bootstrap.Modal(
+                        document.getElementById("viewInvoiceModal")
+                    );
+                    viewModal.show();
+                } else {
+                    alert('Không tìm thấy thông tin hóa đơn');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Lỗi khi tải thông tin hóa đơn');
+            });
     }
 
     function saveInvoice() {
@@ -1057,6 +1154,17 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         viewModal.hide();
         editInvoice(invoiceId);
     }
+    
+    function exportInvoiceToWord() {
+        const invoiceId = document.getElementById("viewInvoiceId").textContent;
+        if (!invoiceId || invoiceId === '-') {
+            alert('Không tìm thấy mã hóa đơn');
+            return;
+        }
+        
+        // Mở link xuất Word trong tab mới
+        window.open(`api/export-invoice.php?id=${invoiceId}`, '_blank');
+    }
 
     function resetInvoiceForm() {
         const form = document.getElementById("invoiceForm");
@@ -1066,8 +1174,80 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             document.getElementById("modalTitle").textContent = 'Thêm Hóa Đơn';
             document.getElementById("submitBtn").textContent = 'Thêm Hóa Đơn';
             document.getElementById("submitBtn").name = 'add_invoice';
+            // Reset Select2
+            if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+                jQuery('#booking_id').val(null).trigger('change');
+            }
         }
     }
+    
+    // Hàm khởi tạo Select2 cho booking
+    function initBookingSelect2() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            return false;
+        }
+        
+        const $bookingSelect = jQuery('#booking_id');
+        if (!$bookingSelect.length) {
+            return false;
+        }
+        
+        // Destroy nếu đã khởi tạo trước đó
+        if ($bookingSelect.hasClass('select2-hidden-accessible')) {
+            $bookingSelect.select2('destroy');
+        }
+        
+        // Lấy modal để set dropdownParent
+        const $modal = jQuery('#addInvoiceModal');
+        const dropdownParent = $modal.length ? $modal : jQuery('body');
+        
+        $bookingSelect.select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Chọn booking chưa có hóa đơn --',
+            allowClear: true,
+            minimumInputLength: 0,
+            width: '100%',
+            dropdownParent: dropdownParent,
+            language: {
+                noResults: function() {
+                    return "Không tìm thấy booking";
+                },
+                searching: function() {
+                    return "Đang tìm kiếm...";
+                }
+            }
+        });
+        
+        // Đảm bảo input tìm kiếm có thể gõ được
+        $bookingSelect.on('select2:open', function() {
+            setTimeout(function() {
+                const $searchField = jQuery('.select2-search__field');
+                $searchField.attr('placeholder', 'Gõ để tìm kiếm...');
+                $searchField.prop('readonly', false);
+                $searchField.prop('disabled', false);
+                $searchField.focus();
+            }, 100);
+        });
+        
+        return true;
+    }
+    
+    // Khởi tạo lại Select2 khi modal mở
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('addInvoiceModal');
+        if (modal) {
+            modal.addEventListener('shown.bs.modal', function() {
+                setTimeout(initBookingSelect2, 200);
+            });
+        }
+        
+        // Khởi tạo lần đầu nếu không trong modal
+        if (typeof jQuery !== 'undefined') {
+            jQuery(document).ready(function() {
+                setTimeout(initBookingSelect2, 300);
+            });
+        }
+    });
 
     // Search and filter functionality
     if (document.getElementById("searchInput")) {

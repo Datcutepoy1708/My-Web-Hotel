@@ -1,6 +1,7 @@
 <?php
 session_start();
 require 'includes/connect.php';
+require 'includes/auth.php'; // Kiểm tra đăng nhập
 $pageName = isset($_GET['page']) ? trim($_GET['page']) : 'home';
 include 'includes/header.php';
 include 'includes/sidebar.php';
@@ -12,14 +13,23 @@ $allowed = [
     'booking-manager' => 'pages/booking-manager.php',
     'customers-manager' => 'pages/customers-manager.php',
     'staff-manager' => 'pages/staff-manager.php',
+    'task-manager' => 'pages/task-manager.php',
+    'permission-manager' => 'pages/permission-manager.php',
     'reports-manager' => 'pages/reports-manager.php',
     'blogs-manager' => 'pages/blogs-manager.php',
+    'profile' => 'pages/profile.php',
+    'logout'=>'pages/logout.php',
+    'my-tasks' => 'pages/my-tasks.php',
 ];
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'home';
 if (isset($allowed[$pageName])) {
-    include $allowed[$pageName];
+    if (function_exists('canAccessSection') && !canAccessSection($pageName)) {
+        include 'pages/403.php';
+    } else {
+        include $allowed[$pageName];
+    }
 } else {
     include 'pages/404.php';
-}  
+}
 include 'includes/footer.php';
 ?>

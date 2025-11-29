@@ -1,4 +1,16 @@
 <?php
+// Kiểm tra quyền module Khách Hàng
+$canViewCustomers   = function_exists('checkPermission') ? checkPermission('customer.view')   : true;
+$canCreateCustomers = function_exists('checkPermission') ? checkPermission('customer.create') : true;
+$canEditCustomers   = function_exists('checkPermission') ? checkPermission('customer.edit')   : true;
+$canDeleteCustomers = function_exists('checkPermission') ? checkPermission('customer.delete') : true;
+
+if (!$canViewCustomers) {
+    http_response_code(403);
+    echo '<div class="main-content"><div class="alert alert-danger m-4">Bạn không có quyền truy cập trang khách hàng.</div></div>';
+    return;
+}
+
 // Xử lý CRUD
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
@@ -6,6 +18,10 @@ $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_customer'])) {
+        if (!$canCreateCustomers) {
+            $message = 'Bạn không có quyền thêm khách hàng.';
+            $messageType = 'danger';
+        } else {
         $full_name = trim($_POST['full_name']);
         $email = trim($_POST['email']);
         $phone = trim($_POST['phone']);
@@ -30,9 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
         $stmt->close();
+        }
     }
 
     if (isset($_POST['update_customer'])) {
+        if (!$canEditCustomers) {
+            $message = 'Bạn không có quyền chỉnh sửa khách hàng.';
+            $messageType = 'danger';
+        } else {
         $customer_id = intval($_POST['customer_id']);
         $full_name = trim($_POST['full_name']);
         $email = trim($_POST['email']);
@@ -64,9 +85,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
         $stmt->close();
+        }
     }
 
     if (isset($_POST['delete_customer'])) {
+        if (!$canDeleteCustomers) {
+            $message = 'Bạn không có quyền xóa khách hàng.';
+            $messageType = 'danger';
+        } else {
         $customer_id = intval($_POST['customer_id']);
         $stmt = $mysqli->prepare("UPDATE customer SET deleted = NOW() WHERE customer_id = ?");
         $stmt->bind_param("i", $customer_id);
@@ -79,19 +105,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
         $stmt->close();
+        }
     }
 }
 
 // Lấy thông tin khách hàng để edit
 $editCustomer = null;
 if ($action == 'edit' && isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-    $stmt = $mysqli->prepare("SELECT * FROM customer WHERE customer_id = ? AND deleted IS NULL");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $editCustomer = $result->fetch_assoc();
-    $stmt->close();
+    if (!$canEditCustomers) {
+        $message = 'Bạn không có quyền chỉnh sửa khách hàng.';
+        $messageType = 'danger';
+        $action = '';
+    } else {
+        $id = intval($_GET['id']);
+        $stmt = $mysqli->prepare("SELECT * FROM customer WHERE customer_id = ? AND deleted IS NULL");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $editCustomer = $result->fetch_assoc();
+        $stmt->close();
+    }
 }
 
 // Phân trang và tìm kiếm
@@ -185,6 +218,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Khách Hàng</h1>
+        <?php if ($canCreateCustomers): ?>
         <div class="row m-3">
             <div class="col-md-12">
                 <button class="btn-add" data-bs-toggle="modal" data-bs-target="#addCustomerModal" onclick="resetForm()">
@@ -192,6 +226,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 </button>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <?php if ($message): ?>
@@ -288,22 +323,29 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                 </span>
                             </td>
                             <td>
+                                <?php if ($canViewCustomers): ?>
                                 <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
                                     data-bs-target="#viewCustomerModal<?php echo $customer['customer_id']; ?>"
                                     title="Xem chi tiết">
                                     <i class="fas fa-eye"></i>
                                 </button>
+                                <?php endif; ?>
+                                <?php if ($canEditCustomers): ?>
                                 <button class="btn btn-sm btn-outline-warning"
                                     onclick="editCustomer(<?php echo $customer['customer_id']; ?>)" title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </button>
+                                <?php endif; ?>
+                                <?php if ($canDeleteCustomers): ?>
                                 <button class="btn btn-sm btn-outline-danger"
                                     onclick="deleteCustomer(<?php echo $customer['customer_id']; ?>)" title="Xóa">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
 
+                        <?php if ($canViewCustomers): ?>
                         <!-- View Modal for each customer -->
                         <div class="modal fade" id="viewCustomerModal<?php echo $customer['customer_id']; ?>" tabindex="-1">
                             <div class="modal-dialog modal-lg">
@@ -358,6 +400,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                 </div>
                             </div>
                         </div>
+                        <?php endif; ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
@@ -367,6 +410,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     <!-- Pagination -->
     <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
 
+    <?php if ($canCreateCustomers || $canEditCustomers): ?>
     <!-- Modal: Thêm/Sửa khách hàng -->
     <div class="modal fade" id="addCustomerModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -455,9 +499,11 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <script>
+    <?php if ($canCreateCustomers || $canEditCustomers): ?>
     function resetForm() {
         document.getElementById('customerForm').reset();
         document.getElementById('customer_id').value = '';
@@ -472,7 +518,16 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     function editCustomer(id) {
         window.location.href = 'index.php?page=customers-manager&action=edit&id=' + id;
     }
+    <?php else: ?>
+    function resetForm() {
+        alert('Bạn không có quyền thêm khách hàng.');
+    }
+    function editCustomer() {
+        alert('Bạn không có quyền chỉnh sửa khách hàng.');
+    }
+    <?php endif; ?>
 
+    <?php if ($canDeleteCustomers): ?>
     function deleteCustomer(id) {
         if (confirm('Bạn có chắc chắn muốn xóa khách hàng này?')) {
             const form = document.createElement('form');
@@ -483,8 +538,13 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             form.submit();
         }
     }
+    <?php else: ?>
+    function deleteCustomer() {
+        alert('Bạn không có quyền xóa khách hàng.');
+    }
+    <?php endif; ?>
 
-    <?php if ($editCustomer): ?>
+    <?php if ($editCustomer && $canEditCustomers): ?>
         document.addEventListener('DOMContentLoaded', function() {
             // Điền dữ liệu vào form
             document.getElementById('customer_id').value = '<?php echo $editCustomer['customer_id']; ?>';

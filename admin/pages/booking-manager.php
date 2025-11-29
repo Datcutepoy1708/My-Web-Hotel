@@ -1,3 +1,12 @@
+<?php
+$canViewBooking = function_exists('checkPermission') ? checkPermission('booking.view') : true;
+
+if (!$canViewBooking) {
+    http_response_code(403);
+    echo '<div class="main-content"><div class="alert alert-danger m-4">Bạn không có quyền xem trang booking.</div></div>';
+    return;
+}
+?>
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Booking</h1>

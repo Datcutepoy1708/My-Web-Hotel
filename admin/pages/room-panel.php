@@ -1,4 +1,16 @@
 <?php
+// Phân quyền
+$canViewRoom = function_exists('checkPermission') ? checkPermission('room.view') : true;
+$canCreateRoom = function_exists('checkPermission') ? checkPermission('room.create') : true;
+$canEditRoom = function_exists('checkPermission') ? checkPermission('room.edit') : true;
+$canDeleteRoom = function_exists('checkPermission') ? checkPermission('room.delete') : true;
+
+if (!$canViewRoom) {
+    http_response_code(403);
+    echo '<div class="alert alert-danger m-4">Bạn không có quyền xem phòng.</div>';
+    return;
+}
+
 // Build base URL for pagination
 $baseUrl = "index.php?page=room-manager&panel=room-panel";
 if ($search) $baseUrl .= "&search=" . urlencode($search);
@@ -8,9 +20,11 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Phòng</h3>
+        <?php if ($canCreateRoom): ?>
         <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomModal">
             <i class="fas fa-plus"></i> Thêm Phòng
         </button>
+        <?php endif; ?>
     </div>
     <div class="filter-section">
         <form method="GET" action="">
@@ -159,14 +173,18 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                             data-bs-target="#viewRoomModal<?php echo $room['room_id']; ?>" title="Xem chi tiết">
                             <i class="fas fa-eye"></i>
                         </button>
+                        <?php if ($canEditRoom): ?>
                         <button class="btn btn-sm btn-outline-warning"
                             onclick="editRoom(<?php echo $room['room_id']; ?>)" title="Sửa">
                             <i class="fas fa-edit"></i>
                         </button>
+                        <?php endif; ?>
+                        <?php if ($canDeleteRoom): ?>
                         <button class="btn btn-sm btn-outline-danger"
                             onclick="deleteRoom(<?php echo $room['room_id']; ?>)" title="Xóa">
                             <i class="fas fa-trash"></i>
                         </button>
+                        <?php endif; ?>
                     </td>
                 </tr>
 
@@ -215,10 +233,12 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                <?php if ($canEditRoom): ?>
                                 <button type="button" class="btn btn-primary"
                                     onclick="editRoomFromView(<?php echo $room['room_id']; ?>)">
                                     Chỉnh Sửa
                                 </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

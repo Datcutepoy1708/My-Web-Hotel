@@ -1,4 +1,16 @@
 <?php
+// Phân quyền module Phòng
+$canViewRoom   = function_exists('checkPermission') ? checkPermission('room.view')   : true;
+$canCreateRoom = function_exists('checkPermission') ? checkPermission('room.create') : true;
+$canEditRoom   = function_exists('checkPermission') ? checkPermission('room.edit')   : true;
+$canDeleteRoom = function_exists('checkPermission') ? checkPermission('room.delete') : true;
+
+if (!$canViewRoom) {
+    http_response_code(403);
+    echo '<div class="main-content"><div class="alert alert-danger m-4">Bạn không có quyền xem trang phòng.</div></div>';
+    return;
+}
+
 // Xử lý CRUD
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';

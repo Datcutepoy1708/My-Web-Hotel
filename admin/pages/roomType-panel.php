@@ -1,6 +1,45 @@
 <?php
+// Phân quyền riêng cho loại phòng
+$canViewRoomType = function_exists('checkPermission') ? (checkPermission('roomType.view') || checkPermission('room.view')) : true;
+$canCreateRoomType = function_exists('checkPermission') ? (checkPermission('roomType.create') || checkPermission('room.create')) : true;
+$canEditRoomType = function_exists('checkPermission') ? (checkPermission('roomType.edit') || checkPermission('room.edit')) : true;
+$canDeleteRoomType = function_exists('checkPermission') ? (checkPermission('roomType.delete') || checkPermission('room.delete')) : true;
+
+if (!$canViewRoomType) {
+    http_response_code(403);
+    echo '<div class="alert alert-danger m-4">Bạn không có quyền xem loại phòng.</div>';
+    return;
+}
+
+// Xử lý CRUD
+$action = isset($_GET['action']) ? $_GET['action'] : '';
+$message = '';
+$messageType = '';
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['update_room_type'])) {
+    if (isset($_POST['add_room_type']) && $canCreateRoomType) {
+        $room_type_name = trim($_POST['room_type_name']);
+        $description = trim($_POST['description'] ?? '');
+        $base_price = floatval($_POST['base_price']);
+        $capacity = intval($_POST['capacity']);
+        $amenities = trim($_POST['amenities'] ?? '');
+        $area = floatval($_POST['area'] ?? 0);
+        $status = $_POST['status'] ?? 'active';
+
+        $stmt = $mysqli->prepare("INSERT INTO room_type (room_type_name, description, base_price, capacity, status, amenities, area) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssdissd", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area);
+
+        if ($stmt->execute()) {
+            $message = 'Thêm loại phòng thành công!';
+            $messageType = 'success';
+        } else {
+            $message = 'Lỗi: ' . $stmt->error;
+            $messageType = 'danger';
+        }
+        $stmt->close();
+    }
+    
+    if (isset($_POST['update_room_type']) && $canEditRoomType) {
         $room_type_id = intval($_POST['room_type_id']);
         $room_type_name = trim($_POST['room_type_name']);
         $description = trim($_POST['description'] ?? '');
@@ -10,30 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $area = floatval($_POST['area'] ?? 0);
         $status = $_POST['status'] ?? 'active';
 
-        // Sửa lại câu UPDATE
         $stmt = $mysqli->prepare("UPDATE room_type 
-                              SET room_type_name=?, 
-                                  description=?, 
-                                  base_price=?, 
-                                  capacity=?, 
-                                  status=?, 
-                                  amenities=?, 
-                                  area=? 
-                              WHERE room_type_id=? 
-                              AND deleted IS NULL");
-
-        // Đúng thứ tự: s s d i s s d i (8 tham số)
-        $stmt->bind_param(
-            "ssdissdi",
-            $room_type_name,    // s - string
-            $description,       // s - string
-            $base_price,        // d - double
-            $capacity,          // i - integer
-            $status,            // s - string
-            $amenities,         // s - string
-            $area,              // d - double
-            $room_type_id       // i - integer (WHERE clause)
-        );
+                                  SET room_type_name=?, 
+                                      description=?, 
+                                      base_price=?, 
+                                      capacity=?, 
+                                      status=?, 
+                                      amenities=?, 
+                                      area=? 
+                                  WHERE room_type_id=? 
+                                  AND deleted IS NULL");
+        $stmt->bind_param("ssdissdi", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area, $room_type_id);
 
         if ($stmt->execute()) {
             $message = 'Cập nhật loại phòng thành công!';
@@ -44,12 +70,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    if (isset($_POST['delete_room_type'])) {
+    
+    if (isset($_POST['delete_room_type']) && $canDeleteRoomType) {
         $room_type_id = intval($_POST['room_type_id']);
-        $stmt = $mysqli->prepare("UPDATE room_type SET deleted=NOW() WHERE room_type_id=?");
+        $stmt = $mysqli->prepare("UPDATE room_type SET deleted = NOW() WHERE room_type_id = ?");
         $stmt->bind_param("i", $room_type_id);
+        
         if ($stmt->execute()) {
-            $message = 'Xóa  loại phòng thành công';
+            $message = 'Xóa loại phòng thành công!';
             $messageType = 'success';
         } else {
             $message = 'Lỗi: ' . $stmt->error;
@@ -58,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt->close();
     }
 }
-// Lấy ra thông tin loại phòng để edit
+
+// Lấy thông tin loại phòng để edit
 $editRoomTypes = null;
 if ($action == 'edit' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
@@ -70,25 +99,106 @@ if ($action == 'edit' && isset($_GET['id'])) {
     $stmt->close();
 }
 
+// Phân trang và filter
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
+$sort = isset($_GET['sort']) ? trim($_GET['sort']) : '';
+$pageNum = isset($_GET['pageNum']) ? intval($_GET['pageNum']) : 1;
+$pageNum = max(1, $pageNum);
+$perPage = 10;
+$offset = ($pageNum - 1) * $perPage;
 
+// Xây dựng query
+$where = "WHERE rt.deleted IS NULL";
+$params = [];
+$types = '';
+
+if ($search) {
+    $where .= " AND (rt.room_type_name LIKE ? OR rt.description LIKE ? OR rt.amenities LIKE ?)";
+    $searchParam = "%$search%";
+    $params = array_merge($params, [$searchParam, $searchParam, $searchParam]);
+    $types .= 'sss';
+}
+
+if ($status_filter) {
+    $where .= " AND rt.status = ?";
+    $params[] = $status_filter;
+    $types .= 's';
+}
+
+// Order by
+$orderBy = "ORDER BY rt.room_type_id DESC";
+if ($sort == 'area_asc') {
+    $orderBy = "ORDER BY rt.area ASC";
+} elseif ($sort == 'area_desc') {
+    $orderBy = "ORDER BY rt.area DESC";
+}
+
+// Đếm tổng số
+$countQuery = "SELECT COUNT(*) as total FROM room_type rt $where";
+$countStmt = $mysqli->prepare($countQuery);
+if (!empty($params)) {
+    $countStmt->bind_param($types, ...$params);
+}
+$countStmt->execute();
+$totalResult = $countStmt->get_result();
+$totalRoomTypes = $totalResult->fetch_assoc()['total'];
+$countStmt->close();
+
+// Lấy dữ liệu
+$roomTypesAll = [];
+if ($totalRoomTypes > 0) {
+    $query = "SELECT rt.*, COUNT(r.room_id) as room_count
+              FROM room_type rt
+              LEFT JOIN room r ON rt.room_type_id = r.room_type_id AND r.deleted IS NULL
+              $where
+              GROUP BY rt.room_type_id
+              $orderBy
+              LIMIT ? OFFSET ?";
+    
+    $params[] = $perPage;
+    $params[] = $offset;
+    $types .= 'ii';
+    
+    $stmt = $mysqli->prepare($query);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $roomTypesAll = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+}
 
 // Build base URL for pagination
 $baseUrl = "index.php?page=room-manager&panel=roomType-panel";
 if ($search) $baseUrl .= "&search=" . urlencode($search);
 if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
-if ($type_filter) $baseUrl .= "&type=" . $type_filter;
+if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 ?>
+
+<?php if ($message): ?>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Loại Phòng</h3>
+        <?php if ($canCreateRoomType): ?>
         <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
             <i class="fas fa-plus"></i> Thêm Loại Phòng
         </button>
+        <?php endif; ?>
     </div>
+    
     <div class="filter-section">
         <form method="GET" action="">
             <input type="hidden" name="page" value="room-manager">
-            <div class="row">
+            <input type="hidden" name="panel" value="roomType-panel">
+            <div class="row g-3">
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
@@ -98,16 +208,16 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 <div class="col-md-3">
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="">Đang Hoạt Động</option>
-                        <option value="">Đang bảo trì</option>
-                        <option value="">Dừng Hoạt Động</option>
+                        <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang Hoạt Động</option>
+                        <option value="maintenance" <?php echo $status_filter == 'maintenance' ? 'selected' : ''; ?>>Đang bảo trì</option>
+                        <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>Dừng Hoạt Động</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="sort">
-                        <option value="0">Tất cả</option>
-                        <option value="0">Diện Tích Tăng Dần</option>
-                        <option value="0">Diện tích Giảm Dần</option>
+                        <option value="">Sắp xếp mặc định</option>
+                        <option value="area_asc" <?php echo $sort == 'area_asc' ? 'selected' : ''; ?>>Diện Tích Tăng Dần</option>
+                        <option value="area_desc" <?php echo $sort == 'area_desc' ? 'selected' : ''; ?>>Diện tích Giảm Dần</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -116,6 +226,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             </div>
         </form>
     </div>
+    
     <!-- Bảng danh sách loại phòng -->
     <div class="table-container">
         <table class="table table-hover" id="roomsTable">
@@ -123,9 +234,11 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 <tr>
                     <th>ID</th>
                     <th>Tên Loại</th>
+                    <th>Giá/Đêm</th>
                     <th>Diện Tích</th>
-                    <th>Tiện nghi</th>
-                    <th>Sức chứa</th>
+                    <th>Sức Chứa</th>
+                    <th>Tiện Nghi</th>
+                    <th>Số Phòng</th>
                     <th>Trạng Thái</th>
                     <th>Hành Động</th>
                 </tr>
@@ -139,10 +252,12 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                     <?php foreach ($roomTypesAll as $rt): ?>
                         <tr>
                             <td><?php echo $rt['room_type_id']; ?></td>
-                            <td><?php echo $rt['room_type_name']; ?></td>
-                            <td><?php echo floatval($rt['area']) . ' m²'; ?></td>
-                            <td><?php echo $rt['amenities']; ?></td>
-                            <td><?php echo $rt['capacity']; ?></td>
+                            <td><strong><?php echo h($rt['room_type_name']); ?></strong></td>
+                            <td><?php echo formatCurrency($rt['base_price'] ?? 0); ?></td>
+                            <td><?php echo $rt['area'] ? number_format($rt['area'], 1) . ' m²' : '-'; ?></td>
+                            <td><?php echo $rt['capacity'] ?? '-'; ?> người</td>
+                            <td><?php echo h($rt['amenities'] ?? '-'); ?></td>
+                            <td><span class="badge bg-info"><?php echo $rt['room_count'] ?? 0; ?></span></td>
                             <td>
                                 <?php
                                 $statusClass = 'bg-secondary';
@@ -152,7 +267,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                         $statusClass = 'bg-success';
                                         $statusText = 'Đang hoạt động';
                                         break;
-                                    case 'mantainance':
+                                    case 'maintenance':
                                         $statusClass = 'bg-warning';
                                         $statusText = 'Đang bảo trì';
                                         break;
@@ -169,14 +284,18 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                     data-bs-target="#viewRoomTypeModal<?php echo $rt['room_type_id']; ?>" title="Xem chi tiết">
                                     <i class="fas fa-eye"></i>
                                 </button>
+                                <?php if ($canEditRoomType): ?>
                                 <button class="btn btn-sm btn-outline-warning"
                                     onclick="editRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Sửa">
                                     <i class="fas fa-edit"></i>
                                 </button>
+                                <?php endif; ?>
+                                <?php if ($canDeleteRoomType): ?>
                                 <button class="btn btn-sm btn-outline-danger"
                                     onclick="deleteRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Xóa">
                                     <i class="fas fa-trash"></i>
                                 </button>
+                                <?php endif; ?>
                             </td>
                         </tr>
 
@@ -191,43 +310,36 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                     <div class="modal-body">
                                         <div class="row g-3">
                                             <div class="col-md-6">
-                                                <?php if ($rt['image']): ?>
+                                                <?php if (!empty($rt['image'])): ?>
                                                     <img src="<?php echo h($rt['image']); ?>" class="img-fluid rounded"
-                                                        alt="Room Image">
+                                                        alt="Room Type Image">
                                                 <?php else: ?>
                                                     <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
-                                                        alt="Room Image">
+                                                        alt="Room Type Image">
                                                 <?php endif; ?>
                                             </div>
                                             <div class="col-md-6">
-                                                <p><strong>Tên loại phòng:</strong>
-                                                    <?php echo h($rt['room_type_name'] ?? '-'); ?></p>
-                                                <p><strong>Mô tả:</strong> <?php echo $rt['description']; ?></p>
-                                                <p><strong>Giá/đêm:</strong>
-                                                    <?php echo formatCurrency($rt['base_price'] ?? 0); ?></p>
-                                                <p><strong>Diện tích:</strong>
-                                                    <?php echo $rt['area'] ? $rt['area'] . 'm²' : '-'; ?></p>
-                                                <p><strong>Sức chứa:</strong>
-                                                    <?php echo $rt['capacity'] ?? '-'; ?>
-                                                    người
-                                                </p>
-                                                <p><strong>Trạng thái:</strong>
-                                                    <span
-                                                        class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                                                </p>
+                                                <p><strong>Tên loại phòng:</strong> <?php echo h($rt['room_type_name'] ?? '-'); ?></p>
+                                                <p><strong>Mô tả:</strong> <?php echo nl2br(h($rt['description'] ?? '-')); ?></p>
+                                                <p><strong>Giá/đêm:</strong> <?php echo formatCurrency($rt['base_price'] ?? 0); ?></p>
+                                                <p><strong>Diện tích:</strong> <?php echo $rt['area'] ? number_format($rt['area'], 1) . 'm²' : '-'; ?></p>
+                                                <p><strong>Sức chứa:</strong> <?php echo $rt['capacity'] ?? '-'; ?> người</p>
+                                                <p><strong>Số phòng:</strong> <span class="badge bg-info"><?php echo $rt['room_count'] ?? 0; ?></span></p>
+                                                <p><strong>Trạng thái:</strong> <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span></p>
                                                 <?php if ($rt['amenities']): ?>
-                                                    <p><strong>Tiện nghi:</strong> <?php echo h($rt['amenities']); ?>
-                                                    </p>
+                                                    <p><strong>Tiện nghi:</strong> <?php echo h($rt['amenities']); ?></p>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                        <?php if ($canEditRoomType): ?>
                                         <button type="button" class="btn btn-primary"
                                             onclick="editRoomTypeFromView(<?php echo $rt['room_type_id']; ?>)">
                                             Chỉnh Sửa
                                         </button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -237,10 +349,12 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             </tbody>
         </table>
     </div>
+    
     <!-- Pagination -->
     <?php echo getPagination($totalRoomTypes, $perPage, $pageNum, $baseUrl); ?>
 </div>
-<!-- Modal Thêm Loại Phòng -->
+
+<!-- Modal Thêm/Sửa Loại Phòng -->
 <div class="modal fade" id="addRoomTypeModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -256,64 +370,66 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 
                     <div class="mb-3">
                         <label class="form-label">Tên loại phòng *</label>
-                        <input type="text" class="form-control" name="room_type_name" required value="<?php echo $editRoomTypes['room_type_name']; ?>">
+                        <input type="text" class="form-control" name="room_type_name" required 
+                            value="<?php echo h($editRoomTypes['room_type_name'] ?? ''); ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
-                        <textarea class="form-control" name="description" rows="3">
-                            <?php echo $editRoomTypes['description']; ?>
-                        </textarea>
+                        <textarea class="form-control" name="description" rows="3"><?php echo h($editRoomTypes['description'] ?? ''); ?></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Giá cơ bản (VNĐ) *</label>
-                            <input type="number" class="form-control" name="base_price" step="0.01" required value="<?php echo h($editRoomTypes['base_price']); ?>">
+                            <input type="number" class="form-control" name="base_price" step="0.01" required 
+                                value="<?php echo h($editRoomTypes['base_price'] ?? ''); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Sức chứa (người) *</label>
-                            <input type="number" class="form-control" name="capacity" required value="<?php echo h($editRoomTypes['capacity']); ?>">
+                            <input type="number" class="form-control" name="capacity" required 
+                                value="<?php echo h($editRoomTypes['capacity'] ?? ''); ?>">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Diện tích (m²)</label>
-                            <input type="number" class="form-control" name="area" step="0.01" value="<?php echo h($editRoomTypes['area']); ?>">
+                            <input type="number" class="form-control" name="area" step="0.01" 
+                                value="<?php echo h($editRoomTypes['area'] ?? ''); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tiện nghi</label>
                             <input type="text" class="form-control" name="amenities"
-                                placeholder="VD: WiFi, TV, Điều hòa..." value="<?php echo $editRoomTypes['amenities']; ?>">
-
+                                placeholder="VD: WiFi, TV, Điều hòa..." 
+                                value="<?php echo h($editRoomTypes['amenities'] ?? ''); ?>">
                         </div>
                     </div>
-                    <div class="col-md-6 mb-3">
+                    <div class="mb-3">
                         <label class="form-label">Trạng thái *</label>
                         <select class="form-select" name="status" required>
                             <option value="active" <?php echo ($editRoomTypes['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>
                                 Đang hoạt động</option>
-                            <option value="inactive" <?php echo ($editRoomTypes['status'] ?? 'inactive') == 'inactive' ? 'selected' : ''; ?>>Dừng hoạt động
-                            </option>
-                            <option value="maintenance" value="inactive" <?php echo ($editRoomTypes['status'] ?? 'maintainance') == 'maintainance' ? 'selected' : ''; ?>>
-                                Bảo
-                                trì</option>
+                            <option value="inactive" <?php echo ($editRoomTypes['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>
+                                Dừng hoạt động</option>
+                            <option value="maintenance" <?php echo ($editRoomTypes['status'] ?? '') == 'maintenance' ? 'selected' : ''; ?>>
+                                Bảo trì</option>
                         </select>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary"
-                        name="<?php echo $editRoom ? 'update_room_type' : 'add_room_type'; ?>">
-                        <?php echo $editRoom ? 'Cập nhật' : 'Thêm'; ?> Phòng
+                    <button type="submit" class="btn btn-primary" name="<?php echo $editRoomTypes ? 'update_room_type' : 'add_room_type'; ?>">
+                        <?php echo $editRoomTypes ? 'Cập nhật' : 'Thêm'; ?> Loại Phòng
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 <script>
     function editRoomTypes(id) {
         window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
     }
+    
     <?php if ($editRoomTypes): ?>
         document.addEventListener('DOMContentLoaded', function() {
             const modal = new bootstrap.Modal(document.getElementById('addRoomTypeModal'));
@@ -322,20 +438,17 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     <?php endif; ?>
 
     function editRoomTypeFromView(id) {
-        // Đóng view modal (có ID động)
         const viewModal = bootstrap.Modal.getInstance(
             document.getElementById("viewRoomTypeModal" + id)
         );
         if (viewModal) {
             viewModal.hide();
         }
-
-        // Chuyển đến trang edit
         window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
     }
 
     function deleteRoomTypes(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+        if (confirm('Bạn có chắc chắn muốn xóa loại phòng này?')) {
             const form = document.createElement('form');
             form.method = 'POST';
             form.innerHTML = '<input type="hidden" name="room_type_id" value="' + id + '">' +

@@ -1,4 +1,7 @@
 <?php
+// Include helper function để tự động tạo hóa đơn
+require_once __DIR__ . '/../includes/invoice_helper.php';
+
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
@@ -94,8 +97,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $room_id
             );
             if ($stmt->execute()) {
+                $booking_id = $stmt->insert_id;
                 $message = "Thêm booking phòng thành công";
                 $messageType = "success";
+                
+                // Tự động tạo hóa đơn nếu status = Confirmed
+                if ($status === 'Confirmed') {
+                    $invoice_id = createInvoiceForRoomBooking($mysqli, $booking_id);
+                    if ($invoice_id) {
+                        $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
+                    }
+                }
+                
                 $action = '';
                 header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
                 exit;
@@ -142,6 +155,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($stmt->execute()) {
             $message = 'Cập nhật booking phòng thành công';
             $messageType = 'success';
+            
+            // Tự động tạo hóa đơn nếu status = Confirmed và chưa có hóa đơn
+            if ($status === 'Confirmed') {
+                $invoice_id = createInvoiceForRoomBooking($mysqli, $booking_id);
+                if ($invoice_id) {
+                    $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
+                }
+            }
+            
             header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
             exit;
         } else {
@@ -515,11 +537,12 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tên Khách Hàng *</label>
-                            <select class="form-select" name="customer_id" required>
+                            <select class="form-select customer-search" name="customer_id" required id="customerSelectRoom">
                                 <option value="">-- Chọn khách hàng --</option>
                                 <?php foreach ($customers as $customer): ?>
                                     <option value="<?php echo $customer['customer_id']; ?>"
-                                        <?php echo ($editBookingRoom && $editBookingRoom['customer_id'] == $customer['customer_id']) ? 'selected' : ''; ?>>
+                                        <?php echo ($editBookingRoom && $editBookingRoom['customer_id'] == $customer['customer_id']) ? 'selected' : ''; ?> data-phone="<?php echo h($customer['phone']); ?>"
+                                        data-email="<?php echo h($customer['email']); ?>">
                                         <?php echo h($customer['full_name']); ?> - <?php echo h($customer['phone']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -607,6 +630,35 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     </div>
 </div>
 
+<style>
+    /* Đảm bảo input Select2 có thể gõ được */
+    .select2-search__field {
+        width: 100% !important;
+        border: none !important;
+        outline: none !important;
+        padding: 5px !important;
+        margin: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    .select2-search__field:focus {
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
+        border: 1px solid #ced4da !important;
+        border-radius: 0.375rem !important;
+    }
+    
+    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus {
+        border-color: #86b7fe !important;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    }
+</style>
+
 <script>
     // Auto-fill phone number when selecting customer
     document.addEventListener('DOMContentLoaded', function() {
@@ -659,8 +711,30 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         document.addEventListener('DOMContentLoaded', function() {
             const modal = new bootstrap.Modal(document.getElementById('addRoomBookingModal'));
             modal.show();
+            // Khởi tạo lại Select2 sau khi modal mở hoàn toàn
+            const modalEl = document.getElementById('addRoomBookingModal');
+            modalEl.addEventListener('shown.bs.modal', function() {
+                setTimeout(initCustomerSelect2Room, 200);
+            }, { once: true });
         });
     <?php endif; ?>
+    
+    // Khởi tạo lại Select2 khi modal mở
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('addRoomBookingModal');
+        if (modal) {
+            modal.addEventListener('shown.bs.modal', function() {
+                setTimeout(initCustomerSelect2Room, 200);
+            });
+        }
+        
+        // Khởi tạo lần đầu nếu không trong modal
+        if (typeof jQuery !== 'undefined') {
+            jQuery(document).ready(function() {
+                setTimeout(initCustomerSelect2Room, 300);
+            });
+        }
+    });
 
     function resetForm() {
         const form = document.getElementById('bookingForm');
@@ -694,5 +768,63 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         url.searchParams.delete('id');
         window.history.replaceState({}, '', url);
         resetForm();
+    }
+    
+    // Hàm khởi tạo Select2 cho customer
+    function initCustomerSelect2Room() {
+        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+            return false;
+        }
+        
+        const $customerSelect = jQuery('#customerSelectRoom');
+        if (!$customerSelect.length) {
+            return false;
+        }
+        
+        // Destroy nếu đã khởi tạo trước đó
+        if ($customerSelect.hasClass('select2-hidden-accessible')) {
+            $customerSelect.select2('destroy');
+        }
+        
+        // Lấy modal để set dropdownParent
+        const $modal = jQuery('#addRoomBookingModal');
+        const dropdownParent = $modal.length ? $modal : jQuery('body');
+        
+        $customerSelect.select2({
+            theme: 'bootstrap-5',
+            placeholder: '-- Chọn khách hàng --',
+            allowClear: true,
+            minimumInputLength: 0,
+            width: '100%',
+            dropdownParent: dropdownParent,
+            language: {
+                noResults: function() {
+                    return "Không tìm thấy khách hàng";
+                },
+                searching: function() {
+                    return "Đang tìm kiếm...";
+                }
+            }
+        });
+        
+        // Tự động điền số điện thoại khi chọn khách hàng
+        $customerSelect.off('change.select2-customer').on('change.select2-customer', function() {
+            const selectedOption = jQuery(this).find('option:selected');
+            const phone = selectedOption.data('phone') || '';
+            jQuery('input[name="phone"]').val(phone);
+        });
+        
+        // Đảm bảo input tìm kiếm có thể gõ được
+        $customerSelect.on('select2:open', function() {
+            setTimeout(function() {
+                const $searchField = jQuery('.select2-search__field');
+                $searchField.attr('placeholder', 'Gõ để tìm kiếm...');
+                $searchField.prop('readonly', false);
+                $searchField.prop('disabled', false);
+                $searchField.focus();
+            }, 100);
+        });
+        
+        return true;
     }
 </script>

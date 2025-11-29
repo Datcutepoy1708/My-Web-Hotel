@@ -1,4 +1,16 @@
 <?php
+// Phân quyền module Nội Dung (Blog & Review)
+$canViewContent   = function_exists('checkPermission') ? checkPermission('blog.view')   : true;
+$canCreateContent = function_exists('checkPermission') ? checkPermission('blog.create') : true;
+$canEditContent   = function_exists('checkPermission') ? checkPermission('blog.edit')   : true;
+$canDeleteContent = function_exists('checkPermission') ? checkPermission('blog.delete') : true;
+
+if (!$canViewContent) {
+    http_response_code(403);
+    echo '<div class="main-content"><div class="alert alert-danger m-4">Bạn không có quyền xem trang nội dung.</div></div>';
+    return;
+}
+
 // Xử lý CRUD
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
@@ -231,17 +243,17 @@ if ($totalReview > 0) {
     <div class="content-header">
         <h1>Quản Lý Nội Dung</h1>
         <?php
-            $current_panel = isset($panel) ? $panel : (isset($_GET['panel']) ? $_GET['panel'] : 'blog-panel');
+        $current_panel = isset($panel) ? $panel : (isset($_GET['panel']) ? $_GET['panel'] : 'blog-panel');
         ?>
         <ul class="nav nav-pills mb-3" id="contentTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <a class="<?php echo ($current_panel=='blog-panel') ? 'nav-link active' : 'nav-link'; ?>"
+                <a class="<?php echo ($current_panel == 'blog-panel') ? 'nav-link active' : 'nav-link'; ?>"
                     href="/My-Web-Hotel/admin/index.php?page=blogs-manager&panel=blog-panel">
                     <span>Bài Viết & Tin Tức</span>
                 </a>
             </li>
             <li class="nav-item" role="presentation">
-                <a class="<?php echo ($current_panel=='review-panel') ? 'nav-link active' : 'nav-link'; ?>"
+                <a class="<?php echo ($current_panel == 'review-panel') ? 'nav-link active' : 'nav-link'; ?>"
                     href="/My-Web-Hotel/admin/index.php?page=blogs-manager&panel=review-panel">
                     <span>Đánh Giá & Review</span>
                 </a>
@@ -251,41 +263,41 @@ if ($totalReview > 0) {
 
     <div class="tab-content">
         <?php
-            $panel = isset($_GET['panel']) ? trim($_GET['panel']) : 'blog-panel';
-            $panelAllowed = [
-                'blog-panel' => 'pages/blog-panel.php',
-                'review-panel' => 'pages/review-panel.php',
-            ];
-            if (isset($panelAllowed[$panel])) {
-                include $panelAllowed[$panel];
-            } else {
-                include 'pages/404.php';
-            }  
+        $panel = isset($_GET['panel']) ? trim($_GET['panel']) : 'blog-panel';
+        $panelAllowed = [
+            'blog-panel' => 'pages/blog-panel.php',
+            'review-panel' => 'pages/review-panel.php',
+        ];
+        if (isset($panelAllowed[$panel])) {
+            include $panelAllowed[$panel];
+        } else {
+            include 'pages/404.php';
+        }
         ?>
     </div>
 </div>
 
 
 <script>
-function editBlog(id) {
-    window.location.href = 'index.php?page=blogs-manager&action=edit&id=' + id;
-}
-
-function deleteBlog(id) {
-    if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="blog_id" value="' + id + '">' +
-            '<input type="hidden" name="delete_blog" value="1">';
-        document.body.appendChild(form);
-        form.submit();
+    function editBlog(id) {
+        window.location.href = 'index.php?page=blogs-manager&action=edit&id=' + id;
     }
-}
 
-<?php if ($editBlog): ?>
-document.addEventListener('DOMContentLoaded', function() {
-    const modal = new bootstrap.Modal(document.getElementById('addBlogModal'));
-    modal.show();
-});
-<?php endif; ?>
+    function deleteBlog(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="blog_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_blog" value="1">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    <?php if ($editBlog): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addBlogModal'));
+            modal.show();
+        });
+    <?php endif; ?>
 </script>

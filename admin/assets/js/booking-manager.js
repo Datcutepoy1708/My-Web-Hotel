@@ -1,17 +1,20 @@
 // Hàm này sẽ hiển thị hoặc ẩn các trường form tương ứng
 function toggleBookingFields() {
-  const type = document.getElementById("bookingType").value;
+  const bookingTypeEl = document.getElementById("bookingType");
+  if (!bookingTypeEl) return;
+  
+  const type = bookingTypeEl.value;
   const roomFields = document.getElementById("roomBookingFields");
   const serviceFields = document.getElementById("serviceBookingFields");
 
   // Reset display
-  roomFields.style.display = "none";
-  serviceFields.style.display = "none";
+  if (roomFields) roomFields.style.display = "none";
+  if (serviceFields) serviceFields.style.display = "none";
 
   // Hiển thị form tương ứng
-  if (type === "room") {
+  if (type === "room" && roomFields) {
     roomFields.style.display = "block";
-  } else if (type === "service") {
+  } else if (type === "service" && serviceFields) {
     serviceFields.style.display = "block";
   }
 }
@@ -20,10 +23,13 @@ function toggleBookingFields() {
 document.addEventListener("DOMContentLoaded", () => {
   // Gắn sự kiện để reset trạng thái form khi modal đóng
   const bookingModal = document.getElementById("addBookingModal");
-  bookingModal.addEventListener("hidden.bs.modal", function () {
-    document.getElementById("bookingType").value = ""; // Reset select box
-    toggleBookingFields(); // Reset hiển thị form
-  });
+  if (bookingModal) {
+    bookingModal.addEventListener("hidden.bs.modal", function () {
+      const bookingTypeEl = document.getElementById("bookingType");
+      if (bookingTypeEl) bookingTypeEl.value = ""; // Reset select box
+      toggleBookingFields(); // Reset hiển thị form
+    });
+  }
 
   // Gọi lần đầu để đảm bảo ẩn khi trang load (nếu modal mở sẵn)
   toggleBookingFields();
@@ -187,12 +193,18 @@ document.addEventListener("DOMContentLoaded", () => {
   toggleBookingFields();
 
   // Khởi tạo Modal Xem Chi Tiết
-  setupViewBookingDetailModal();
+  const viewModal = document.getElementById("viewBookingDetailModal");
+  if (viewModal) {
+    setupViewBookingDetailModal();
+  }
 
   // Gắn sự kiện để reset trạng thái form khi modal đóng
   const bookingModal = document.getElementById("addBookingModal");
-  bookingModal.addEventListener("hidden.bs.modal", function () {
-    document.getElementById("bookingType").value = "";
-    toggleBookingFields();
-  });
+  if (bookingModal) {
+    bookingModal.addEventListener("hidden.bs.modal", function () {
+      const bookingTypeEl = document.getElementById("bookingType");
+      if (bookingTypeEl) bookingTypeEl.value = "";
+      toggleBookingFields();
+    });
+  }
 });

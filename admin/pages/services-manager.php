@@ -1,4 +1,16 @@
 <?php
+// Phân quyền module Dịch Vụ
+$canViewService   = function_exists('checkPermission') ? checkPermission('service.view')   : true;
+$canCreateService = function_exists('checkPermission') ? checkPermission('service.create') : true;
+$canEditService   = function_exists('checkPermission') ? checkPermission('service.edit')   : true;
+$canDeleteService = function_exists('checkPermission') ? checkPermission('service.delete') : true;
+
+if (!$canViewService) {
+    http_response_code(403);
+    echo '<div class="main-content"><div class="alert alert-danger m-4">Bạn không có quyền xem trang dịch vụ.</div></div>';
+    return;
+}
+
 // Xử lý CRUD
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
@@ -6,6 +18,10 @@ $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_service'])) {
+        if (!$canCreateService) {
+            $message = 'Bạn không có quyền thêm dịch vụ.';
+            $messageType = 'danger';
+        } else {
         $service_name = trim($_POST['service_name']);
         $description = trim($_POST['description'] ?? '');
         $service_type = trim($_POST['service_type']);
@@ -24,9 +40,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
         $stmt->close();
+        }
     }
 
     if (isset($_POST['update_service'])) {
+        if (!$canEditService) {
+            $message = 'Bạn không có quyền chỉnh sửa dịch vụ.';
+            $messageType = 'danger';
+        } else {
         $service_id = intval($_POST['service_id']);
         $service_name = trim($_POST['service_name']);
         $description = trim($_POST['description'] ?? '');
@@ -46,9 +67,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
         $stmt->close();
+        }
     }
 
     if (isset($_POST['delete_service'])) {
+        if (!$canDeleteService) {
+            $message = 'Bạn không có quyền xóa dịch vụ.';
+            $messageType = 'danger';
+        } else {
         $service_id = intval($_POST['service_id']);
         $stmt = $mysqli->prepare("UPDATE service SET deleted = NOW() WHERE service_id = ?");
         $stmt->bind_param("i", $service_id);
@@ -61,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $messageType = 'danger';
         }
         $stmt->close();
+        }
     }
 }
 
@@ -155,9 +182,11 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
         <h1>Quản Lý Dịch Vụ</h1>
         <div class="row m-3">
             <div class="col-md-12">
+                <?php if ($canCreateService): ?>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addServiceModal">
                     <i class="fas fa-plus"></i> Thêm Dịch Vụ
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </div>

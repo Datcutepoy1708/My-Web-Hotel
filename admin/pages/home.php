@@ -1,4 +1,16 @@
 <?php
+// Phân biệt nhân viên và quản lý
+// Nếu là nhân viên (không phải quản lý), hiển thị trang nhiệm vụ
+$chuc_vu = $_SESSION['chuc_vu'] ?? '';
+$isManager = (stripos($chuc_vu, 'Quản lý') !== false || stripos($chuc_vu, 'Manager') !== false || stripos($chuc_vu, 'Admin') !== false);
+
+if (!$isManager) {
+    // Nhân viên: hiển thị trang nhiệm vụ
+    include 'my-tasks.php';
+    return;
+}
+
+// Quản lý: hiển thị dashboard
 // Thống kê tổng quan
 $stats = [];
 

@@ -1,3 +1,118 @@
+<?php
+session_start();
+require '../includes/connect.php';
+
+$error = '';
+
+// Xử lý đăng nhập
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+    $password = isset($_POST['password']) ? $_POST['password'] : '';
+    $remember = isset($_POST['remember']);
+    
+    if ($email === '' || $password === '') {
+        $error = 'Vui lòng nhập email và mật khẩu.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error = 'Email không hợp lệ.';
+    } else {
+        // Kiểm tra nhân viên trong bảng nhan_vien
+        $sql = 'SELECT id_nhan_vien, ma_nhan_vien, ho_ten, email, mat_khau, chuc_vu, trang_thai, anh_dai_dien 
+                FROM nhan_vien 
+                WHERE email = ? AND trang_thai = "Đang làm việc" 
+                LIMIT 1';
+        $stmt = $mysqli->prepare($sql);
+        
+        if ($stmt) {
+            $stmt->bind_param('s', $email);
+            if ($stmt->execute()) {
+                $result = $stmt->get_result();
+                if ($result && $result->num_rows === 1) {
+                    $nhanVien = $result->fetch_assoc();
+                    $storedPassword = $nhanVien['mat_khau'];
+                    $loginOk = false;
+                    
+                    // Kiểm tra mật khẩu
+                    if (!empty($storedPassword)) {
+                        // Thử verify hash trước
+                        if (password_verify($password, $storedPassword)) {
+                            $loginOk = true;
+                            // Rehash nếu cần
+                            if (password_needs_rehash($storedPassword, PASSWORD_DEFAULT)) {
+                                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                                if ($newHash !== false) {
+                                    $upd = $mysqli->prepare('UPDATE nhan_vien SET mat_khau = ? WHERE id_nhan_vien = ?');
+                                    if ($upd) {
+                                        $upd->bind_param('si', $newHash, $nhanVien['id_nhan_vien']);
+                                        $upd->execute();
+                                        $upd->close();
+                                    }
+                                }
+                            }
+                        } else {
+                            // Fallback plaintext (nếu DB đang lưu plaintext)
+                            if ($password === $storedPassword) {
+                                $loginOk = true;
+                                // Migrate lên hash
+                                $newHash = password_hash($password, PASSWORD_DEFAULT);
+                                if ($newHash !== false) {
+                                    $upd = $mysqli->prepare('UPDATE nhan_vien SET mat_khau = ? WHERE id_nhan_vien = ?');
+                                    if ($upd) {
+                                        $upd->bind_param('si', $newHash, $nhanVien['id_nhan_vien']);
+                                        $upd->execute();
+                                        $upd->close();
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Nếu chưa có mật khẩu, cho phép đăng nhập với mật khẩu mặc định
+                        // Hoặc yêu cầu đặt mật khẩu
+                        $error = 'Tài khoản chưa được thiết lập mật khẩu. Vui lòng liên hệ quản trị viên.';
+                    }
+                    
+                    if ($loginOk) {
+                        // Set session
+                        $_SESSION['id_nhan_vien'] = $nhanVien['id_nhan_vien'];
+                        $_SESSION['ma_nhan_vien'] = $nhanVien['ma_nhan_vien'];
+                        $_SESSION['ho_ten'] = $nhanVien['ho_ten'];
+                        $_SESSION['email'] = $nhanVien['email'];
+                        $_SESSION['chuc_vu'] = $nhanVien['chuc_vu'];
+                        $_SESSION['anh_dai_dien'] = $nhanVien['anh_dai_dien'] ?? '';
+                        $_SESSION['logged_in_at'] = time();
+                        $_SESSION['is_staff'] = true;
+                        
+                        // Nếu người dùng chọn "Ghi nhớ đăng nhập"
+                        // Hiện tại hệ thống KHÔNG sử dụng bảng login_tokens, nên chỉ giữ session
+                        // và không lưu token vào cookie/DB để tránh lỗi khi thiếu bảng.
+                        
+                        // Redirect
+                        $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : '/My-Web-Hotel/admin/index.php';
+                        $parsed = parse_url($redirect);
+                        if (isset($parsed['host']) && $parsed['host'] !== $_SERVER['SERVER_NAME']) {
+                            $redirect = '/My-Web-Hotel/admin/index.php';
+                        }
+                        
+                        header("Location: $redirect");
+                        $stmt->close();
+                        $mysqli->close();
+                        exit;
+                    } else {
+                        $error = 'Email hoặc mật khẩu không đúng.';
+                    }
+                } else {
+                    $error = 'Email hoặc mật khẩu không đúng.';
+                }
+            } else {
+                $error = 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+            }
+            $stmt->close();
+        } else {
+            $error = 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+        }
+    }
+}
+?>
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -6,6 +121,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Đăng nhập quản lý khách sạn</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
     :root {
         --primary: #deb666;
@@ -87,6 +203,10 @@
         text-decoration: underline;
     }
 
+    .alert {
+        margin-bottom: 1rem;
+    }
+
     @media (max-width: 576px) {
         .login-card {
             width: 90%;
@@ -99,18 +219,28 @@
 <body>
     <div class="login-card">
         <h2>Đăng nhập quản lý khách sạn</h2>
-        <form>
+        
+        <?php if ($error): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?php echo htmlspecialchars($error); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+        
+        <form method="POST" action="">
             <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
-                <input type="text" class="form-control" id="email" placeholder="Nhập email" />
+                <input type="email" class="form-control" id="email" name="email" 
+                    placeholder="Nhập email" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required />
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Mật khẩu</label>
-                <input type="password" class="form-control" id="password" placeholder="Nhập mật khẩu" />
+                <input type="password" class="form-control" id="password" name="password" 
+                    placeholder="Nhập mật khẩu" required />
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="remember" />
+                    <input class="form-check-input" type="checkbox" id="remember" name="remember" />
                     <label class="form-check-label" for="remember">Ghi nhớ đăng nhập</label>
                 </div>
                 <a href="/My-Web-Hotel/admin/pages/forgotPass.php" class="text-decoration-none"
@@ -127,6 +257,8 @@
             </p>
         </div>
     </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
