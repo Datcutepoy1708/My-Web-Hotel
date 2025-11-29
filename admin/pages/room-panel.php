@@ -61,10 +61,10 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                     <select class="form-select" name="type" id="typeFilter">
                         <option value="0">Tất cả loại phòng</option>
                         <?php foreach ($roomTypes as $rt): ?>
-                        <option value="<?php echo $rt['room_type_id']; ?>"
-                            <?php echo $type_filter == $rt['room_type_id'] ? 'selected' : ''; ?>>
-                            <?php echo h($rt['room_type_name']); ?>
-                        </option>
+                            <option value="<?php echo $rt['room_type_id']; ?>"
+                                <?php echo $type_filter == $rt['room_type_id'] ? 'selected' : ''; ?>>
+                                <?php echo h($rt['room_type_name']); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -98,17 +98,17 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             </thead>
             <tbody>
                 <?php if (empty($rooms)): ?>
-                <tr>
-                    <td colspan="9" class="text-center">Không có dữ liệu</td>
-                </tr>
+                    <tr>
+                        <td colspan="9" class="text-center">Không có dữ liệu</td>
+                    </tr>
                 <?php else: ?>
-                <?php foreach ($rooms as $room): ?>
-                <tr>
-                    <td><?php echo $room['room_id']; ?></td>
-                    <td><?php echo h($room['room_number']); ?></td>
-                    <td><?php echo $room['floor']; ?></td>
-                    <td>
-                        <?php
+                    <?php foreach ($rooms as $room): ?>
+                        <tr>
+                            <td><?php echo $room['room_id']; ?></td>
+                            <td><?php echo h($room['room_number']); ?></td>
+                            <td><?php echo $room['floor']; ?></td>
+                            <td>
+                                <?php
                                 $statusClass = 'bg-secondary';
                                 $roomText = $room['room_type_name'];
                                 switch ($room['room_type_name']) {
@@ -134,11 +134,11 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                         break;
                                 }
                                 ?>
-                        <span class="badge <?php echo $statusClass; ?>"><?php echo $roomText; ?></span>
-                    </td>
-                    <td><?php echo formatCurrency($room['base_price'] ?? 0); ?></td>
-                    <td>
-                        <?php
+                                <span class="badge <?php echo $statusClass; ?>"><?php echo $roomText; ?></span>
+                            </td>
+                            <td><?php echo formatCurrency($room['base_price'] ?? 0); ?></td>
+                            <td>
+                                <?php
                                 $statusClass = 'bg-secondary';
                                 $statusText = $room['status'];
                                 switch ($room['status']) {
@@ -164,6 +164,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                         break;
                                 }
                                 ?>
+<<<<<<< HEAD
                         <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
                     </td>
                     <td><?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></td>
@@ -187,50 +188,81 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         <?php endif; ?>
                     </td>
                 </tr>
+=======
+                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                            </td>
+                            <td><?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></td>
+                            <td><?php echo $room['capacity'] ?? '-'; ?></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                    data-bs-target="#viewRoomModal<?php echo $room['room_id']; ?>" title="Xem chi tiết">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning"
+                                    onclick="editRoom(<?php echo $room['room_id']; ?>)" title="Sửa">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                    onclick="deleteRoom(<?php echo $room['room_id']; ?>)" title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+>>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
 
-                <!-- View Modal -->
-                <div class="modal fade" id="viewRoomModal<?php echo $room['room_id']; ?>" tabindex="-1">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Chi Tiết Phòng</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <?php if ($room['image']): ?>
-                                        <img src="<?php echo h($room['image']); ?>" class="img-fluid rounded"
-                                            alt="Room Image">
-                                        <?php else: ?>
-                                        <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
-                                            alt="Room Image">
-                                        <?php endif; ?>
+                        <!-- View Modal -->
+                        <div class="modal fade" id="viewRoomModal<?php echo $room['room_id']; ?>" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Chi Tiết Phòng</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="col-md-6">
-                                        <h4>Phòng <?php echo h($room['room_number']); ?></h4>
-                                        <p><strong>Loại phòng:</strong>
-                                            <?php echo h($room['room_type_name'] ?? '-'); ?></p>
-                                        <p><strong>Tầng:</strong> <?php echo $room['floor']; ?></p>
-                                        <p><strong>Giá/đêm:</strong>
-                                            <?php echo formatCurrency($room['base_price'] ?? 0); ?></p>
-                                        <p><strong>Diện tích:</strong>
-                                            <?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></p>
-                                        <p><strong>Sức chứa:</strong>
-                                            <?php echo $room['capacity'] ?? '-'; ?>
-                                            người
-                                        </p>
-                                        <p><strong>Trạng thái:</strong>
-                                            <span
-                                                class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                                        </p>
-                                        <?php if ($room['amenities']): ?>
-                                        <p><strong>Tiện nghi:</strong> <?php echo h($room['amenities']); ?>
-                                        </p>
-                                        <?php endif; ?>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <?php if ($room['image']): ?>
+                                                    <img src="<?php echo h($room['image']); ?>" class="img-fluid rounded"
+                                                        alt="Room Image">
+                                                <?php else: ?>
+                                                    <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
+                                                        alt="Room Image">
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h4>Phòng <?php echo h($room['room_number']); ?></h4>
+                                                <p><strong>Loại phòng:</strong>
+                                                    <?php echo h($room['room_type_name'] ?? '-'); ?></p>
+                                                <p><strong>Tầng:</strong> <?php echo $room['floor']; ?></p>
+                                                <p><strong>Giá/đêm:</strong>
+                                                    <?php echo formatCurrency($room['base_price'] ?? 0); ?></p>
+                                                <p><strong>Diện tích:</strong>
+                                                    <?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></p>
+                                                <p><strong>Sức chứa:</strong>
+                                                    <?php echo $room['capacity'] ?? '-'; ?>
+                                                    người
+                                                </p>
+                                                <p><strong>Trạng thái:</strong>
+                                                    <span
+                                                        class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                                </p>
+                                                <?php if ($room['amenities']): ?>
+                                                    <p><strong>Tiện nghi:</strong> <?php echo h($room['amenities']); ?>
+                                                    </p>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="editRoomFromView(<?php echo $room['room_id']; ?>)">
+                                            Chỉnh Sửa
+                                        </button>
                                     </div>
                                 </div>
                             </div>
+<<<<<<< HEAD
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
                                 <?php if ($canEditRoom): ?>
@@ -240,10 +272,10 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                 </button>
                                 <?php endif; ?>
                             </div>
+=======
+>>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                         </div>
-                    </div>
-                </div>
-                <?php endforeach; ?>
+                    <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -262,7 +294,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             <form method="POST">
                 <div class="modal-body">
                     <?php if ($editRoom): ?>
-                    <input type="hidden" name="room_id" value="<?php echo $editRoom['room_id']; ?>">
+                        <input type="hidden" name="room_id" value="<?php echo $editRoom['room_id']; ?>">
                     <?php endif; ?>
 
                     <div class="row">
@@ -283,10 +315,10 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                             <select class="form-select" name="room_type_id" required>
                                 <option value="">Chọn loại phòng</option>
                                 <?php foreach ($roomTypes as $rt): ?>
-                                <option value="<?php echo $rt['room_type_id']; ?>"
-                                    <?php echo ($editRoom['room_type_id'] ?? '') == $rt['room_type_id'] ? 'selected' : ''; ?>>
-                                    <?php echo h($rt['room_type_name']); ?>
-                                </option>
+                                    <option value="<?php echo $rt['room_type_id']; ?>"
+                                        <?php echo ($editRoom['room_type_id'] ?? '') == $rt['room_type_id'] ? 'selected' : ''; ?>>
+                                        <?php echo h($rt['room_type_name']); ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -329,3 +361,191 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         </div>
     </div>
 </div>
+
+<script>
+    // ==================== HELPER FUNCTIONS ====================
+
+    // Hàm reset form tổng quát
+    function resetFormFields(form) {
+        if (!form) return;
+
+        form.reset();
+
+        // Xóa input hidden (trừ page và panel)
+        form.querySelectorAll('input[type="hidden"]').forEach(input => {
+            if (input.name !== 'page' && input.name !== 'panel') {
+                input.remove();
+            }
+        });
+
+        // Reset text/number/tel/email inputs
+        form.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"],select').forEach(input => {
+            input.value = '';
+        });
+
+        // Reset textarea
+        form.querySelectorAll('textarea').forEach(textarea => {
+            textarea.value = '';
+        });
+
+        // Reset date về hôm nay
+        const today = new Date().toISOString().split('T')[0];
+        form.querySelectorAll('input[type="date"]').forEach(input => {
+            input.value = today;
+        });
+
+        // Clear readonly fields
+        form.querySelectorAll('input[readonly]').forEach(input => {
+            input.value = '';
+        });
+    }
+
+    // Hàm xóa query string edit
+    function clearEditQueryString() {
+        const url = new URL(window.location);
+        url.searchParams.delete('action');
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
+    }
+
+    // Hàm force cleanup backdrop
+    function forceCleanupBackdrop() {
+        const openModals = document.querySelectorAll('.modal.show');
+        if (openModals.length === 0) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    }
+
+    // Hàm reset modal về trạng thái "Thêm mới"
+    function resetModalToAddMode(modalElement, form) {
+        if (!modalElement || !form) return;
+
+        const modalId = modalElement.id;
+        const modalTitle = modalElement.querySelector('.modal-title');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        // Config cho từng modal
+        const modalConfig = {
+            'addRoomModal': {
+                title: 'Thêm Phòng',
+                buttonName: 'add_room',
+                buttonHTML: '<i class="fas fa-save"></i> Thêm Phòng'
+            },
+            'addRoomTypeModal': {
+                title: 'Thêm Loại Phòng',
+                buttonName: 'add_room_type',
+                buttonHTML: '<i class="fas fa-save"></i> Thêm Loại Phòng'
+            },
+            'addBookingServiceModal': {
+                title: 'Thêm Booking Dịch Vụ',
+                buttonName: 'add_booking_service',
+                buttonHTML: 'Thêm Booking dịch vụ'
+            }
+        };
+
+        const config = modalConfig[modalId];
+        if (config) {
+            if (modalTitle) modalTitle.textContent = config.title;
+            if (submitBtn) {
+                submitBtn.name = config.buttonName;
+                submitBtn.innerHTML = config.buttonHTML;
+            }
+        }
+    }
+
+    // ==================== ROOM FUNCTIONS ====================
+
+
+
+    function editRoom(id) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('action', 'edit');
+        url.searchParams.set('id', id);
+        window.location.href = url.toString();
+    }
+
+    function deleteRoom(id) {
+        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_room" value="1">';
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    // ==================== MODAL AUTO-RESET ====================
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Tự động mở modal edit nếu có action=edit
+        <?php if ($editRoom): ?>
+            const editModal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+            editModal.show();
+        <?php endif; ?>
+
+        // Danh sách modal cần auto-reset
+        const resettableModals = ['addRoomModal', 'addRoomTypeModal', 'addBookingServiceModal'];
+
+        // Xử lý TỔNG QUÁT cho TẤT CẢ modal
+        document.querySelectorAll('.modal').forEach(modalElement => {
+
+            // Event: Khi modal đã đóng hoàn toàn
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                const form = modalElement.querySelector('form');
+                const modalId = modalElement.id;
+
+                // Chỉ xử lý modal trong danh sách
+                if (resettableModals.includes(modalId)) {
+                    const isEditMode = window.location.search.includes('action=edit');
+
+                    if (isEditMode) {
+                        // Xóa query string edit
+                        clearEditQueryString();
+                    }
+
+                    // Reset form về trạng thái "Thêm mới"
+                    if (form) {
+                        resetFormFields(form);
+                        resetModalToAddMode(modalElement, form);
+                    }
+                }
+
+                // Cleanup backdrop
+                setTimeout(forceCleanupBackdrop, 100);
+            });
+
+            // Event: Khi modal sắp mở
+            modalElement.addEventListener('show.bs.modal', function() {
+                const form = modalElement.querySelector('form');
+                const isEditMode = window.location.search.includes('action=edit');
+
+                // Nếu KHÔNG phải edit mode, reset form
+                if (!isEditMode && form && resettableModals.includes(modalElement.id)) {
+                    resetFormFields(form);
+                }
+            });
+        });
+
+        // Xử lý nút "Thêm mới" - xóa query string edit
+        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const isEditMode = window.location.search.includes('action=edit');
+                if (isEditMode) {
+                    clearEditQueryString();
+                }
+            });
+        });
+
+        // Xử lý ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                setTimeout(forceCleanupBackdrop, 150);
+            }
+        });
+    });
+</script>

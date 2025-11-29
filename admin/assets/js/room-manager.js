@@ -1,7 +1,7 @@
 // JavaScript functions for room management
 function editRoom(roomId) {
   // Logic to edit room
- window.location.href = 'index.php?page=room-manager&action=edit&id=' + roomId;
+  window.location.href = 'index.php?page=room-manager&action=edit&id=' + roomId;
   // You can implement edit functionality here
 }
 
@@ -85,13 +85,14 @@ function saveRoom() {
   addModal.hide();
 }
 
-function editRoomFromView() {
+function editRoomFromView(id) {
   const viewModal = bootstrap.Modal.getInstance(
-    document.getElementById("viewRoomModal")
+    document.getElementById("viewRoomModal" + id)
   );
-  viewModal.hide();
-  const addModal = new bootstrap.Modal(document.getElementById("addRoomModal"));
-  addModal.show();
+  if (viewModal) {
+    viewModal.hide();
+  }
+  window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
 }
 
 // Search and filter functionality

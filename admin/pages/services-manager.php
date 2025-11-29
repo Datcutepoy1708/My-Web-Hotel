@@ -318,7 +318,7 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                                 <option value="" disabled>Tất cả loại</option>
                                 <?php foreach ($serviceTypes as $st): ?>
                                     <option value="<?php echo h($st['service_type']); ?>"
-                                        <?php echo $editService['service_type'] == $st['service_type'] ? 'selected' : ''; ?>>
+                                        <?php echo (isset($editService) && $editService['service_type'] == $st['service_type']) ? 'selected' : ''; ?>>
                                         <?php echo h($st['service_type']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -368,8 +368,94 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
 </div>
 
 <script>
+    // ==================== HELPER FUNCTIONS ====================
+
+    // Hàm xóa query string edit - PHẢI ở ngoài
+    function clearEditQueryString() {
+        const url = new URL(window.location);
+        url.searchParams.delete('action');
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
+    }
+
+    // Hàm force cleanup backdrop
+    function forceCleanupBackdrop() {
+        const openModals = document.querySelectorAll('.modal.show');
+        if (openModals.length === 0) {
+            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+    }
+
+    // Hàm reset modal về trạng thái "Thêm mới"
+    function resetModalToAddMode(modalElement, form) {
+        if (!modalElement || !form) return;
+
+        const modalId = modalElement.id;
+        const modalTitle = modalElement.querySelector('.modal-title');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        // Config cho từng modal
+        const modalConfig = {
+            'addServiceModal': {
+                title: 'Thêm dịch vụ',
+                buttonName: 'add_service',
+                buttonHTML: '<i class="fas fa-save"></i> Thêm dịch vụ'
+            }
+        };
+
+        const config = modalConfig[modalId];
+        if (config) {
+            if (modalTitle) modalTitle.textContent = config.title;
+            if (submitBtn) {
+                submitBtn.name = config.buttonName;
+                submitBtn.innerHTML = config.buttonHTML;
+            }
+        }
+    }
+
+    // Hàm reset form tổng quát
+    function resetFormFields(form) {
+        if (!form) return;
+        form.reset();
+
+        // Xóa input hidden (trừ page và panel)
+        form.querySelectorAll('input[type="hidden"]').forEach(input => {
+            if (input.name !== 'page' && input.name !== 'panel') {
+                input.remove();
+            }
+        });
+
+        // Reset text/number/tel/email inputs
+        form.querySelectorAll('input[type="text"], input[type="number"],select').forEach(input => {
+            input.value = '';
+        });
+
+        // Reset textarea
+        form.querySelectorAll('textarea').forEach(textarea => {
+            textarea.value = '';
+        });
+
+        // Reset date về hôm nay
+        const today = new Date().toISOString().split('T')[0];
+        form.querySelectorAll('input[type="date"]').forEach(input => {
+            input.value = today;
+        });
+
+        // Clear readonly fields
+        form.querySelectorAll('input[readonly]').forEach(input => {
+            input.value = '';
+        });
+    }
+
+    // ==================== SERVICE FUNCTIONS ====================
     function editService(id) {
-        window.location.href = 'index.php?page=services-manager&action=edit&id=' + id;
+        const url = new URL(window.location.href);
+        url.searchParams.set('action', 'edit');
+        url.searchParams.set('id', id);
+        window.location.href = url.toString();
     }
 
     function deleteService(id) {
@@ -383,10 +469,74 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
         }
     }
 
-    <?php if ($editService): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = new bootstrap.Modal(document.getElementById('addServiceModal'));
-            modal.show();
+    // ==================== MODAL AUTO-RESET ====================
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Tự động mở modal edit nếu có action=edit
+        <?php if ($editService): ?>
+            const editModal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+            editModal.show();
+        <?php endif; ?>
+
+        // Danh sách modal cần auto-reset
+        const resettableModals = ['addServiceModal'];
+
+        // Xử lý TỔNG QUÁT cho TẤT CẢ modal
+        document.querySelectorAll('.modal').forEach(modalElement => {
+
+            // Event: Khi modal đã đóng hoàn toàn
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                const form = modalElement.querySelector('form');
+                const modalId = modalElement.id;
+
+                // Chỉ xử lý modal trong danh sách
+                if (resettableModals.includes(modalId)) {
+                    const isEditMode = window.location.search.includes('action=edit');
+
+                    if (isEditMode) {
+                        // Xóa query string edit
+                        clearEditQueryString();
+                    }
+
+                    // Reset form về trạng thái "Thêm mới"
+                    if (form) {
+                        resetFormFields(form);
+                        resetModalToAddMode(modalElement, form);
+                    }
+                }
+
+                // Cleanup backdrop
+                setTimeout(forceCleanupBackdrop, 100);
+            });
+
+            // Event: Khi modal sắp mở
+            modalElement.addEventListener('show.bs.modal', function() {
+                const form = modalElement.querySelector('form');
+                const isEditMode = window.location.search.includes('action=edit');
+
+                // Nếu KHÔNG phải edit mode, reset form
+                if (!isEditMode && form && resettableModals.includes(modalElement.id)) {
+                    resetFormFields(form);
+                }
+            });
         });
-    <?php endif; ?>
+
+        // Xử lý nút "Thêm mới" - xóa query string edit
+        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+            button.addEventListener('click', function() {
+                const isEditMode = window.location.search.includes('action=edit');
+                if (isEditMode) {
+                    clearEditQueryString();
+                }
+            });
+        });
+
+        // Xử lý ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                setTimeout(forceCleanupBackdrop, 150);
+            }
+        });
+    });
 </script>

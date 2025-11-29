@@ -168,15 +168,19 @@ $offset = ($pageNum - 1) * $perPage;
 
 // Xây dựng WHERE clause
 $where = "WHERE i.deleted IS NULL";
-
+$params = [];
+$types = '';
 if ($search) {
-    $search = $mysqli->real_escape_string($search);
-    $where .= " AND (i.invoice_id LIKE '%$search%' OR b.booking_id LIKE '%$search%')";
+    $where .= " AND (b.booking_id LIKE ? OR c.full_name LIKE ? OR i.invoice_id LIKE ?)";
+    $searchParam = "%$search%";
+    $params = array_merge($params, [$searchParam, $searchParam, $searchParam]);
+    $types .= 'isi';
 }
 
 if ($status_filter) {
-    $status_filter = $mysqli->real_escape_string($status_filter);
-    $where .= " AND i.status = '$status_filter'";
+    $where .= " AND i.status=?";
+    $params[] = $status_filter;
+    $types .= 's';
 }
 
 // Xây dựng ORDER BY
@@ -198,11 +202,15 @@ switch ($sort) {
 }
 
 // Đếm tổng số
+<<<<<<< HEAD
 $countQuery = "SELECT COUNT(DISTINCT i.invoice_id) as total 
     FROM invoice i 
     LEFT JOIN booking b ON i.booking_id = b.booking_id
     LEFT JOIN customer c ON i.customer_id = c.customer_id
     $where";
+=======
+$countQuery = "SELECT COUNT(*) as total FROM invoice i LEFT JOIN booking b ON i.booking_id = b.booking_id";
+>>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
 $countResult = $mysqli->query($countQuery);
 $total = 0;
 
@@ -235,16 +243,20 @@ if ($total > 0) {
         $where 
         GROUP BY i.invoice_id
         $orderBy 
-        LIMIT $perPage OFFSET $offset";
+        LIMIT ? OFFSET ?";
+    $params[] = $perPage;
+    $params[] = $offset;
+    $types .= 'ii';
 
-    $result = $mysqli->query($query);
-    if (!$result) {
-        error_log("Query Error: " . $mysqli->error);
-        $message = "Lỗi truy vấn: " . $mysqli->error;
-        $messageType = 'danger';
-    } else {
-        $invoices = $result->fetch_all(MYSQLI_ASSOC);
+
+    $stmt = $mysqli->prepare($query);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
     }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $invoices = $result->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
 }
 
 // Build base URL for pagination
@@ -1050,7 +1062,6 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     // JavaScript functions for invoice management
     function editInvoice(invoiceId) {
         // Logic to edit invoice
-        console.log("Edit invoice:", invoiceId);
         window.location.href = 'index.php?page=invoices-manager&action=edit&id=' + invoiceId;
     }
 
