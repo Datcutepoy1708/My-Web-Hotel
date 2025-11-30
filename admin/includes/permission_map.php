@@ -56,11 +56,18 @@ return [
         ['type' => 'prefix', 'value' => 'Blog'],
         ['type' => 'prefix', 'value' => 'Review'],
         ['type' => 'prefix', 'value' => 'blog.'],
+        ['type' => 'prefix', 'value' => 'content.'],
+        ['type' => 'prefix', 'value' => 'review.'],
     ],
     'my-tasks' => [
         // Tất cả nhân viên đều có thể xem nhiệm vụ của mình
         ['type' => 'exact', 'value' => 'task.view'],
         ['type' => 'prefix', 'value' => 'task.'],
+    ],
+    'voucher-manager' => [
+        ['type' => 'prefix', 'value' => 'Quản Lý Voucher'],
+        ['type' => 'prefix', 'value' => 'Quản lý voucher'],
+        ['type' => 'prefix', 'value' => 'voucher.'],
     ],
 ];
 

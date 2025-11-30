@@ -17,7 +17,6 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-<<<<<<< HEAD
     if (isset($_POST['add_room_type']) && $canCreateRoomType) {
         $room_type_name = trim($_POST['room_type_name']);
         $description = trim($_POST['description'] ?? '');
@@ -41,11 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     
     if (isset($_POST['update_room_type']) && $canEditRoomType) {
-=======
-
-
-    if (isset($_POST['update_room_type'])) {
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
         $room_type_id = intval($_POST['room_type_id']);
         $room_type_name = trim($_POST['room_type_name']);
         $description = trim($_POST['description'] ?? '');
@@ -105,7 +99,6 @@ if ($action == 'edit' && isset($_GET['id'])) {
     $stmt->close();
 }
 
-<<<<<<< HEAD
 // Phân trang và filter
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
@@ -177,8 +170,6 @@ if ($totalRoomTypes > 0) {
     $stmt->close();
 }
 
-=======
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
 // Build base URL for pagination
 $baseUrl = "index.php?page=room-manager&panel=roomType-panel";
 if ($search) $baseUrl .= "&search=" . urlencode($search);
@@ -196,12 +187,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 <div class="content-card">
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Loại Phòng</h3>
-<<<<<<< HEAD
         <?php if ($canCreateRoomType): ?>
         <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
-=======
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal" name="add_room_type">
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
             <i class="fas fa-plus"></i> Thêm Loại Phòng
         </button>
         <?php endif; ?>
@@ -211,11 +198,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         <form method="GET" action="">
             <input type="hidden" name="page" value="room-manager">
             <input type="hidden" name="panel" value="roomType-panel">
-<<<<<<< HEAD
             <div class="row g-3">
-=======
-            <div class="row">
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
@@ -226,25 +209,15 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
                         <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang Hoạt Động</option>
-<<<<<<< HEAD
                         <option value="maintenance" <?php echo $status_filter == 'maintenance' ? 'selected' : ''; ?>>Đang bảo trì</option>
-=======
-                        <option value="maintainace" <?php echo $status_filter == 'maintainance' ? 'selected' : '';  ?>>Đang bảo trì</option>
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                         <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>Dừng Hoạt Động</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="sort">
-<<<<<<< HEAD
                         <option value="">Sắp xếp mặc định</option>
                         <option value="area_asc" <?php echo $sort == 'area_asc' ? 'selected' : ''; ?>>Diện Tích Tăng Dần</option>
                         <option value="area_desc" <?php echo $sort == 'area_desc' ? 'selected' : ''; ?>>Diện tích Giảm Dần</option>
-=======
-                        <option value="">Tất cả</option>
-                        <option value="asc" <?php echo $sort == 'asc' ? 'selected' : ''; ?>>Diện Tích Tăng Dần</option>
-                        <option value="desc" <?php echo $sort = 'desc' ? 'selected' : ''; ?>>Diện tích Giảm Dần</option>
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -397,22 +370,12 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 
                     <div class="mb-3">
                         <label class="form-label">Tên loại phòng *</label>
-<<<<<<< HEAD
                         <input type="text" class="form-control" name="room_type_name" required 
                             value="<?php echo h($editRoomTypes['room_type_name'] ?? ''); ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
                         <textarea class="form-control" name="description" rows="3"><?php echo h($editRoomTypes['description'] ?? ''); ?></textarea>
-=======
-                        <input type="text" class="form-control" name="room_type_name" required value="<?php echo $editRoomTypes ? $editRoomTypes['room_type_name'] : ''; ?>">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Mô tả</label>
-                        <textarea class="form-control" name="description" rows="3">
-                            <?php echo $editRoomTypes ? $editRoomTypes['description'] : '';  ?>
-                        </textarea>
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -435,13 +398,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tiện nghi</label>
                             <input type="text" class="form-control" name="amenities"
-<<<<<<< HEAD
                                 placeholder="VD: WiFi, TV, Điều hòa..." 
                                 value="<?php echo h($editRoomTypes['amenities'] ?? ''); ?>">
-=======
-                                placeholder="VD: WiFi, TV, Điều hòa..." value="<?php echo $editRoomTypes ? $editRoomTypes['amenities'] : '' ?>">
-
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                         </div>
                     </div>
                     <div class="mb-3">
@@ -449,18 +407,10 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                         <select class="form-select" name="status" required>
                             <option value="active" <?php echo ($editRoomTypes['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>
                                 Đang hoạt động</option>
-<<<<<<< HEAD
                             <option value="inactive" <?php echo ($editRoomTypes['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>
                                 Dừng hoạt động</option>
                             <option value="maintenance" <?php echo ($editRoomTypes['status'] ?? '') == 'maintenance' ? 'selected' : ''; ?>>
                                 Bảo trì</option>
-=======
-                            <option value="inactive" <?php echo ($editRoomTypes['status'] ?? 'inactive') == 'inactive' ? 'selected' : ''; ?>>Dừng hoạt động
-                            </option>
-                            <option value="maintenance" <?php echo ($editRoomTypes['status'] ?? 'maintainance') == 'maintainance' ? 'selected' : ''; ?>>
-                                Bảo
-                                trì</option>
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                         </select>
                     </div>
                 </div>
@@ -476,95 +426,187 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 </div>
 
 <script>
-<<<<<<< HEAD
+    function resetRoomTypeForm() {
+        // Clear URL parameters first
+        const url = new URL(window.location);
+        url.searchParams.delete('action');
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url);
+        
+        // Reset form
+        const form = document.querySelector('#addRoomTypeModal form');
+        if (!form) return;
+        
+        // Xóa room_type_id hidden input nếu có
+        const roomTypeIdInput = form.querySelector('input[name="room_type_id"]');
+        if (roomTypeIdInput) {
+            roomTypeIdInput.remove();
+        }
+        
+        // Reset tất cả fields một cách rõ ràng - override giá trị từ PHP
+        const roomTypeName = form.querySelector('input[name="room_type_name"]');
+        const description = form.querySelector('textarea[name="description"]');
+        const basePrice = form.querySelector('input[name="base_price"]');
+        const capacity = form.querySelector('input[name="capacity"]');
+        const area = form.querySelector('input[name="area"]');
+        const amenities = form.querySelector('input[name="amenities"]');
+        const status = form.querySelector('select[name="status"]');
+        
+        // Force reset từng field
+        if (roomTypeName) {
+            roomTypeName.value = '';
+            roomTypeName.defaultValue = '';
+        }
+        if (description) {
+            description.value = '';
+            description.defaultValue = '';
+        }
+        if (basePrice) {
+            basePrice.value = '';
+            basePrice.defaultValue = '';
+        }
+        if (capacity) {
+            capacity.value = '';
+            capacity.defaultValue = '';
+        }
+        if (area) {
+            area.value = '';
+            area.defaultValue = '';
+        }
+        if (amenities) {
+            amenities.value = '';
+            amenities.defaultValue = '';
+        }
+        if (status) {
+            status.value = 'active';
+            status.selectedIndex = 0;
+            // Force select option
+            const activeOption = status.querySelector('option[value="active"]');
+            if (activeOption) {
+                activeOption.selected = true;
+            }
+        }
+        
+        // Reset form để clear tất cả default values
+        form.reset();
+        
+        // Sau khi reset, set lại values để đảm bảo
+        if (roomTypeName) roomTypeName.value = '';
+        if (description) description.value = '';
+        if (basePrice) basePrice.value = '';
+        if (capacity) capacity.value = '';
+        if (area) area.value = '';
+        if (amenities) amenities.value = '';
+        if (status) {
+            status.value = 'active';
+            const activeOption = status.querySelector('option[value="active"]');
+            if (activeOption) activeOption.selected = true;
+        }
+        
+        // Reset modal title
+        const modalTitle = document.querySelector('#addRoomTypeModal .modal-title');
+        if (modalTitle) {
+            modalTitle.textContent = 'Thêm Loại Phòng';
+        }
+        
+        // Reset submit button
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.name = 'add_room_type';
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Thêm Loại Phòng';
+        }
+    }
+
     function editRoomTypes(id) {
         window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
     }
     
     <?php if ($editRoomTypes): ?>
         document.addEventListener('DOMContentLoaded', function() {
-            const modal = new bootstrap.Modal(document.getElementById('addRoomTypeModal'));
-            modal.show();
-=======
-    // ==== Helper Functions ============
-    // Hàm reset form tổng quát
-    function resetFormFields(form) {
-        if (!form) return;
-
-        form.reset();
-
-        // Xóa input hidden (trừ page và panel)
-        form.querySelectorAll('input[type="hidden"]').forEach(input => {
-            if (input.name !== 'page' && input.name !== 'panel') {
-                input.remove();
+            // Populate form with edit data
+            const form = document.querySelector('#addRoomTypeModal form');
+            if (form) {
+                const roomTypeName = form.querySelector('input[name="room_type_name"]');
+                const description = form.querySelector('textarea[name="description"]');
+                const basePrice = form.querySelector('input[name="base_price"]');
+                const capacity = form.querySelector('input[name="capacity"]');
+                const area = form.querySelector('input[name="area"]');
+                const amenities = form.querySelector('input[name="amenities"]');
+                const status = form.querySelector('select[name="status"]');
+                
+                if (roomTypeName) roomTypeName.value = '<?php echo h($editRoomTypes['room_type_name']); ?>';
+                if (description) description.value = '<?php echo h($editRoomTypes['description'] ?? ''); ?>';
+                if (basePrice) basePrice.value = '<?php echo h($editRoomTypes['base_price']); ?>';
+                if (capacity) capacity.value = '<?php echo h($editRoomTypes['capacity']); ?>';
+                if (area) area.value = '<?php echo h($editRoomTypes['area'] ?? ''); ?>';
+                if (amenities) amenities.value = '<?php echo h($editRoomTypes['amenities'] ?? ''); ?>';
+                if (status) status.value = '<?php echo h($editRoomTypes['status']); ?>';
+                
+                // Update modal title and button
+                const modalTitle = document.querySelector('#addRoomTypeModal .modal-title');
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (modalTitle) modalTitle.textContent = 'Sửa Loại Phòng';
+                if (submitBtn) {
+                    submitBtn.name = 'update_room_type';
+                    submitBtn.textContent = 'Cập nhật Loại Phòng';
+                }
             }
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
+            
+            // Delay để đảm bảo modal đã được render
+            setTimeout(function() {
+                const modalEl = document.getElementById('addRoomTypeModal');
+                if (modalEl) {
+                    const modal = new bootstrap.Modal(modalEl);
+                    modal.show();
+                }
+            }, 100);
         });
-
-        // Reset text/number/tel/email inputs
-        form.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"],select').forEach(input => {
-            input.value = '';
-        });
-
-        // Reset textarea
-        form.querySelectorAll('textarea').forEach(textarea => {
-            textarea.value = '';
-        });
-
-        // Reset date về hôm nay
-        const today = new Date().toISOString().split('T')[0];
-        form.querySelectorAll('input[type="date"]').forEach(input => {
-            input.value = today;
-        });
-
-        // Clear readonly fields
-        form.querySelectorAll('input[readonly]').forEach(input => {
-            input.value = '';
-        });
-    }
-    // Hàm xóa query string edit
-    function clearEditQueryString() {
-        const url = new URL(window.location);
-        url.searchParams.delete('action');
-        url.searchParams.delete('id');
-        window.history.replaceState({}, '', url.toString());
-    }
-    // Hàm force cleanup backdrop
-    function forceCleanupBackdrop() {
-        const openModals = document.querySelectorAll('.modal.show');
-        if (openModals.length === 0) {
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }
-    }
-    // Hàm reset modal về trạng thái "Thêm mới"
-    function resetModalToAddMode(modalElement, form) {
-        if (!modalElement || !form) return;
-
-        const modalId = modalElement.id;
-        const modalTitle = modalElement.querySelector('.modal-title');
-        const submitBtn = form.querySelector('button[type="submit"]');
-
-        // Config cho từng modal
-        const modalConfig = {
-            'addRoomTypeModal': {
-                title: 'Thêm Loại Phòng',
-                buttonName: 'add_room_type',
-                buttonHTML: '<i class="fas fa-save"></i> Thêm Loại Phòng'
-            },
-        };
-
-        const config = modalConfig[modalId];
-        if (config) {
-            if (modalTitle) modalTitle.textContent = config.title;
-            if (submitBtn) {
-                submitBtn.name = config.buttonName;
-                submitBtn.innerHTML = config.buttonHTML;
+    <?php endif; ?>
+    
+    // Auto-reset modal when closed or when "Add" button is clicked
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('addRoomTypeModal');
+        if (modal) {
+            // Clear URL and reset form when modal is closed
+            modal.addEventListener('hidden.bs.modal', function() {
+                const url = new URL(window.location);
+                url.searchParams.delete('action');
+                url.searchParams.delete('id');
+                window.history.replaceState({}, '', url);
+                // Reset form ngay lập tức
+                setTimeout(function() {
+                    resetRoomTypeForm();
+                }, 100);
+            });
+            
+            // Reset form when "Add" button is clicked
+            const addButton = document.querySelector('[data-bs-target="#addRoomTypeModal"]');
+            if (addButton) {
+                addButton.addEventListener('click', function(e) {
+                    // Clear URL first
+                    const url = new URL(window.location);
+                    url.searchParams.delete('action');
+                    url.searchParams.delete('id');
+                    window.history.replaceState({}, '', url);
+                    // Reset form ngay lập tức - không cần delay
+                    setTimeout(function() {
+                        resetRoomTypeForm();
+                    }, 50);
+                });
             }
+            
+            // Reset form when modal opens if not in edit mode
+            modal.addEventListener('show.bs.modal', function() {
+                const isEditMode = window.location.search.includes('action=edit');
+                if (!isEditMode) {
+                    // Reset form ngay lập tức với delay nhỏ
+                    setTimeout(function() {
+                        resetRoomTypeForm();
+                    }, 50);
+                }
+            });
         }
-    }
+    });
 
 
     // ==================== ROOM TYPES FUNCTIONS ====================
@@ -595,77 +637,4 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             form.submit();
         }
     }
-<<<<<<< HEAD
 </script>
-=======
-    // ==================== MODAL AUTO-RESET ====================
-    document.addEventListener('DOMContentLoaded', function() {
-
-        // Tự động mở modal edit nếu có action=edit
-        <?php if ($editRoomTypes): ?>
-            const editModal = new bootstrap.Modal(document.getElementById('addRoomTypeModal'));
-            editModal.show();
-        <?php endif; ?>
-
-        // Danh sách modal cần auto-reset
-        const resettableModals = ['addRoomTypeModal'];
-
-        // Xử lý TỔNG QUÁT cho TẤT CẢ modal
-        document.querySelectorAll('.modal').forEach(modalElement => {
-
-            // Event: Khi modal đã đóng hoàn toàn
-            modalElement.addEventListener('hidden.bs.modal', function() {
-                const form = modalElement.querySelector('form');
-                const modalId = modalElement.id;
-
-                // Chỉ xử lý modal trong danh sách
-                if (resettableModals.includes(modalId)) {
-                    const isEditMode = window.location.search.includes('action=edit');
-
-                    if (isEditMode) {
-                        // Xóa query string edit
-                        clearEditQueryString();
-                    }
-
-                    // Reset form về trạng thái "Thêm mới"
-                    if (form) {
-                        resetFormFields(form);
-                        resetModalToAddMode(modalElement, form);
-                    }
-                }
-
-                // Cleanup backdrop
-                setTimeout(forceCleanupBackdrop, 100);
-            });
-
-            // Event: Khi modal sắp mở
-            modalElement.addEventListener('show.bs.modal', function() {
-                const form = modalElement.querySelector('form');
-                const isEditMode = window.location.search.includes('action=edit');
-
-                // Nếu KHÔNG phải edit mode, reset form
-                if (!isEditMode && form && resettableModals.includes(modalElement.id)) {
-                    resetFormFields(form);
-                }
-            });
-        });
-
-        // Xử lý nút "Thêm mới" - xóa query string edit
-        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const isEditMode = window.location.search.includes('action=edit');
-                if (isEditMode) {
-                    clearEditQueryString();
-                }
-            });
-        });
-
-        // Xử lý ESC key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                setTimeout(forceCleanupBackdrop, 150);
-            }
-        });
-    });
-</script>
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162

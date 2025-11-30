@@ -522,12 +522,23 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
             });
         });
 
-        // Xử lý nút "Thêm mới" - xóa query string edit
+        // Xử lý nút "Thêm mới" - xóa query string edit và reset form
         document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
             button.addEventListener('click', function() {
                 const isEditMode = window.location.search.includes('action=edit');
                 if (isEditMode) {
                     clearEditQueryString();
+                }
+                // Reset form when opening add modal
+                const modalId = button.getAttribute('data-bs-target');
+                if (modalId && modalId.includes('addServiceModal')) {
+                    setTimeout(function() {
+                        const form = document.querySelector(modalId + ' form');
+                        if (form && !window.location.search.includes('action=edit')) {
+                            resetFormFields(form);
+                            resetModalToAddMode(document.querySelector(modalId), form);
+                        }
+                    }, 200);
                 }
             });
         });

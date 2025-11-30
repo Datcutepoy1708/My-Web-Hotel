@@ -263,15 +263,32 @@ if ($totalReview > 0) {
 
     <div class="tab-content">
         <?php
-        $panel = isset($_GET['panel']) ? trim($_GET['panel']) : 'blog-panel';
+        $panel = isset($panel) ? $panel : (isset($_GET['panel']) ? trim($_GET['panel']) : 'blog-panel');
         $panelAllowed = [
-            'blog-panel' => 'pages/blog-panel.php',
-            'review-panel' => 'pages/review-panel.php',
+            'blog-panel' => 'blog-panel.php',
+            'review-panel' => 'review-panel.php',
         ];
         if (isset($panelAllowed[$panel])) {
-            include $panelAllowed[$panel];
+            // Ensure $mysqli is available
+            if (!isset($mysqli)) {
+                global $mysqli;
+                if (!isset($mysqli)) {
+                    require_once __DIR__ . '/../includes/connect.php';
+                }
+            }
+            $panelFile = __DIR__ . DIRECTORY_SEPARATOR . $panelAllowed[$panel];
+            if (file_exists($panelFile)) {
+                include $panelFile;
+            } else {
+                echo '<div class="alert alert-danger">File not found: ' . htmlspecialchars($panelFile) . '</div>';
+            }
         } else {
-            include 'pages/404.php';
+            $notFoundFile = __DIR__ . DIRECTORY_SEPARATOR . '404.php';
+            if (file_exists($notFoundFile)) {
+                include $notFoundFile;
+            } else {
+                echo '<div class="alert alert-danger">404 - Page not found</div>';
+            }
         }
         ?>
     </div>

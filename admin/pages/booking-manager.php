@@ -31,15 +31,34 @@ if (!$canViewBooking) {
 
     <div class="tab-content">
         <?php
-            $panel = isset($_GET['panel']) ? trim($_GET['panel']) : 'roomBooking-panel';
+            $panel = isset($panel) ? $panel : (isset($_GET['panel']) ? trim($_GET['panel']) : 'roomBooking-panel');
             $panelAllowed = [
-                'roomBooking-panel' => 'pages/roomBooking-panel.php',
-                'serviceBooking-panel' => 'pages/serviceBooking-panel.php',
+                'roomBooking-panel' => 'roomBooking-panel.php',
+                'serviceBooking-panel' => 'serviceBooking-panel.php',
             ];
             if (isset($panelAllowed[$panel])) {
-                include $panelAllowed[$panel];
+                // $mysqli should be available from parent scope (index.php or Controller)
+                // If not, try to get it from global scope
+                if (!isset($mysqli)) {
+                    global $mysqli;
+                    if (!isset($mysqli)) {
+                        require_once __DIR__ . '/../includes/connect.php';
+                    }
+                }
+                // Use absolute path to avoid issues
+                $panelFile = __DIR__ . DIRECTORY_SEPARATOR . $panelAllowed[$panel];
+                if (file_exists($panelFile)) {
+                    include $panelFile;
+                } else {
+                    echo '<div class="alert alert-danger">File not found: ' . htmlspecialchars($panelFile) . '</div>';
+                }
             } else {
-                include 'pages/404.php';
+                $notFoundFile = __DIR__ . DIRECTORY_SEPARATOR . '404.php';
+                if (file_exists($notFoundFile)) {
+                    include $notFoundFile;
+                } else {
+                    echo '<div class="alert alert-danger">404 - Page not found</div>';
+                }
             }  
         ?>
 

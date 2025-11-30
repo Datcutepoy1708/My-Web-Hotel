@@ -164,7 +164,6 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                         break;
                                 }
                                 ?>
-<<<<<<< HEAD
                         <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
                     </td>
                     <td><?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></td>
@@ -188,27 +187,6 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         <?php endif; ?>
                     </td>
                 </tr>
-=======
-                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                            </td>
-                            <td><?php echo $room['area'] ? $room['area'] . 'm²' : '-'; ?></td>
-                            <td><?php echo $room['capacity'] ?? '-'; ?></td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
-                                    data-bs-target="#viewRoomModal<?php echo $room['room_id']; ?>" title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editRoom(<?php echo $room['room_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deleteRoom(<?php echo $room['room_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
 
                         <!-- View Modal -->
                         <div class="modal fade" id="viewRoomModal<?php echo $room['room_id']; ?>" tabindex="-1">
@@ -262,7 +240,6 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                     </div>
                                 </div>
                             </div>
-<<<<<<< HEAD
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
                                 <?php if ($canEditRoom): ?>
@@ -272,8 +249,6 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                 </button>
                                 <?php endif; ?>
                             </div>
-=======
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
                         </div>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -531,12 +506,23 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             });
         });
 
-        // Xử lý nút "Thêm mới" - xóa query string edit
+        // Xử lý nút "Thêm mới" - xóa query string edit và reset form
         document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
             button.addEventListener('click', function() {
                 const isEditMode = window.location.search.includes('action=edit');
                 if (isEditMode) {
                     clearEditQueryString();
+                }
+                // Reset form when opening add modal
+                const modalId = button.getAttribute('data-bs-target');
+                if (modalId && (modalId.includes('addRoomModal') || modalId.includes('addRoomTypeModal'))) {
+                    setTimeout(function() {
+                        const form = document.querySelector(modalId + ' form');
+                        if (form && !window.location.search.includes('action=edit')) {
+                            resetFormFields(form);
+                            resetModalToAddMode(document.querySelector(modalId), form);
+                        }
+                    }, 200);
                 }
             });
         });

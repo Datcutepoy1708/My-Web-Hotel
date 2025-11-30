@@ -4,8 +4,12 @@
 <script src="https://cdn.ckeditor.com/ckeditor5/40.0.0/classic/ckeditor.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script src="/My-Web-Hotel/admin/assets/js/sidebar.js"></script>
+<script src="/My-Web-Hotel/admin/assets/js/modal-reset.js"></script>
 
 <?php
+    // Ensure $page is defined
+    $page = $page ?? (isset($_GET['page']) ? trim($_GET['page']) : 'home');
+    
     if ($page == 'home') echo '<script src="/My-Web-Hotel/admin/assets/js/home.js"></script>';
     if ($page == 'room-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/room-manager.js"></script>';
     if ($page == 'staff-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/staff-manager.js"></script>';

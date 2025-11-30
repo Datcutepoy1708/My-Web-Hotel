@@ -67,11 +67,35 @@ if ($panel == 'task-panel') {
     </div>
 
     <div class="tab-content">
-                                    <?php 
+        <?php 
+        $panel = isset($panel) ? $panel : (isset($_GET['panel']) ? trim($_GET['panel']) : 'staff-panel');
+        $panelAllowed = [
+            'staff-panel' => 'staff-panel.php',
+            'permission-panel' => 'permission-manager.php',
+            'task-panel' => 'task-manager.php',
+        ];
+        
         if (isset($panelAllowed[$panel])) {
-            include $panelAllowed[$panel];
+            // Ensure $mysqli is available
+            if (!isset($mysqli)) {
+                global $mysqli;
+                if (!isset($mysqli)) {
+                    require_once __DIR__ . '/../includes/connect.php';
+                }
+            }
+            $panelFile = __DIR__ . DIRECTORY_SEPARATOR . $panelAllowed[$panel];
+            if (file_exists($panelFile)) {
+                include $panelFile;
+            } else {
+                echo '<div class="alert alert-danger">File not found: ' . htmlspecialchars($panelFile) . '</div>';
+            }
         } else {
-            include 'pages/staff-panel.php';
+            $defaultFile = __DIR__ . DIRECTORY_SEPARATOR . 'staff-panel.php';
+            if (file_exists($defaultFile)) {
+                include $defaultFile;
+            } else {
+                echo '<div class="alert alert-danger">Default panel not found</div>';
+            }
         }
         ?>
     </div>

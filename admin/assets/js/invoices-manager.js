@@ -2,7 +2,7 @@
 function editInvoice(invoiceId) {
   // Logic to edit invoice
   console.log("Edit invoice:", invoiceId);
-  window.location.href = 'index.php?page=invoice-manager&action=edit&id=' + invoiceId;
+  window.location.href = 'index.php?page=invoices-manager&action=edit&id=' + invoiceId;
 }
 
 function deleteInvoice(invoiceId) {
@@ -73,12 +73,28 @@ function saveInvoice() {
 }
 
 function editInvoiceFromView() {
-  const invoiceId = document.getElementById("viewInvoiceId").textContent;
+  // Lấy invoice_id từ biến global đã lưu khi view invoice
+  let invoiceId = window.currentInvoiceId;
+  if (!invoiceId) {
+    // Fallback: lấy từ textContent và loại bỏ dấu #
+    const invoiceIdText = document.getElementById("viewInvoiceId")?.textContent || '';
+    invoiceId = invoiceIdText.replace('#', '').trim();
+  }
+  
+  if (!invoiceId || invoiceId === '-' || invoiceId === '') {
+    alert('Không tìm thấy mã hóa đơn');
+    return;
+  }
+  
   const viewModal = bootstrap.Modal.getInstance(
     document.getElementById("viewInvoiceModal")
   );
-  viewModal.hide();
-  editInvoice(invoiceId);
+  if (viewModal) {
+    viewModal.hide();
+  }
+  
+  // Chuyển đến trang edit với URL đúng
+  window.location.href = 'index.php?page=invoices-manager&action=edit&id=' + invoiceId;
 }
 
 function resetInvoiceForm() {

@@ -505,19 +505,57 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 <script>
     <?php if ($canCreateCustomers || $canEditCustomers): ?>
     function resetForm() {
-        document.getElementById('customerForm').reset();
-        document.getElementById('customer_id').value = '';
-        document.getElementById('username').readOnly = false;
-        document.getElementById('password').required = true;
-        document.getElementById('passwordRequired').style.display = 'inline';
-        document.getElementById('modalTitle').textContent = 'Thêm Khách Hàng';
-        document.getElementById('submitBtn').textContent = 'Thêm Khách Hàng';
-        document.getElementById('submitBtn').name = 'add_customer';
+        // Clear URL parameters first
+        const url = new URL(window.location);
+        url.searchParams.delete('action');
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url);
+        
+        // Reset form
+        const form = document.getElementById('customerForm');
+        if (form) {
+            form.reset();
+            document.getElementById('customer_id').value = '';
+            document.getElementById('username').readOnly = false;
+            document.getElementById('password').required = true;
+            document.getElementById('passwordRequired').style.display = 'inline';
+            document.getElementById('modalTitle').textContent = 'Thêm Khách Hàng';
+            document.getElementById('submitBtn').textContent = 'Thêm Khách Hàng';
+            document.getElementById('submitBtn').name = 'add_customer';
+        }
     }
 
     function editCustomer(id) {
         window.location.href = 'index.php?page=customers-manager&action=edit&id=' + id;
     }
+    
+    // Auto-reset when modal is closed
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('addCustomerModal');
+        if (modal) {
+            modal.addEventListener('hidden.bs.modal', function() {
+                // Clear URL parameters when modal is closed
+                const url = new URL(window.location);
+                url.searchParams.delete('action');
+                url.searchParams.delete('id');
+                window.history.replaceState({}, '', url);
+            });
+            
+            // Reset form when "Add" button is clicked
+            const addButton = document.querySelector('[data-bs-target="#addCustomerModal"]');
+            if (addButton) {
+                addButton.addEventListener('click', function() {
+                    // Clear URL first
+                    const url = new URL(window.location);
+                    url.searchParams.delete('action');
+                    url.searchParams.delete('id');
+                    window.history.replaceState({}, '', url);
+                    // Then reset form
+                    setTimeout(resetForm, 100);
+                });
+            }
+        }
+    });
     <?php else: ?>
     function resetForm() {
         alert('Bạn không có quyền thêm khách hàng.');

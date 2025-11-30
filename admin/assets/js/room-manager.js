@@ -96,20 +96,32 @@ function editRoomFromView(id) {
 }
 
 // Search and filter functionality
-document.getElementById("searchInput").addEventListener("input", function () {
-  const searchTerm = this.value.toLowerCase();
-  const table = document.getElementById("roomsTable");
-  const rows = table.getElementsByTagName("tr");
+const searchInput = document.getElementById("searchInput");
+if (searchInput) {
+  searchInput.addEventListener("input", function () {
+    const searchTerm = this.value.toLowerCase();
+    const table = document.getElementById("roomsTable");
+    if (!table) return;
+    const rows = table.getElementsByTagName("tr");
 
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    const text = row.textContent.toLowerCase();
-    row.style.display = text.includes(searchTerm) ? "" : "none";
-  }
-});
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(searchTerm) ? "" : "none";
+    }
+  });
+}
 
-document.getElementById("statusFilter").addEventListener("change", filterTable);
-document.getElementById("typeFilter").addEventListener("change", filterTable);
+const statusFilter = document.getElementById("statusFilter");
+const typeFilter = document.getElementById("typeFilter");
+
+if (statusFilter) {
+  statusFilter.addEventListener("change", filterTable);
+}
+
+if (typeFilter) {
+  typeFilter.addEventListener("change", filterTable);
+}
 
 function filterTable() {
   const statusFilter = document.getElementById("statusFilter").value;
@@ -156,42 +168,50 @@ function filterTable() {
   }
 }
 
-document.getElementById("resetFilter").addEventListener("click", function () {
-  document.getElementById("searchInput").value = "";
-  document.getElementById("statusFilter").value = "";
-  document.getElementById("typeFilter").value = "";
+const resetFilter = document.getElementById("resetFilter");
+if (resetFilter) {
+  resetFilter.addEventListener("click", function () {
+    if (searchInput) searchInput.value = "";
+    if (statusFilter) statusFilter.value = "";
+    if (typeFilter) typeFilter.value = "";
 
-  const table = document.getElementById("roomsTable");
-  const rows = table.getElementsByTagName("tr");
+    const table = document.getElementById("roomsTable");
+    if (!table) return;
+    const rows = table.getElementsByTagName("tr");
 
-  for (let i = 1; i < rows.length; i++) {
-    rows[i].style.display = "";
-  }
-});
+    for (let i = 1; i < rows.length; i++) {
+      rows[i].style.display = "";
+    }
+  });
+}
 
 // Xử lý preview hình ảnh
-document.getElementById("roomImages").addEventListener("change", function (e) {
-  const files = e.target.files;
-  const previewContainer = document.getElementById("imagePreview");
-  previewContainer.innerHTML = "";
+const roomImages = document.getElementById("roomImages");
+if (roomImages) {
+  roomImages.addEventListener("change", function (e) {
+    const files = e.target.files;
+    const previewContainer = document.getElementById("imagePreview");
+    if (!previewContainer) return;
+    previewContainer.innerHTML = "";
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const previewItem = document.createElement("div");
-        previewItem.className = "image-preview-item";
-        previewItem.innerHTML = `
-                    <img src="${e.target.result}" alt="Preview">
-                    <button type="button" class="remove-btn" onclick="removeImage(this)">×</button>
-                `;
-        previewContainer.appendChild(previewItem);
-      };
-      reader.readAsDataURL(file);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const previewItem = document.createElement("div");
+          previewItem.className = "image-preview-item";
+          previewItem.innerHTML = `
+                      <img src="${e.target.result}" alt="Preview">
+                      <button type="button" class="remove-btn" onclick="removeImage(this)">×</button>
+                  `;
+          previewContainer.appendChild(previewItem);
+        };
+        reader.readAsDataURL(file);
+      }
     }
-  }
-});
+  });
+}
 
 function removeImage(btn) {
   btn.parentElement.remove();

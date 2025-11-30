@@ -19,35 +19,44 @@ $messageType = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Thêm hóa đơn
     if (isset($_POST['add_invoice'])) {
-        $booking_id = intval($_POST['booking_id']);
+        $booking_id = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null;
+        $customer_id = intval($_POST['customer_id'] ?? 0);
         $room_charge = floatval($_POST['room_charge']);
         $service_charge = floatval($_POST['service_charge']);
         $vat = floatval($_POST['vat']);
         $other_fees = floatval($_POST['other_fees']);
         $total_amount = $room_charge + $service_charge + $vat + $other_fees;
+        $deposit_amount = floatval($_POST['deposit_amount'] ?? 0);
+        $remaining_amount = $total_amount - $deposit_amount;
         $payment_method = trim($_POST['payment_method']);
         $status = $_POST['status'] ?? 'Unpaid';
         $payment_time = !empty($_POST['payment_time']) ? $_POST['payment_time'] : null;
         $note = trim($_POST['note'] ?? '');
 
-        // Lấy ra customer_id
-        $stmt_get_customer = $mysqli->prepare("SELECT customer_id FROM booking WHERE booking_id = ?");
-        $stmt_get_customer->bind_param("i", $booking_id);
-        $stmt_get_customer->execute();
-        $result = $stmt_get_customer->get_result();
-        $booking_data = $result->fetch_assoc();
-        $customer_id = $booking_data['customer_id'] ?? null;
-        $stmt_get_customer->close();
+        // Nếu có booking_id, lấy customer_id từ booking
+        if ($booking_id) {
+            $stmt_get_customer = $mysqli->prepare("SELECT customer_id FROM booking WHERE booking_id = ?");
+            $stmt_get_customer->bind_param("i", $booking_id);
+            $stmt_get_customer->execute();
+            $result = $stmt_get_customer->get_result();
+            $booking_data = $result->fetch_assoc();
+            $customer_id = $booking_data['customer_id'] ?? $customer_id;
+            $stmt_get_customer->close();
+        }
 
-
-        // KIỂM TRA nếu không tìm thấy customer_id
-        if (!$customer_id) {
-            $message = 'Lỗi: Không tìm thấy thông tin khách hàng từ booking!';
+        // Kiểm tra customer_id
+        if (!$customer_id || $customer_id <= 0) {
+            $message = 'Lỗi: Khách hàng không được để trống!';
             $messageType = 'danger';
         } else {
-            // INSERT VỚI customer_id
-            $stmt = $mysqli->prepare("INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, payment_method, status, payment_time, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iidddddssss", $booking_id, $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $payment_method, $status, $payment_time, $note);
+            // INSERT với booking_id có thể NULL
+            if ($booking_id) {
+                $stmt = $mysqli->prepare("INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, deposit_amount, remaining_amount, payment_method, status, payment_time, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("iiddddddssss", $booking_id, $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $deposit_amount, $remaining_amount, $payment_method, $status, $payment_time, $note);
+            } else {
+                $stmt = $mysqli->prepare("INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, deposit_amount, remaining_amount, payment_method, status, payment_time, note) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("iddddddssss", $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $deposit_amount, $remaining_amount, $payment_method, $status, $payment_time, $note);
+            }
 
             if ($stmt->execute()) {
                 $message = 'Thêm hóa đơn thành công!';
@@ -64,35 +73,39 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Cập nhật hóa đơn
     if (isset($_POST['update_invoice'])) {
         $invoice_id = intval($_POST['invoice_id']);
-        $booking_id = intval($_POST['booking_id']);
+        $booking_id = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null;
+        $customer_id = intval($_POST['customer_id'] ?? 0);
         $room_charge = floatval($_POST['room_charge']);
         $service_charge = floatval($_POST['service_charge']);
         $vat = floatval($_POST['vat']);
         $other_fees = floatval($_POST['other_fees']);
         $total_amount = $room_charge + $service_charge + $vat + $other_fees;
+        $deposit_amount = floatval($_POST['deposit_amount'] ?? 0);
+        $remaining_amount = $total_amount - $deposit_amount;
         $payment_method = trim($_POST['payment_method']);
         $status = $_POST['status'] ?? 'Unpaid';
         $payment_time = !empty($_POST['payment_time']) ? $_POST['payment_time'] : null;
         $note = trim($_POST['note'] ?? '');
 
-        // LẤY customer_id TỪ BOOKING
-        $stmt_get_customer = $mysqli->prepare("SELECT customer_id FROM booking WHERE booking_id = ?");
-        $stmt_get_customer->bind_param("i", $booking_id);
-        $stmt_get_customer->execute();
-        $result = $stmt_get_customer->get_result();
-        $booking_data = $result->fetch_assoc();
-        $customer_id = $booking_data['customer_id'] ?? null;
-        $stmt_get_customer->close();
+        // Nếu có booking_id, lấy customer_id từ booking
+        if ($booking_id) {
+            $stmt_get_customer = $mysqli->prepare("SELECT customer_id FROM booking WHERE booking_id = ?");
+            $stmt_get_customer->bind_param("i", $booking_id);
+            $stmt_get_customer->execute();
+            $result = $stmt_get_customer->get_result();
+            $booking_data = $result->fetch_assoc();
+            $customer_id = $booking_data['customer_id'] ?? $customer_id;
+            $stmt_get_customer->close();
+        }
 
-
-        // KIỂM TRA nếu không tìm thấy customer_id
-        if (!$customer_id) {
-            $message = 'Lỗi: Không tìm thấy thông tin khách hàng từ booking!';
+        // Kiểm tra customer_id
+        if (!$customer_id || $customer_id <= 0) {
+            $message = 'Lỗi: Khách hàng không được để trống!';
             $messageType = 'danger';
         } else {
-            // UPDATE VỚI customer_id
-            $stmt = $mysqli->prepare("UPDATE invoice SET booking_id=?, customer_id=?, room_charge=?, service_charge=?, vat=?, other_fees=?, total_amount=?, payment_method=?, status=?, payment_time=?, note=? WHERE invoice_id=? AND deleted IS NULL");
-            $stmt->bind_param("iidddddssssi", $booking_id, $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $payment_method, $status, $payment_time, $note, $invoice_id);
+            // UPDATE với booking_id có thể NULL
+            $stmt = $mysqli->prepare("UPDATE invoice SET booking_id=?, customer_id=?, room_charge=?, service_charge=?, vat=?, other_fees=?, total_amount=?, deposit_amount=?, remaining_amount=?, payment_method=?, status=?, payment_time=?, note=? WHERE invoice_id=? AND deleted IS NULL");
+            $stmt->bind_param("iiddddddssssi", $booking_id, $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $deposit_amount, $remaining_amount, $payment_method, $status, $payment_time, $note, $invoice_id);
 
             if ($stmt->execute()) {
                 $message = 'Cập nhật hóa đơn thành công!';
@@ -127,6 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 // Lấy thông tin hóa đơn để edit
 $editInvoice = null;
+$editBookingInfo = null;
 if ($action == 'edit' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
     $stmt = $mysqli->prepare("SELECT * FROM invoice WHERE invoice_id = ? AND deleted IS NULL");
@@ -135,6 +149,25 @@ if ($action == 'edit' && isset($_GET['id'])) {
     $result = $stmt->get_result();
     $editInvoice = $result->fetch_assoc();
     $stmt->close();
+
+    // Nếu có booking_id, lấy thông tin booking để hiển thị
+    if ($editInvoice && $editInvoice['booking_id']) {
+        $booking_stmt = $mysqli->prepare("
+            SELECT b.booking_id, b.check_in_date, b.check_out_date,
+                   c.full_name, c.phone,
+                   r.room_number, rt.room_type_name
+            FROM booking b
+            LEFT JOIN customer c ON b.customer_id = c.customer_id
+            LEFT JOIN room r ON b.room_id = r.room_id
+            LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
+            WHERE b.booking_id = ? AND b.deleted IS NULL
+        ");
+        $booking_stmt->bind_param("i", $editInvoice['booking_id']);
+        $booking_stmt->execute();
+        $booking_result = $booking_stmt->get_result();
+        $editBookingInfo = $booking_result->fetch_assoc();
+        $booking_stmt->close();
+    }
 }
 
 // Lấy danh sách booking chưa có hóa đơn (chỉ booking phòng)
@@ -202,15 +235,11 @@ switch ($sort) {
 }
 
 // Đếm tổng số
-<<<<<<< HEAD
 $countQuery = "SELECT COUNT(DISTINCT i.invoice_id) as total 
     FROM invoice i 
     LEFT JOIN booking b ON i.booking_id = b.booking_id
     LEFT JOIN customer c ON i.customer_id = c.customer_id
     $where";
-=======
-$countQuery = "SELECT COUNT(*) as total FROM invoice i LEFT JOIN booking b ON i.booking_id = b.booking_id";
->>>>>>> f400ee24e93a1e241687444fe9242cd07da77162
 $countResult = $mysqli->query($countQuery);
 $total = 0;
 
@@ -306,8 +335,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             </option>
                             <option value="Unpaid" <?php echo $status_filter == 'Unpaid' ? 'selected' : ''; ?>>Chưa
                                 thanh toán</option>
-                            <option value="Partial" <?php echo $status_filter == 'Partial' ? 'selected' : ''; ?>>Thanh
-                                toán một phần</option>
+                            <!-- Removed Partial status as it's not in the new schema -->
+                            toán một phần</option>
                         </select>
                     </div>
                     <div class="col-md-3">
@@ -349,7 +378,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <tr data-invoice-id="<?php echo $invoice['invoice_id']; ?>">
                                 <td><?php echo $invoice['invoice_id']; ?></td>
                                 <td>
-                                    <?php 
+                                    <?php
                                     if ($invoice['booking_id']) {
                                         echo $invoice['booking_id'];
                                     } else {
@@ -368,7 +397,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                     $badgeClass = 'badge';
                                     if ($invoice['status'] == 'Paid') $badgeClass = 'badge bg-success';
                                     elseif ($invoice['status'] == 'Unpaid') $badgeClass = 'badge bg-danger';
-                                    elseif ($invoice['status'] == 'Partial') $badgeClass = 'badge bg-warning';
+                                    // Removed Partial status handling
                                     ?>
                                     <span class="<?php echo $badgeClass; ?>">
                                         <?php
@@ -386,10 +415,12 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                         onclick="viewInvoice(<?php echo $invoice['invoice_id']; ?>)" title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-outline-warning"
-                                        onclick="editInvoice(<?php echo $invoice['invoice_id']; ?>)" title="Sửa">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
+                                    <a href="index.php?page=invoices-manager&action=edit&id=<?php echo $invoice['invoice_id']; ?>">
+                                        <button class="btn btn-sm btn-outline-warning"
+                                            title="Sửa">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </a>
                                     <button class="btn btn-sm btn-outline-danger"
                                         onclick="deleteInvoice(<?php echo $invoice['invoice_id']; ?>)" title="Xóa">
                                         <i class="fas fa-trash"></i>
@@ -417,12 +448,43 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-6"><strong>Mã Hóa Đơn:</strong> <span id="viewInvoiceId">-</span></div>
-                        <div class="col-md-6"><strong>Booking ID:</strong> <span id="viewBookingId">-</span></div>
+                        <div class="col-md-6"><strong>Ngày Tạo:</strong> <span id="viewCreatedAt">-</span></div>
                     </div>
                     <div class="row mb-3">
                         <div class="col-md-6"><strong>Khách Hàng:</strong> <span id="viewCustomerName">-</span></div>
-                        <div class="col-md-6"><strong>Ngày Tạo:</strong> <span id="viewCreatedAt">-</span></div>
+                        <div class="col-md-6"><strong>Điện Thoại:</strong> <span id="viewCustomerPhone">-</span></div>
                     </div>
+
+                    <!-- Thông tin phòng (nếu có) -->
+                    <div id="viewRoomInfo" style="display: none;" class="mb-3">
+                        <div class="row">
+                            <div class="col-md-6"><strong>Phòng:</strong> <span id="viewRoomNumber">-</span></div>
+                            <div class="col-md-6"><strong>Loại Phòng:</strong> <span id="viewRoomType">-</span></div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6"><strong>Check-in:</strong> <span id="viewCheckIn">-</span></div>
+                            <div class="col-md-6"><strong>Check-out:</strong> <span id="viewCheckOut">-</span></div>
+                        </div>
+                    </div>
+
+                    <!-- Danh sách dịch vụ -->
+                    <div id="viewServicesSection" class="mb-3" style="display: none;">
+                        <strong>Dịch Vụ:</strong>
+                        <table class="table table-sm table-bordered mt-2">
+                            <thead>
+                                <tr>
+                                    <th>Tên Dịch Vụ</th>
+                                    <th class="text-center">Số Lượng</th>
+                                    <th class="text-end">Đơn Giá</th>
+                                    <th class="text-end">Thành Tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody id="viewServicesList">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bảng tính tiền -->
                     <table class="table table-sm mt-3">
                         <tr>
                             <td>Phí Phòng:</td>
@@ -436,15 +498,20 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <td>VAT:</td>
                             <td class="text-end" id="viewVat">0 VNĐ</td>
                         </tr>
-                        <tr>
-                            <td>Phí Khác:</td>
-                            <td class="text-end" id="viewOtherFees">0 VNĐ</td>
-                        </tr>
                         <tr style="border-top: 2px solid #ddd; font-weight: bold;">
                             <td>Tổng Cộng:</td>
                             <td class="text-end" id="viewTotalAmount">0 VNĐ</td>
                         </tr>
+                        <tr>
+                            <td>Tiền Cọc:</td>
+                            <td class="text-end" id="viewDepositAmount">0 VNĐ</td>
+                        </tr>
+                        <tr style="font-weight: bold;">
+                            <td>Còn Lại:</td>
+                            <td class="text-end" id="viewRemainingAmount">0 VNĐ</td>
+                        </tr>
                     </table>
+
                     <div class="row mt-3">
                         <div class="col-md-6">
                             <strong>Hình Thức TT:</strong> <span id="viewPaymentMethod">-</span>
@@ -797,23 +864,50 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Booking ID *</label>
-                            <select class="form-select booking-search" id="booking_id" name="booking_id" required>
-                                <option value="">-- Chọn booking chưa có hóa đơn --</option>
-                                <?php foreach ($bookingsWithoutInvoice as $booking): ?>
-                                    <option value="<?php echo $booking['booking_id']; ?>"
-                                        data-customer-name="<?php echo h($booking['full_name']); ?>"
-                                        data-checkin="<?php echo $booking['check_in_date']; ?>"
-                                        data-checkout="<?php echo $booking['check_out_date']; ?>"
-                                        data-room="<?php echo h($booking['room_number']); ?>">
-                                        Booking #<?php echo $booking['booking_id']; ?> - 
-                                        <?php echo h($booking['full_name']); ?> - 
-                                        Phòng <?php echo h($booking['room_number']); ?> - 
-                                        <?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <small class="text-muted">Hoặc nhập Booking ID thủ công nếu không có trong danh sách</small>
+                            <label class="form-label">Booking ID <?php echo $editInvoice ? '(Không thể thay đổi)' : '*'; ?></label>
+                            <?php if ($editInvoice): ?>
+                                <!-- Khi edit: hiển thị readonly -->
+                                <?php if ($editInvoice['booking_id']): ?>
+                                    <!-- Có booking_id: hiển thị thông tin booking -->
+                                    <select class="form-select" id="booking_id" name="booking_id" readonly disabled style="background-color: #e9ecef; cursor: not-allowed;">
+                                        <option value="<?php echo $editInvoice['booking_id']; ?>" selected>
+                                            <?php if ($editBookingInfo): ?>
+                                                Booking #<?php echo $editInvoice['booking_id']; ?> -
+                                                <?php echo h($editBookingInfo['full_name']); ?> -
+                                                Phòng <?php echo h($editBookingInfo['room_number']); ?> -
+                                                <?php echo date('d/m/Y', strtotime($editBookingInfo['check_in_date'])); ?>
+                                            <?php else: ?>
+                                                Booking #<?php echo $editInvoice['booking_id']; ?>
+                                            <?php endif; ?>
+                                        </option>
+                                    </select>
+                                    <!-- Hidden input để gửi booking_id khi submit -->
+                                    <input type="hidden" name="booking_id" value="<?php echo $editInvoice['booking_id']; ?>">
+                                <?php else: ?>
+                                    <!-- Không có booking_id: hóa đơn chỉ dịch vụ -->
+                                    <input type="text" class="form-control" value="Không có (Hóa đơn chỉ dịch vụ)" readonly disabled style="background-color: #e9ecef; cursor: not-allowed;">
+                                    <input type="hidden" name="booking_id" value="">
+                                <?php endif; ?>
+                                <small class="text-muted">Booking ID không thể thay đổi khi chỉnh sửa hóa đơn</small>
+                            <?php else: ?>
+                                <!-- Khi thêm mới: select bình thường -->
+                                <select class="form-select booking-search" id="booking_id" name="booking_id" required>
+                                    <option value="">-- Chọn booking chưa có hóa đơn --</option>
+                                    <?php foreach ($bookingsWithoutInvoice as $booking): ?>
+                                        <option value="<?php echo $booking['booking_id']; ?>"
+                                            data-customer-name="<?php echo h($booking['full_name']); ?>"
+                                            data-checkin="<?php echo $booking['check_in_date']; ?>"
+                                            data-checkout="<?php echo $booking['check_out_date']; ?>"
+                                            data-room="<?php echo h($booking['room_number']); ?>">
+                                            Booking #<?php echo $booking['booking_id']; ?> -
+                                            <?php echo h($booking['full_name']); ?> -
+                                            Phòng <?php echo h($booking['room_number']); ?> -
+                                            <?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <small class="text-muted">Hoặc nhập Booking ID thủ công nếu không có trong danh sách</small>
+                            <?php endif; ?>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Hình Thức Thanh Toán *</label>
@@ -856,7 +950,21 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     <div class="mb-3">
                         <label class="form-label">Tổng Tiền (VNĐ) *</label>
                         <input type="number" class="form-control" id="total_amount" name="total_amount" step="0.01"
-                            min="0" readonly>
+                            min="0" readonly required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Tiền Cọc (VNĐ)</label>
+                            <input type="number" class="form-control" id="deposit_amount" name="deposit_amount" step="0.01"
+                                min="0" value="0" onchange="calculateRemaining()">
+                            <small class="text-muted">Số tiền đã cọc (30% = tổng tiền × 0.3)</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Còn Lại (VNĐ)</label>
+                            <input type="number" class="form-control" id="remaining_amount" name="remaining_amount" step="0.01"
+                                min="0" value="0" readonly>
+                        </div>
                     </div>
 
                     <div class="row">
@@ -865,7 +973,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <select class="form-select" id="status" name="status" required>
                                 <option value="Unpaid">Chưa thanh toán</option>
                                 <option value="Paid">Đã thanh toán</option>
-                                <option value="Partial">Thanh toán một phần</option>
+                                <option value="Refunded">Đã hoàn tiền</option>
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
@@ -1085,54 +1193,95 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             .then(data => {
                 if (data.success && data.invoice) {
                     const inv = data.invoice;
-                    
+
                     // Format số tiền
                     const formatMoney = (amount) => {
                         return new Intl.NumberFormat('vi-VN').format(amount || 0) + ' VNĐ';
                     };
-                    
+
                     // Format ngày
                     const formatDate = (dateStr) => {
                         if (!dateStr || dateStr === '0000-00-00 00:00:00') return '-';
                         const date = new Date(dateStr);
-                        return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute: '2-digit'});
+                        return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
                     };
-                    
+
                     // Format trạng thái
                     const formatStatus = (status) => {
                         const statusMap = {
                             'Paid': 'Đã thanh toán',
                             'Unpaid': 'Chưa thanh toán',
-                            'Partial': 'Thanh toán một phần'
+                            'Refunded': 'Đã hoàn tiền'
                         };
                         return statusMap[status] || status;
                     };
-                    
+
                     // Set text fields trong modal
                     const setElement = (id, value) => {
                         const el = document.getElementById(id);
                         if (el) el.textContent = value;
                     };
-                    
-                    setElement('viewInvoiceId', inv.invoice_id || '-');
-                    setElement('viewBookingId', inv.booking_id || '-');
+
+                    setElement('viewInvoiceId', '#' + (inv.invoice_id || '-'));
                     setElement('viewCustomerName', inv.full_name || '-');
-                    setElement('viewRoomCharge', formatMoney(inv.room_charge));
-                    setElement('viewServiceCharge', formatMoney(inv.service_charge));
-                    setElement('viewVat', formatMoney(inv.vat));
-                    setElement('viewOtherFees', formatMoney(inv.other_fees));
-                    setElement('viewTotalAmount', formatMoney(inv.total_amount));
+                    setElement('viewCustomerPhone', inv.phone || '-');
+                    setElement('viewCreatedAt', formatDate(inv.created_at));
+
+                    // Hiển thị thông tin phòng (nếu có)
+                    const roomInfoEl = document.getElementById('viewRoomInfo');
+                    if (inv.room_number && inv.room_type_name) {
+                        setElement('viewRoomNumber', inv.room_number || '-');
+                        setElement('viewRoomType', inv.room_type_name || '-');
+                        setElement('viewCheckIn', inv.check_in_date ? formatDate(inv.check_in_date) : '-');
+                        setElement('viewCheckOut', inv.check_out_date ? formatDate(inv.check_out_date) : '-');
+                        if (roomInfoEl) roomInfoEl.style.display = 'block';
+                    } else {
+                        if (roomInfoEl) roomInfoEl.style.display = 'none';
+                    }
+
+                    // Hiển thị danh sách dịch vụ
+                    const servicesSection = document.getElementById('viewServicesSection');
+                    const servicesList = document.getElementById('viewServicesList');
+                    if (inv.services && inv.services.length > 0) {
+                        if (servicesList) {
+                            servicesList.innerHTML = '';
+                            inv.services.forEach(service => {
+                                const row = document.createElement('tr');
+                                row.innerHTML = `
+                                    <td>${service.service_name || '-'}</td>
+                                    <td class="text-center">${service.quantity || 0} ${service.unit || ''}</td>
+                                    <td class="text-end">${formatMoney(service.unit_price || 0)}</td>
+                                    <td class="text-end">${formatMoney(service.total_price || 0)}</td>
+                                `;
+                                servicesList.appendChild(row);
+                            });
+                        }
+                        if (servicesSection) servicesSection.style.display = 'block';
+                    } else {
+                        if (servicesSection) servicesSection.style.display = 'none';
+                    }
+
+                    // Thông tin thanh toán
+                    setElement('viewRoomCharge', formatMoney(inv.room_charge || 0));
+                    setElement('viewServiceCharge', formatMoney(inv.service_charge || 0));
+                    setElement('viewVat', formatMoney(inv.vat || 0));
+                    setElement('viewTotalAmount', formatMoney(inv.total_amount || 0));
+                    setElement('viewDepositAmount', formatMoney(inv.deposit_amount || 0));
+                    setElement('viewRemainingAmount', formatMoney(inv.remaining_amount || 0));
                     setElement('viewPaymentMethod', inv.payment_method || '-');
                     setElement('viewStatus', formatStatus(inv.status));
-                    setElement('viewCreatedAt', formatDate(inv.created_at));
                     setElement('viewPaymentTime', inv.payment_time ? formatDate(inv.payment_time) : '-');
-                    
+
                     const noteEl = document.getElementById('viewNote');
                     if (noteEl) noteEl.textContent = inv.note || '-';
-                    
-                    // Lưu invoice data để xuất Word
+
+                    // Lưu invoice data để xuất Word và edit
                     window.currentInvoiceData = inv;
-                    
+                    window.currentInvoiceId = inv.invoice_id; // Lưu invoice_id riêng để dùng cho edit
+
                     // Show modal
                     const viewModal = new bootstrap.Modal(
                         document.getElementById("viewInvoiceModal")
@@ -1158,21 +1307,37 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     }
 
     function editInvoiceFromView() {
-        const invoiceId = document.getElementById("viewInvoiceId").textContent;
+        // Lấy invoice_id từ biến global đã lưu khi view invoice
+        let invoiceId = window.currentInvoiceId;
+        if (!invoiceId) {
+            // Fallback: lấy từ textContent và loại bỏ dấu #
+            const invoiceIdText = document.getElementById("viewInvoiceId")?.textContent || '';
+            invoiceId = invoiceIdText.replace('#', '').trim();
+        }
+
+        if (!invoiceId || invoiceId === '-' || invoiceId === '') {
+            alert('Không tìm thấy mã hóa đơn');
+            return;
+        }
+
         const viewModal = bootstrap.Modal.getInstance(
             document.getElementById("viewInvoiceModal")
         );
-        viewModal.hide();
-        editInvoice(invoiceId);
+        if (viewModal) {
+            viewModal.hide();
+        }
+
+        // Chuyển đến trang edit với URL đúng
+        window.location.href = 'index.php?page=invoices-manager&action=edit&id=' + invoiceId;
     }
-    
+
     function exportInvoiceToWord() {
         const invoiceId = document.getElementById("viewInvoiceId").textContent;
         if (!invoiceId || invoiceId === '-') {
             alert('Không tìm thấy mã hóa đơn');
             return;
         }
-        
+
         // Mở link xuất Word trong tab mới
         window.open(`api/export-invoice.php?id=${invoiceId}`, '_blank');
     }
@@ -1191,27 +1356,27 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             }
         }
     }
-    
+
     // Hàm khởi tạo Select2 cho booking
     function initBookingSelect2() {
         if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
             return false;
         }
-        
+
         const $bookingSelect = jQuery('#booking_id');
         if (!$bookingSelect.length) {
             return false;
         }
-        
+
         // Destroy nếu đã khởi tạo trước đó
         if ($bookingSelect.hasClass('select2-hidden-accessible')) {
             $bookingSelect.select2('destroy');
         }
-        
+
         // Lấy modal để set dropdownParent
         const $modal = jQuery('#addInvoiceModal');
         const dropdownParent = $modal.length ? $modal : jQuery('body');
-        
+
         $bookingSelect.select2({
             theme: 'bootstrap-5',
             placeholder: '-- Chọn booking chưa có hóa đơn --',
@@ -1228,7 +1393,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 }
             }
         });
-        
+
         // Đảm bảo input tìm kiếm có thể gõ được
         $bookingSelect.on('select2:open', function() {
             setTimeout(function() {
@@ -1239,10 +1404,10 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 $searchField.focus();
             }, 100);
         });
-        
+
         return true;
     }
-    
+
     // Khởi tạo lại Select2 khi modal mở
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('addInvoiceModal');
@@ -1251,7 +1416,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 setTimeout(initBookingSelect2, 200);
             });
         }
-        
+
         // Khởi tạo lần đầu nếu không trong modal
         if (typeof jQuery !== 'undefined') {
             jQuery(document).ready(function() {
@@ -1362,6 +1527,18 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         if (totalField) {
             totalField.value = total.toFixed(2);
         }
+        calculateRemaining();
+    }
+
+    // Tính số tiền còn lại
+    function calculateRemaining() {
+        const total = parseFloat(document.getElementById('total_amount')?.value) || 0;
+        const deposit = parseFloat(document.getElementById('deposit_amount')?.value) || 0;
+        const remaining = total - deposit;
+        const remainingField = document.getElementById('remaining_amount');
+        if (remainingField) {
+            remainingField.value = Math.max(0, remaining).toFixed(2);
+        }
     }
 
     // Gán sự kiện tính toán khi thay đổi các trường
@@ -1380,12 +1557,15 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     <?php if ($editInvoice): ?>
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('invoice_id').value = '<?php echo $editInvoice['invoice_id']; ?>';
-            document.getElementById('booking_id').value = '<?php echo $editInvoice['booking_id']; ?>';
+            // Booking ID đã được set trong HTML với readonly, không cần set lại bằng JS
+            // document.getElementById('booking_id').value = '<?php echo $editInvoice['booking_id'] ?? ''; ?>';
             document.getElementById('room_charge').value = '<?php echo $editInvoice['room_charge']; ?>';
             document.getElementById('service_charge').value = '<?php echo $editInvoice['service_charge']; ?>';
             document.getElementById('vat').value = '<?php echo $editInvoice['vat']; ?>';
             document.getElementById('other_fees').value = '<?php echo $editInvoice['other_fees']; ?>';
             document.getElementById('total_amount').value = '<?php echo $editInvoice['total_amount']; ?>';
+            document.getElementById('deposit_amount').value = '<?php echo $editInvoice['deposit_amount'] ?? 0; ?>';
+            document.getElementById('remaining_amount').value = '<?php echo $editInvoice['remaining_amount'] ?? $editInvoice['total_amount']; ?>';
             document.getElementById('payment_method').value = '<?php echo $editInvoice['payment_method']; ?>';
             document.getElementById('status').value = '<?php echo $editInvoice['status']; ?>';
             document.getElementById('payment_time').value = '<?php echo $editInvoice['payment_time']; ?>';

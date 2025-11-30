@@ -405,34 +405,270 @@ function viewTaskDetail(id) {
 }
 
 function editTask(id) {
+    console.log('editTask called with id:', id); // Debug log
     fetch(`/My-Web-Hotel/admin/api/staff-api.php?action=view_task&id=${id}`)
-        .then(response => response.json())
+        .then(response => {
+            console.log('Response status:', response.status); // Debug log
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.success) {
+            console.log('API Response:', data); // Debug log
+            if (data.success && data.task) {
                 const task = data.task;
+                console.log('Task data:', task); // Debug log
                 const form = document.getElementById('editTaskForm');
-                form.querySelector('input[name="id_nhiem_vu"]').value = task.id_nhiem_vu;
-                form.querySelector('select[name="id_nhan_vien_duoc_gan"]').value = task.id_nhan_vien_duoc_gan;
-                form.querySelector('input[name="ten_nhiem_vu"]').value = task.ten_nhiem_vu;
-                form.querySelector('textarea[name="mo_ta_chi_tiet"]').value = task.mo_ta_chi_tiet || '';
-                form.querySelector('select[name="muc_do_uu_tien"]').value = task.muc_do_uu_tien;
-                form.querySelector('input[name="ngay_bat_dau"]').value = task.ngay_bat_dau;
-                form.querySelector('input[name="han_hoan_thanh"]').value = task.han_hoan_thanh;
-                form.querySelector('textarea[name="ghi_chu"]').value = task.ghi_chu || '';
-                form.querySelector('select[name="trang_thai"]').value = task.trang_thai;
-                form.querySelector('input[name="tien_do_hoan_thanh"]').value = task.tien_do_hoan_thanh || 0;
+                if (!form) {
+                    alert('Không tìm thấy form chỉnh sửa (editTaskForm)');
+                    console.error('Form editTaskForm not found'); // Debug log
+                    return;
+                }
                 
-                const modal = new bootstrap.Modal(document.getElementById('editTaskModal'));
-                modal.show();
+                // Populate form với dữ liệu từ server
+                const idNhiemVu = form.querySelector('input[name="id_nhiem_vu"]');
+                const idNhanVien = form.querySelector('select[name="id_nhan_vien_duoc_gan"]');
+                const tenNhiemVu = form.querySelector('input[name="ten_nhiem_vu"]');
+                const moTaChiTiet = form.querySelector('textarea[name="mo_ta_chi_tiet"]');
+                const mucDoUuTien = form.querySelector('select[name="muc_do_uu_tien"]');
+                const ngayBatDau = form.querySelector('input[name="ngay_bat_dau"]');
+                const hanHoanThanh = form.querySelector('input[name="han_hoan_thanh"]');
+                const ghiChu = form.querySelector('textarea[name="ghi_chu"]');
+                const trangThai = form.querySelector('select[name="trang_thai"]');
+                const tienDoHoanThanh = form.querySelector('input[name="tien_do_hoan_thanh"]');
+                
+                console.log('Form fields found:', {
+                    idNhiemVu: !!idNhiemVu,
+                    idNhanVien: !!idNhanVien,
+                    tenNhiemVu: !!tenNhiemVu,
+                    moTaChiTiet: !!moTaChiTiet,
+                    mucDoUuTien: !!mucDoUuTien,
+                    ngayBatDau: !!ngayBatDau,
+                    hanHoanThanh: !!hanHoanThanh,
+                    ghiChu: !!ghiChu,
+                    trangThai: !!trangThai,
+                    tienDoHoanThanh: !!tienDoHoanThanh
+                }); // Debug log
+                
+                // Set values - đảm bảo tất cả fields được populate
+                // API trả về nv.* nên tất cả fields từ nhiem_vu sẽ có trong task object
+                if (idNhiemVu && task.id_nhiem_vu) {
+                    idNhiemVu.value = String(task.id_nhiem_vu);
+                    console.log('Set id_nhiem_vu:', idNhiemVu.value);
+                }
+                if (idNhanVien && task.id_nhan_vien_duoc_gan) {
+                    idNhanVien.value = String(task.id_nhan_vien_duoc_gan);
+                    console.log('Set id_nhan_vien_duoc_gan:', idNhanVien.value);
+                }
+                if (tenNhiemVu && task.ten_nhiem_vu) {
+                    tenNhiemVu.value = String(task.ten_nhiem_vu);
+                    console.log('Set ten_nhiem_vu:', tenNhiemVu.value);
+                }
+                if (moTaChiTiet) {
+                    moTaChiTiet.value = task.mo_ta_chi_tiet ? String(task.mo_ta_chi_tiet) : '';
+                    console.log('Set mo_ta_chi_tiet:', moTaChiTiet.value);
+                }
+                if (mucDoUuTien) {
+                    mucDoUuTien.value = task.muc_do_uu_tien ? String(task.muc_do_uu_tien) : 'Trung bình';
+                    console.log('Set muc_do_uu_tien:', mucDoUuTien.value);
+                }
+                if (ngayBatDau && task.ngay_bat_dau) {
+                    // Format date (YYYY-MM-DD) - lấy phần date nếu có datetime
+                    let dateValue = String(task.ngay_bat_dau);
+                    if (dateValue.includes(' ')) {
+                        dateValue = dateValue.split(' ')[0];
+                    }
+                    // Convert từ format khác nếu cần (DD/MM/YYYY -> YYYY-MM-DD)
+                    if (dateValue.includes('/')) {
+                        const parts = dateValue.split('/');
+                        if (parts.length === 3) {
+                            dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
+                        }
+                    }
+                    ngayBatDau.value = dateValue;
+                    console.log('Set ngay_bat_dau:', ngayBatDau.value);
+                }
+                if (hanHoanThanh && task.han_hoan_thanh) {
+                    // Format date (YYYY-MM-DD) - lấy phần date nếu có datetime
+                    let dateValue = String(task.han_hoan_thanh);
+                    if (dateValue.includes(' ')) {
+                        dateValue = dateValue.split(' ')[0];
+                    }
+                    // Convert từ format khác nếu cần (DD/MM/YYYY -> YYYY-MM-DD)
+                    if (dateValue.includes('/')) {
+                        const parts = dateValue.split('/');
+                        if (parts.length === 3) {
+                            dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
+                        }
+                    }
+                    hanHoanThanh.value = dateValue;
+                    console.log('Set han_hoan_thanh:', hanHoanThanh.value);
+                }
+                if (ghiChu) {
+                    ghiChu.value = task.ghi_chu ? String(task.ghi_chu) : '';
+                    console.log('Set ghi_chu:', ghiChu.value);
+                }
+                if (trangThai) {
+                    trangThai.value = task.trang_thai ? String(task.trang_thai) : 'Chưa bắt đầu';
+                    console.log('Set trang_thai:', trangThai.value);
+                }
+                if (tienDoHoanThanh) {
+                    tienDoHoanThanh.value = task.tien_do_hoan_thanh !== undefined && task.tien_do_hoan_thanh !== null ? String(task.tien_do_hoan_thanh) : '0';
+                    console.log('Set tien_do_hoan_thanh:', tienDoHoanThanh.value);
+                }
+                
+                // Trigger change event để đảm bảo Select2 và các event listeners được cập nhật
+                if (idNhanVien) {
+                    const event = new Event('change', { bubbles: true });
+                    idNhanVien.dispatchEvent(event);
+                }
+                
+                // Delay để đảm bảo values đã được set trước khi mở modal
+                // Mở modal trước, sau đó populate data
+                setTimeout(function() {
+                    const modalEl = document.getElementById('editTaskModal');
+                    if (modalEl) {
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                        console.log('Modal opened');
+                        
+                        // Sau khi modal đã mở, đảm bảo values được set lại (đôi khi modal.show() reset form)
+                        setTimeout(function() {
+                            // Set lại values sau khi modal đã render
+                            if (idNhiemVu && task.id_nhiem_vu) {
+                                idNhiemVu.value = String(task.id_nhiem_vu);
+                            }
+                            if (idNhanVien && task.id_nhan_vien_duoc_gan) {
+                                idNhanVien.value = String(task.id_nhan_vien_duoc_gan);
+                                // Trigger change event lại
+                                const event = new Event('change', { bubbles: true });
+                                idNhanVien.dispatchEvent(event);
+                            }
+                            if (tenNhiemVu && task.ten_nhiem_vu) {
+                                tenNhiemVu.value = String(task.ten_nhiem_vu);
+                            }
+                            if (moTaChiTiet) {
+                                moTaChiTiet.value = task.mo_ta_chi_tiet ? String(task.mo_ta_chi_tiet) : '';
+                            }
+                            if (mucDoUuTien) {
+                                mucDoUuTien.value = task.muc_do_uu_tien ? String(task.muc_do_uu_tien) : 'Trung bình';
+                            }
+                            if (ngayBatDau && task.ngay_bat_dau) {
+                                let dateValue = String(task.ngay_bat_dau);
+                                if (dateValue.includes(' ')) {
+                                    dateValue = dateValue.split(' ')[0];
+                                }
+                                if (dateValue.includes('/')) {
+                                    const parts = dateValue.split('/');
+                                    if (parts.length === 3) {
+                                        dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
+                                    }
+                                }
+                                ngayBatDau.value = dateValue;
+                            }
+                            if (hanHoanThanh && task.han_hoan_thanh) {
+                                let dateValue = String(task.han_hoan_thanh);
+                                if (dateValue.includes(' ')) {
+                                    dateValue = dateValue.split(' ')[0];
+                                }
+                                if (dateValue.includes('/')) {
+                                    const parts = dateValue.split('/');
+                                    if (parts.length === 3) {
+                                        dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
+                                    }
+                                }
+                                hanHoanThanh.value = dateValue;
+                            }
+                            if (ghiChu) {
+                                ghiChu.value = task.ghi_chu ? String(task.ghi_chu) : '';
+                            }
+                            if (trangThai) {
+                                trangThai.value = task.trang_thai ? String(task.trang_thai) : 'Chưa bắt đầu';
+                            }
+                            if (tienDoHoanThanh) {
+                                tienDoHoanThanh.value = task.tien_do_hoan_thanh !== undefined && task.tien_do_hoan_thanh !== null ? String(task.tien_do_hoan_thanh) : '0';
+                            }
+                            console.log('Values re-set after modal opened');
+                        }, 300);
+                    } else {
+                        console.error('Modal editTaskModal not found');
+                    }
+                }, 100);
             } else {
-                alert('Không thể tải thông tin nhiệm vụ: ' + data.message);
+                alert('Không thể tải thông tin nhiệm vụ: ' + (data.message || 'Lỗi không xác định'));
+                console.error('API returned error:', data);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('Có lỗi xảy ra khi tải thông tin nhiệm vụ');
+            alert('Có lỗi xảy ra khi tải thông tin nhiệm vụ: ' + error.message);
+            console.error('Fetch error:', error);
         });
 }
+
+    // Hàm reset form tổng quát
+    function resetFormFields(form) {
+        if (!form) return;
+
+        form.reset();
+
+        // Xóa input hidden (trừ các field cần thiết)
+        form.querySelectorAll('input[type="hidden"]').forEach(input => {
+            if (input.name === 'id_nhiem_vu') {
+                input.value = '';
+            }
+        });
+
+        // Reset text/number/tel/email/date inputs
+        form.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"]').forEach(input => {
+            input.value = '';
+        });
+
+        // Reset select
+        form.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+
+        // Reset textarea
+        form.querySelectorAll('textarea').forEach(textarea => {
+            textarea.value = '';
+        });
+    }
+
+    // Hàm reset modal về trạng thái ban đầu
+    function resetModalToAddMode(modalElement, form) {
+        if (!modalElement || !form) return;
+
+        const modalTitle = modalElement.querySelector('.modal-title');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-edit"></i> Sửa Nhiệm Vụ';
+        }
+    }
+
+// Reset edit task form when modal is closed
+document.addEventListener('DOMContentLoaded', function() {
+    const editModal = document.getElementById('editTaskModal');
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('editTaskForm');
+            if (form) {
+                resetFormFields(form);
+                resetModalToAddMode(editModal, form);
+            }
+        });
+    }
+    
+    // Reset global task form when modal is closed
+    const globalModal = document.getElementById('globalTaskModal');
+    if (globalModal) {
+        globalModal.addEventListener('hidden.bs.modal', function() {
+            const form = document.getElementById('globalTaskForm');
+            if (form) {
+                form.reset();
+            }
+        });
+    }
+});
 
 function submitEditTask() {
     const form = document.getElementById('editTaskForm');

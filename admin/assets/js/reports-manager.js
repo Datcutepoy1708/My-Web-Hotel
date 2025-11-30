@@ -502,46 +502,11 @@ function updateRevenueChart(period, buttonElement) {
 }
 
 function exportReport() {
-    // Kiểm tra quyền xuất báo cáo (từ server-side)
     const params = getUrlParams();
-    fetch(`api/reports-api.php?action=check_export_permission`)
-        .then(response => response.text())
-        .then(text => {
-            try {
-                const data = JSON.parse(text);
-                if (!data.success || !data.hasPermission) {
-                    alert('Bạn không có quyền xuất báo cáo!');
-                    return;
-                }
-                // Nếu có quyền, thực hiện export
-                performExport(params);
-            } catch (e) {
-                console.error('Error checking export permission:', e);
-                // Fallback: vẫn cho phép export nếu không check được
-                performExport(params);
-            }
-        })
-        .catch(error => {
-            console.error('Error checking export permission:', error);
-            // Fallback: vẫn cho phép export nếu không check được
-            performExport(params);
-        });
-}
-
-function performExport(params) {
-    // Tạo URL để xuất báo cáo
     const exportUrl = `api/reports-api.php?action=export&start_date=${params.start_date}&end_date=${params.end_date}&format=excel`;
     
-    // Tạo link tạm để download
-    const link = document.createElement('a');
-    link.href = exportUrl;
-    link.download = `bao-cao-${params.start_date}-${params.end_date}.xlsx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Hoặc hiển thị thông báo nếu chưa implement
-    // alert("Chức năng xuất báo cáo đang được phát triển!\n\nSẽ xuất file Excel/PDF với toàn bộ dữ liệu thống kê.");
+    // Mở link xuất báo cáo trong tab mới để download
+    window.open(exportUrl, '_blank');
 }
 
 // Reload tất cả báo cáo khi thay đổi date range

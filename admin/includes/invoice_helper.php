@@ -47,7 +47,13 @@ function createInvoiceForServiceBooking($mysqli, $booking_service_id) {
     $booking_service = $result->fetch_assoc();
     $stmt->close();
     
-    if (!$booking_service || $booking_service['status'] !== 'confirmed') {
+    // Kiểm tra booking_service có tồn tại và status = 'confirmed'
+    if (!$booking_service) {
+        return false;
+    }
+    
+    // Chỉ tạo hóa đơn khi status = 'confirmed'
+    if ($booking_service['status'] !== 'confirmed') {
         return false;
     }
     
@@ -97,12 +103,16 @@ function createInvoiceForServiceBooking($mysqli, $booking_service_id) {
             $new_service_charge = floatval($existing_invoice['service_charge'] ?? 0) + $service_charge;
             $total_amount = floatval($existing_invoice['room_charge'] ?? 0) + $new_service_charge + floatval($existing_invoice['vat'] ?? 0) + floatval($existing_invoice['other_fees'] ?? 0);
             
+            // Cập nhật remaining_amount khi service_charge thay đổi
+            $existing_deposit = floatval($existing_invoice['deposit_amount'] ?? 0);
+            $new_remaining = $total_amount - $existing_deposit;
+            
             $update_stmt = $mysqli->prepare("
                 UPDATE invoice 
-                SET service_charge = ?, total_amount = ?
+                SET service_charge = ?, total_amount = ?, remaining_amount = ?
                 WHERE invoice_id = ?
             ");
-            $update_stmt->bind_param("ddi", $new_service_charge, $total_amount, $invoice_id);
+            $update_stmt->bind_param("dddi", $new_service_charge, $total_amount, $new_remaining, $invoice_id);
             $update_stmt->execute();
             $update_stmt->close();
             $check_stmt->close();
@@ -139,18 +149,32 @@ function createInvoiceForServiceBooking($mysqli, $booking_service_id) {
     } else {
         // Không có booking_id - chỉ booking dịch vụ (service only)
         // Tạo hóa đơn với booking_id = NULL
+        // Kiểm tra xem đã có hóa đơn cho customer này (service-only) chưa
+        // Nếu chưa có thì tạo mới, nếu có rồi thì cập nhật
+        
         $vat = 0;
         $other_fees = 0;
         $total_amount = $service_charge + $vat + $other_fees;
         
+        // Kiểm tra xem đã có hóa đơn service-only cho customer này chưa (trong cùng ngày hoặc gần đây)
+        // Hoặc tạo mới hóa đơn cho mỗi booking_service
+        // Ở đây chúng ta tạo mới hóa đơn cho mỗi booking_service để dễ quản lý
+        
+        $deposit_amount = 0;
+        $remaining_amount = $total_amount;
+        
         $invoice_stmt = $mysqli->prepare("
-            INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, payment_method, status, created_at)
-            VALUES (NULL, ?, 0, ?, ?, ?, ?, 'Cash', 'Unpaid', NOW())
+            INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, deposit_amount, remaining_amount, payment_method, status, created_at)
+            VALUES (NULL, ?, 0, ?, ?, ?, ?, ?, ?, 'Cash', 'Unpaid', NOW())
         ");
-        $invoice_stmt->bind_param("idddd", $customer_id, $service_charge, $vat, $other_fees, $total_amount);
+        $invoice_stmt->bind_param("idddddd", $customer_id, $service_charge, $vat, $other_fees, $total_amount, $deposit_amount, $remaining_amount);
         
         if ($invoice_stmt->execute()) {
             $invoice_id = $invoice_stmt->insert_id;
+        } else {
+            error_log("Error creating invoice for service booking: " . $invoice_stmt->error);
+            $invoice_stmt->close();
+            return false;
         }
         $invoice_stmt->close();
     }
@@ -241,11 +265,14 @@ function createInvoiceForRoomBooking($mysqli, $booking_id) {
     $total_amount = $room_charge + $service_charge + $vat + $other_fees;
     
     // Tạo hóa đơn
+    $deposit_amount = 0;
+    $remaining_amount = $total_amount;
+    
     $invoice_stmt = $mysqli->prepare("
-        INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, payment_method, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'Cash', 'Unpaid', NOW())
+        INSERT INTO invoice (booking_id, customer_id, room_charge, service_charge, vat, other_fees, total_amount, deposit_amount, remaining_amount, payment_method, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Cash', 'Unpaid', NOW())
     ");
-    $invoice_stmt->bind_param("iiddddd", $booking_id, $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount);
+    $invoice_stmt->bind_param("iiddddddd", $booking_id, $customer_id, $room_charge, $service_charge, $vat, $other_fees, $total_amount, $deposit_amount, $remaining_amount);
     
     if ($invoice_stmt->execute()) {
         $invoice_id = $invoice_stmt->insert_id;

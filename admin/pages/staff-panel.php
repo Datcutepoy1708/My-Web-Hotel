@@ -558,6 +558,114 @@ function editEmployee(id) {
     window.location.href = 'index.php?page=staff-manager&panel=staff-panel&action=edit&id=' + id;
 }
 
+// Auto-reset when modal is closed or when "Add" button is clicked (không cần reload)
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('addEmployeeModal');
+    if (modal) {
+        // Clear URL and reset form when modal is closed
+        modal.addEventListener('hidden.bs.modal', function() {
+            const url = new URL(window.location);
+            url.searchParams.delete('action');
+            url.searchParams.delete('id');
+            window.history.replaceState({}, '', url);
+            // Reset form completely ngay lập tức
+            const form = modal.querySelector('form');
+            if (form) {
+                form.reset();
+                // Clear all input values
+                form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], textarea, select').forEach(input => {
+                    if (input.name !== 'page' && input.name !== 'panel' && input.name !== 'id_nhan_vien') {
+                        if (input.type === 'select-one' || input.tagName === 'SELECT') {
+                            input.selectedIndex = 0;
+                        } else {
+                            input.value = '';
+                        }
+                    } else if (input.name === 'id_nhan_vien') {
+                        input.value = '';
+                    }
+                });
+                // Reset modal title and button
+                const modalTitle = modal.querySelector('.modal-title');
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (modalTitle) modalTitle.textContent = 'Thêm Nhân Viên';
+                if (submitBtn) {
+                    submitBtn.name = 'add_nhan_vien';
+                    submitBtn.textContent = 'Thêm Nhân Viên';
+                }
+            }
+        });
+        
+        // Reset form when "Add" button is clicked
+        const addButton = document.querySelector('[data-bs-target="#addEmployeeModal"]');
+        if (addButton) {
+            addButton.addEventListener('click', function() {
+                const url = new URL(window.location);
+                url.searchParams.delete('action');
+                url.searchParams.delete('id');
+                window.history.replaceState({}, '', url);
+                // Reset form
+                setTimeout(function() {
+                    const form = modal.querySelector('form');
+                    if (form) {
+                        form.reset();
+                        // Clear all input values
+                        form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], textarea, select').forEach(input => {
+                            if (input.name !== 'page' && input.name !== 'panel' && input.name !== 'id_nhan_vien') {
+                                if (input.type === 'select-one' || input.tagName === 'SELECT') {
+                                    input.selectedIndex = 0;
+                                } else {
+                                    input.value = '';
+                                }
+                            } else if (input.name === 'id_nhan_vien') {
+                                input.value = '';
+                            }
+                        });
+                        // Reset modal title and button
+                        const modalTitle = modal.querySelector('.modal-title');
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        if (modalTitle) modalTitle.textContent = 'Thêm Nhân Viên';
+                        if (submitBtn) {
+                            submitBtn.name = 'add_nhan_vien';
+                            submitBtn.textContent = 'Thêm Nhân Viên';
+                        }
+                    }
+                }, 200);
+            });
+        }
+        
+        // Reset form when modal opens if not in edit mode
+        modal.addEventListener('show.bs.modal', function() {
+            const isEditMode = window.location.search.includes('action=edit');
+            if (!isEditMode) {
+                const form = modal.querySelector('form');
+                if (form) {
+                    form.reset();
+                    // Clear all input values
+                    form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], textarea, select').forEach(input => {
+                        if (input.name !== 'page' && input.name !== 'panel' && input.name !== 'id_nhan_vien') {
+                            if (input.type === 'select-one' || input.tagName === 'SELECT') {
+                                input.selectedIndex = 0;
+                            } else {
+                                input.value = '';
+                            }
+                        } else if (input.name === 'id_nhan_vien') {
+                            input.value = '';
+                        }
+                    });
+                    // Reset modal title and button
+                    const modalTitle = modal.querySelector('.modal-title');
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (modalTitle) modalTitle.textContent = 'Thêm Nhân Viên';
+                    if (submitBtn) {
+                        submitBtn.name = 'add_nhan_vien';
+                        submitBtn.textContent = 'Thêm Nhân Viên';
+                    }
+                }
+            }
+        });
+    }
+});
+
 function deleteEmployee(id) {
     if (confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) {
         const form = document.createElement('form');
@@ -658,6 +766,47 @@ function clearEditMode() {
 
 <?php if ($editNhanVien): ?>
     document.addEventListener('DOMContentLoaded', function() {
+        // Populate form with edit data
+        const form = document.querySelector('#addEmployeeModal form');
+        if (form) {
+            const maNV = form.querySelector('input[name="ma_nhan_vien"]');
+            const hoTen = form.querySelector('input[name="ho_ten"]');
+            const email = form.querySelector('input[name="email"]');
+            const dienThoai = form.querySelector('input[name="dien_thoai"]');
+            const ngaySinh = form.querySelector('input[name="ngay_sinh"]');
+            const gioiTinh = form.querySelector('select[name="gioi_tinh"]');
+            const chucVu = form.querySelector('select[name="chuc_vu"]');
+            const phongBan = form.querySelector('input[name="phong_ban"]');
+            const ngayVaoLam = form.querySelector('input[name="ngay_vao_lam"]');
+            const luongCoBan = form.querySelector('input[name="luong_co_ban"]');
+            const trangThai = form.querySelector('select[name="trang_thai"]');
+            const diaChi = form.querySelector('input[name="dia_chi"]');
+            const ghiChu = form.querySelector('textarea[name="ghi_chu"]');
+            
+            if (maNV) maNV.value = '<?php echo h($editNhanVien['ma_nhan_vien']); ?>';
+            if (hoTen) hoTen.value = '<?php echo h($editNhanVien['ho_ten']); ?>';
+            if (email) email.value = '<?php echo h($editNhanVien['email']); ?>';
+            if (dienThoai) dienThoai.value = '<?php echo h($editNhanVien['dien_thoai']); ?>';
+            if (ngaySinh) ngaySinh.value = '<?php echo $editNhanVien['ngay_sinh']; ?>';
+            if (gioiTinh) gioiTinh.value = '<?php echo h($editNhanVien['gioi_tinh']); ?>';
+            if (chucVu) chucVu.value = '<?php echo h($editNhanVien['chuc_vu']); ?>';
+            if (phongBan) phongBan.value = '<?php echo h($editNhanVien['phong_ban'] ?? ''); ?>';
+            if (ngayVaoLam) ngayVaoLam.value = '<?php echo $editNhanVien['ngay_vao_lam']; ?>';
+            if (luongCoBan) luongCoBan.value = '<?php echo $editNhanVien['luong_co_ban']; ?>';
+            if (trangThai) trangThai.value = '<?php echo h($editNhanVien['trang_thai']); ?>';
+            if (diaChi) diaChi.value = '<?php echo h($editNhanVien['dia_chi'] ?? ''); ?>';
+            if (ghiChu) ghiChu.value = '<?php echo h($editNhanVien['ghi_chu'] ?? ''); ?>';
+            
+            // Update modal title and button
+            const modalTitle = document.querySelector('#addEmployeeModal .modal-title');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (modalTitle) modalTitle.textContent = 'Sửa Nhân Viên';
+            if (submitBtn) {
+                submitBtn.name = 'update_nhan_vien';
+                submitBtn.textContent = 'Cập nhật Nhân Viên';
+            }
+        }
+        
         const modal = new bootstrap.Modal(document.getElementById('addEmployeeModal'));
         modal.show();
     });

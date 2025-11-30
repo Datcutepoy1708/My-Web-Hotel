@@ -1,18 +1,20 @@
 <?php
 session_start();
 require_once __DIR__ . '/../includes/connect.php';
+require_once __DIR__ . '/../includes/auth.php';
 
-// Kiểm tra đăng nhập - không redirect, chỉ trả về JSON error
-if (!isset($_SESSION['id_nhan_vien']) || !isset($_SESSION['is_staff'])) {
-    http_response_code(401);
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-    exit;
-}
-
-header('Content-Type: application/json');
-
+// Kiểm tra đăng nhập - không redirect, chỉ trả về JSON error (trừ khi export)
 $action = isset($_GET['action']) ? $_GET['action'] : '';
+
+if ($action != 'export') {
+    if (!isset($_SESSION['id_nhan_vien']) || !isset($_SESSION['is_staff'])) {
+        http_response_code(401);
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
+    header('Content-Type: application/json');
+}
 $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : date('Y-m-01');
 $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : date('Y-m-t');
 $period = isset($_GET['period']) ? $_GET['period'] : 'month';
@@ -339,24 +341,240 @@ if ($action == 'check_export_permission') {
 }
 
 if ($action == 'export') {
-    // Kiểm tra quyền xuất báo cáo
-    $hasPermission = false;
-    if (function_exists('checkPermission')) {
-        $hasPermission = checkPermission('report.export');
+    // Kiểm tra đăng nhập (không redirect)
+    if (!isset($_SESSION['id_nhan_vien'])) {
+        http_response_code(401);
+        die('Unauthorized - Vui lòng đăng nhập');
     }
+    
+    // Kiểm tra quyền xuất báo cáo
+    $hasPermission = checkPermission('report.export');
     
     if (!$hasPermission) {
         http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Bạn không có quyền xuất báo cáo']);
-        exit;
+        die('Bạn không có quyền xuất báo cáo');
     }
     
-    // TODO: Implement export functionality (Excel/PDF)
-    // Hiện tại chỉ trả về thông báo
-    echo json_encode([
-        'success' => false,
-        'message' => 'Chức năng xuất báo cáo đang được phát triển'
-    ]);
+    $format = isset($_GET['format']) ? $_GET['format'] : 'excel';
+    
+    // Lấy dữ liệu báo cáo
+    $summary_query = "
+        SELECT 
+            COALESCE(SUM(i.total_amount), 0) as total_revenue,
+            COALESCE(SUM(i.room_charge), 0) as room_revenue,
+            COALESCE(SUM(i.service_charge), 0) as service_revenue,
+            COUNT(DISTINCT i.invoice_id) as total_invoices,
+            COUNT(DISTINCT CASE WHEN i.booking_id IS NOT NULL THEN i.booking_id END) as total_room_bookings,
+            COUNT(DISTINCT isv.booking_service_id) as total_service_bookings
+        FROM invoice i
+        LEFT JOIN booking b ON i.booking_id = b.booking_id
+        LEFT JOIN invoice_service isv ON i.invoice_id = isv.invoice_id
+        WHERE i.deleted IS NULL 
+        AND DATE(i.created_at) BETWEEN '$start_date' AND '$end_date'
+        AND i.status IN ('Paid', 'Unpaid', 'Refunded')
+    ";
+    $summary_result = $mysqli->query($summary_query);
+    $summary = $summary_result ? $summary_result->fetch_assoc() : [];
+    $summary['total_bookings'] = (intval($summary['total_room_bookings'] ?? 0)) + (intval($summary['total_service_bookings'] ?? 0));
+    
+    // Tính tỷ lệ lấp đầy
+    $occupancy_query = "
+        SELECT 
+            SUM(DATEDIFF(
+                LEAST(b.check_out_date, '$end_date'),
+                GREATEST(b.check_in_date, '$start_date')
+            ) + 1) as total_nights_booked
+        FROM booking b
+        WHERE b.deleted IS NULL 
+        AND b.status IN ('Confirmed', 'Completed')
+        AND b.check_in_date <= '$end_date' 
+        AND b.check_out_date >= '$start_date'
+    ";
+    $occupancy_result = $mysqli->query($occupancy_query);
+    $nights = $occupancy_result ? $occupancy_result->fetch_assoc() : ['total_nights_booked' => 0];
+    
+    $total_rooms = $mysqli->query("SELECT COUNT(*) as total FROM room WHERE deleted IS NULL")->fetch_assoc()['total'] ?? 0;
+    $days_in_period = (strtotime($end_date) - strtotime($start_date)) / 86400 + 1;
+    $total_available_nights = $total_rooms * $days_in_period;
+    $occupancy_rate = $total_available_nights > 0 ? ($nights['total_nights_booked'] / $total_available_nights) * 100 : 0;
+    
+    // Đánh giá trung bình
+    $rating_query = "
+        SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews
+        FROM review 
+        WHERE deleted IS NULL 
+        AND DATE(created_at) BETWEEN '$start_date' AND '$end_date'
+        AND status = 'Approved'
+    ";
+    $rating_result = $mysqli->query($rating_query);
+    $rating = $rating_result ? $rating_result->fetch_assoc() : ['avg_rating' => 0, 'total_reviews' => 0];
+    
+    // Lấy thông tin nhân viên xuất báo cáo
+    $staff_id = $_SESSION['id_nhan_vien'];
+    $staff_query = $mysqli->prepare("SELECT ho_ten, ma_nhan_vien FROM nhan_vien WHERE id_nhan_vien = ?");
+    $staff_query->bind_param("i", $staff_id);
+    $staff_query->execute();
+    $staff_result = $staff_query->get_result();
+    $staff = $staff_result->fetch_assoc();
+    $staff_query->close();
+    
+    // Tạo HTML cho Word/Excel
+    $html = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Báo Cáo Thống Kê</title>
+    <style>
+        body { font-family: "Times New Roman", serif; font-size: 12pt; margin: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .company-name { font-size: 18pt; font-weight: bold; margin: 10px 0; }
+        .slogan { font-style: italic; color: #666; margin-bottom: 5px; }
+        .phone { margin-bottom: 20px; }
+        .report-title { font-size: 16pt; font-weight: bold; text-align: center; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        table th, table td { border: 1px solid #000; padding: 8px; text-align: left; }
+        table th { background-color: #f0f0f0; font-weight: bold; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .section { margin: 30px 0; }
+        .footer { margin-top: 40px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">OCEANPEARL HOTEL</div>
+        <div class="slogan">Niềm vui của bạn là hạnh phúc của chúng tôi</div>
+        <div class="phone">Điện thoại: 0123456789</div>
+    </div>
+    
+    <div class="report-title">BÁO CÁO THỐNG KÊ</div>
+    <div style="text-align: center; margin-bottom: 20px;">
+        <p><strong>Khoảng thời gian:</strong> ' . formatDate($start_date) . ' - ' . formatDate($end_date) . '</p>
+    </div>
+    
+    <div class="section">
+        <h3>1. Tổng Quan</h3>
+        <table>
+            <tr>
+                <th>Chỉ Số</th>
+                <th class="text-right">Giá Trị</th>
+            </tr>
+            <tr>
+                <td>Tổng Doanh Thu</td>
+                <td class="text-right">' . formatCurrency($summary['total_revenue'] ?? 0) . '</td>
+            </tr>
+            <tr>
+                <td>Doanh Thu Phòng</td>
+                <td class="text-right">' . formatCurrency($summary['room_revenue'] ?? 0) . '</td>
+            </tr>
+            <tr>
+                <td>Doanh Thu Dịch Vụ</td>
+                <td class="text-right">' . formatCurrency($summary['service_revenue'] ?? 0) . '</td>
+            </tr>
+            <tr>
+                <td>Tổng Số Hóa Đơn</td>
+                <td class="text-right">' . number_format($summary['total_invoices'] ?? 0) . '</td>
+            </tr>
+            <tr>
+                <td>Tổng Số Booking</td>
+                <td class="text-right">' . number_format($summary['total_bookings'] ?? 0) . '</td>
+            </tr>
+            <tr>
+                <td>Tỷ Lệ Lấp Đầy</td>
+                <td class="text-right">' . number_format($occupancy_rate, 1) . '%</td>
+            </tr>
+            <tr>
+                <td>Đánh Giá Trung Bình</td>
+                <td class="text-right">' . number_format($rating['avg_rating'] ?? 0, 1) . ' / 5.0</td>
+            </tr>
+            <tr>
+                <td>Tổng Số Đánh Giá</td>
+                <td class="text-right">' . number_format($rating['total_reviews'] ?? 0) . '</td>
+            </tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h3>2. Chi Tiết Hóa Đơn</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mã HĐ</th>
+                    <th>Khách Hàng</th>
+                    <th>Booking ID</th>
+                    <th class="text-right">Phí Phòng</th>
+                    <th class="text-right">Phí Dịch Vụ</th>
+                    <th class="text-right">Tổng Tiền</th>
+                    <th>Trạng Thái</th>
+                    <th>Ngày Tạo</th>
+                </tr>
+            </thead>
+            <tbody>';
+    
+    // Lấy danh sách hóa đơn
+    $invoices_query = "
+        SELECT i.invoice_id, i.booking_id, i.room_charge, i.service_charge, i.total_amount, 
+               i.status, i.created_at, c.full_name
+        FROM invoice i
+        LEFT JOIN customer c ON i.customer_id = c.customer_id
+        WHERE i.deleted IS NULL 
+        AND DATE(i.created_at) BETWEEN '$start_date' AND '$end_date'
+        AND i.status IN ('Paid', 'Unpaid', 'Refunded')
+        ORDER BY i.created_at DESC
+    ";
+    $invoices_result = $mysqli->query($invoices_query);
+    if ($invoices_result && $invoices_result->num_rows > 0) {
+        while ($inv = $invoices_result->fetch_assoc()) {
+            $status_text = $inv['status'] == 'Paid' ? 'Đã Thanh Toán' : ($inv['status'] == 'Unpaid' ? 'Chưa Thanh Toán' : 'Hoàn Tiền');
+            $html .= '
+                <tr>
+                    <td>#' . $inv['invoice_id'] . '</td>
+                    <td>' . htmlspecialchars($inv['full_name'] ?? '-') . '</td>
+                    <td>' . ($inv['booking_id'] ? '#' . $inv['booking_id'] : '-') . '</td>
+                    <td class="text-right">' . formatCurrency($inv['room_charge']) . '</td>
+                    <td class="text-right">' . formatCurrency($inv['service_charge']) . '</td>
+                    <td class="text-right"><strong>' . formatCurrency($inv['total_amount']) . '</strong></td>
+                    <td>' . $status_text . '</td>
+                    <td>' . formatDateTime($inv['created_at']) . '</td>
+                </tr>';
+        }
+    } else {
+        $html .= '<tr><td colspan="8" class="text-center">Không có dữ liệu</td></tr>';
+    }
+    
+    $html .= '
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <div style="margin-top: 40px;">
+            <div style="float: left; width: 45%;">
+                <p><strong>Người Xuất Báo Cáo:</strong></p>
+                <p>' . htmlspecialchars($staff['ho_ten'] ?? '-') . '</p>
+                <p>(' . htmlspecialchars($staff['ma_nhan_vien'] ?? '-') . ')</p>
+            </div>
+            <div style="float: right; width: 45%; text-align: center;">
+                <p><strong>Ngày Xuất:</strong></p>
+                <p>' . date('d/m/Y H:i') . '</p>
+            </div>
+            <div style="clear: both;"></div>
+        </div>
+    </div>
+</body>
+</html>';
+    
+    // Set headers để download
+    if ($format == 'excel') {
+        header('Content-Type: application/vnd.ms-excel');
+        header('Content-Disposition: attachment; filename="BaoCao_' . date('YmdHis') . '.xls"');
+    } else {
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment; filename="BaoCao_' . date('YmdHis') . '.doc"');
+    }
+    header('Cache-Control: max-age=0');
+    
+    echo $html;
     exit;
 }
 

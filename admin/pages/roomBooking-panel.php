@@ -17,6 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $check_out_date = $_POST['check_out_date'];
         $status = $_POST['status'] ?? 'Pending';
         $special_request = trim($_POST['special_request'] ?? '');
+        $booking_method = trim($_POST['booking_method'] ?? 'Website');
+        $deposit = !empty($_POST['deposit']) ? floatval($_POST['deposit']) : null;
 
         // Validate dữ liệu
         $errors = [];
@@ -79,44 +81,118 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // Nếu không có lỗi thì thêm booking
         if (empty($errors)) {
-            $booking_date = date('Y-m-d H:i:s');
-            $stmt = $mysqli->prepare(
-                "INSERT INTO booking(booking_date, check_in_date, check_out_date, quantity, 
-                special_request, status, customer_id, room_id, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())"
-            );
-            $stmt->bind_param(
-                "sssissii",
-                $booking_date,
-                $check_in_date,
-                $check_out_date,
-                $quantity,
-                $special_request,
-                $status,
-                $customer_id,
-                $room_id
-            );
-            if ($stmt->execute()) {
-                $booking_id = $stmt->insert_id;
-                $message = "Thêm booking phòng thành công";
-                $messageType = "success";
+            // Xử lý nhiều phòng: room_id có thể là array hoặc single value
+            $room_ids = [];
+            if (isset($_POST['room_id']) && is_array($_POST['room_id'])) {
+                $room_ids = array_map('intval', $_POST['room_id']);
+            } elseif (isset($_POST['room_id']) && !empty($_POST['room_id'])) {
+                $room_ids = [intval($_POST['room_id'])];
+            }
+            
+            // Loại bỏ các room_id không hợp lệ
+            $room_ids = array_filter($room_ids, function($id) { return $id > 0; });
+            
+            if (empty($room_ids)) {
+                $errors[] = "Vui lòng chọn ít nhất một phòng";
+            }
+            
+            if (empty($errors)) {
+                $booking_date = date('Y-m-d H:i:s');
+                $success_count = 0;
+                $error_count = 0;
+                $created_bookings = [];
                 
-                // Tự động tạo hóa đơn nếu status = Confirmed
-                if ($status === 'Confirmed') {
-                    $invoice_id = createInvoiceForRoomBooking($mysqli, $booking_id);
-                    if ($invoice_id) {
-                        $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
+                // Tạo booking cho từng phòng
+                foreach ($room_ids as $room_id) {
+                    // Kiểm tra lại availability cho từng phòng
+                    $checkAvailability = $mysqli->prepare(
+                        "SELECT COUNT(*) as count FROM booking
+                         WHERE room_id = ? 
+                         AND status NOT IN ('Cancelled', 'Completed')
+                         AND deleted IS NULL
+                         AND (
+                             (check_in_date <= ? AND check_out_date >= ?) OR
+                             (check_in_date <= ? AND check_out_date >= ?) OR
+                             (check_in_date >= ? AND check_out_date <= ?)
+                         )"
+                    );
+                    $checkAvailability->bind_param(
+                        "issssss",
+                        $room_id,
+                        $check_in_date,
+                        $check_in_date,
+                        $check_out_date,
+                        $check_out_date,
+                        $check_in_date,
+                        $check_out_date
+                    );
+                    $checkAvailability->execute();
+                    $result = $checkAvailability->get_result();
+                    $row = $result->fetch_assoc();
+                    $checkAvailability->close();
+                    
+                    if ($row['count'] > 0) {
+                        $error_count++;
+                        continue; // Bỏ qua phòng này
                     }
+                    
+                    // Tạo booking cho phòng này
+                    $stmt = $mysqli->prepare(
+                        "INSERT INTO booking(booking_date, check_in_date, check_out_date, quantity, 
+                        special_request, booking_method, deposit, status, customer_id, room_id, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                    );
+                    $stmt->bind_param(
+                        "sssissdsii",
+                        $booking_date,
+                        $check_in_date,
+                        $check_out_date,
+                        $quantity,
+                        $special_request,
+                        $booking_method,
+                        $deposit,
+                        $status,
+                        $customer_id,
+                        $room_id
+                    );
+                    
+                    if ($stmt->execute()) {
+                        $booking_id = $stmt->insert_id;
+                        $created_bookings[] = $booking_id;
+                        $success_count++;
+                        
+                        // Tự động tạo hóa đơn nếu status = Confirmed
+                        if ($status === 'Confirmed') {
+                            $invoice_id = createInvoiceForRoomBooking($mysqli, $booking_id);
+                        }
+                    } else {
+                        $error_count++;
+                    }
+                    $stmt->close();
                 }
                 
-                $action = '';
-                header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
-                exit;
+                if ($success_count > 0) {
+                    $message = "Đã tạo thành công " . $success_count . " booking phòng";
+                    if ($success_count > 1) {
+                        $message .= " (Booking IDs: " . implode(", ", $created_bookings) . ")";
+                    } else {
+                        $message .= " (Booking ID: " . $created_bookings[0] . ")";
+                    }
+                    if ($error_count > 0) {
+                        $message .= ". Có " . $error_count . " phòng không thể đặt (đã được đặt trước)";
+                    }
+                    $messageType = "success";
+                    $action = '';
+                    header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
+                    exit;
+                } else {
+                    $message = "Không thể tạo booking. Tất cả các phòng đã được đặt trong khoảng thời gian này.";
+                    $messageType = "danger";
+                }
             } else {
-                $message = 'Lỗi: ' . $stmt->error;
-                $messageType = 'danger';
+                $message = implode("<br>", $errors);
+                $messageType = "danger";
             }
-            $stmt->close();
         } else {
             $message = implode("<br>", $errors);
             $messageType = "danger";
@@ -133,22 +209,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $check_out_date = $_POST['check_out_date'];
         $status = $_POST['status'] ?? 'Pending';
         $special_request = trim($_POST['special_request'] ?? '');
+        $booking_method = trim($_POST['booking_method'] ?? 'Website');
+        $deposit = !empty($_POST['deposit']) ? floatval($_POST['deposit']) : null;
 
         $stmt = $mysqli->prepare(
-            "UPDATE booking SET customer_id=?, phone=?, room_id=?, quantity=?, 
-            check_in_date=?, check_out_date=?, status=?, special_request=? 
+            "UPDATE booking SET customer_id=?, room_id=?, quantity=?, 
+            check_in_date=?, check_out_date=?, status=?, special_request=?, booking_method=?, deposit=? 
             WHERE booking_id=? AND deleted IS NULL"
         );
         $stmt->bind_param(
-            "isiissssi",
+            "iiissssdsi",
             $customer_id,
-            $phone,
             $room_id,
             $quantity,
             $check_in_date,
             $check_out_date,
             $status,
             $special_request,
+            $booking_method,
+            $deposit,
             $booking_id
         );
 
@@ -191,9 +270,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 }
 
-// Lấy thông tin booking ra để edit
+// Lấy thông tin booking ra để edit - CHỈ khi có action=edit trong URL
 $editBookingRoom = null;
-if ($action == 'edit' && isset($_GET['id'])) {
+$isEditMode = ($action == 'edit' && isset($_GET['id']));
+if ($isEditMode) {
     $id = intval($_GET['id']);
     $stmt = $mysqli->prepare(
         "SELECT b.*, c.phone, c.full_name, c.email, 
@@ -519,312 +599,33 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     <?php echo getPagination($totalBookingRooms, $perPage, $pageNum, $baseUrl); ?>
 </div>
 
-<!-- Modal Thêm/Sửa Booking -->
-<div class="modal fade" id="addRoomBookingModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"><?php echo $editBookingRoom ? 'Sửa' : 'Thêm'; ?> Booking Phòng</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" id="reset" onclick="clearEditMode()">
-                </button>
-            </div>
-            <form method="POST" id="bookingForm">
-                <?php if ($editBookingRoom): ?>
-                    <input type="hidden" name="booking_id" value="<?php echo $editBookingRoom['booking_id']; ?>">
-                <?php endif; ?>
+<?php
+// Include form thêm mới
+include __DIR__ . '/roomBooking-panel-add.php';
+?>
 
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tên Khách Hàng *</label>
-                            <select class="form-select customer-search" name="customer_id" required id="customerSelectRoom">
-                                <option value="">-- Chọn khách hàng --</option>
-                                <?php foreach ($customers as $customer): ?>
-                                    <option value="<?php echo $customer['customer_id']; ?>"
-                                        <?php echo ($editBookingRoom && $editBookingRoom['customer_id'] == $customer['customer_id']) ? 'selected' : ''; ?> data-phone="<?php echo h($customer['phone']); ?>"
-                                        data-email="<?php echo h($customer['email']); ?>">
-                                        <?php echo h($customer['full_name']); ?> - <?php echo h($customer['phone']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Số Điện Thoại *</label>
-                            <input type="tel"
-                                class="form-control"
-                                name="phone"
-                                value="<?php echo $editBookingRoom ? $editBookingRoom['phone'] : ''; ?>"
-                                required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Số Phòng *</label>
-                            <select class="form-select" name="room_id" required>
-                                <option value="">-- Chọn phòng --</option>
-                                <?php foreach ($availableRooms as $room): ?>
-                                    <option value="<?php echo $room['room_id']; ?>"
-                                        <?php echo ($editBookingRoom && $editBookingRoom['room_id'] == $room['room_id']) ? 'selected' : ''; ?>>
-                                        <?php echo h($room['room_number']); ?> - <?php echo h($room['room_type_name']); ?>
-                                        (<?php echo number_format($room['base_price']); ?> VNĐ)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Số Khách *</label>
-                            <input type="number"
-                                class="form-control"
-                                name="quantity"
-                                min="1"
-                                value="<?php echo $editBookingRoom ? h($editBookingRoom['quantity']) : '1'; ?>"
-                                required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Ngày Check-in *</label>
-                            <input type="date"
-                                class="form-control"
-                                name="check_in_date"
-                                value="<?php echo $editBookingRoom ? h($editBookingRoom['check_in_date']) : ''; ?>"
-                                required>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Ngày Check-out *</label>
-                            <input type="date"
-                                class="form-control"
-                                name="check_out_date"
-                                value="<?php echo $editBookingRoom ? h($editBookingRoom['check_out_date']) : ''; ?>"
-                                required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Trạng Thái *</label>
-                            <select class="form-select" name="status" required>
-                                <option value="Pending" <?php echo ($editBookingRoom && $editBookingRoom['status'] == 'Pending') ? 'selected' : ''; ?>>Chờ xác nhận</option>
-                                <option value="Confirmed" <?php echo ($editBookingRoom && $editBookingRoom['status'] == 'Confirmed') ? 'selected' : ''; ?>>Đã xác nhận</option>
-                                <option value="Completed" <?php echo ($editBookingRoom && $editBookingRoom['status'] == 'Completed') ? 'selected' : ''; ?>>Đã hoàn thành</option>
-                                <option value="Cancelled" <?php echo ($editBookingRoom && $editBookingRoom['status'] == 'Cancelled') ? 'selected' : ''; ?>>Đã hủy</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Ghi Chú</label>
-                        <textarea class="form-control"
-                            name="special_request"
-                            rows="3"><?php echo $editBookingRoom ? h($editBookingRoom['special_request']) : ''; ?></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit"
-                        name="<?php echo $editBookingRoom ? 'update_room_booking' : 'add_booking_room'; ?>"
-                        class="btn-primary-custom">
-                        <?php echo $editBookingRoom ? 'Cập nhật' : 'Thêm'; ?> Booking
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<style>
-    /* Đảm bảo input Select2 có thể gõ được */
-    .select2-search__field {
-        width: 100% !important;
-        border: none !important;
-        outline: none !important;
-        padding: 5px !important;
-        margin: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-    }
-    
-    .select2-search__field:focus {
-        border: none !important;
-        outline: none !important;
-        box-shadow: none !important;
-    }
-    
-    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field {
-        border: 1px solid #ced4da !important;
-        border-radius: 0.375rem !important;
-    }
-    
-    .select2-container--bootstrap-5 .select2-search--dropdown .select2-search__field:focus {
-        border-color: #86b7fe !important;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-    }
-</style>
+<?php
+// Include form chỉnh sửa nếu có action=edit
+if ($isEditMode) {
+    include __DIR__ . '/roomBooking-panel-edit.php';
+}
+?>
 
 <script>
-    // Auto-fill phone number when selecting customer
-    document.addEventListener('DOMContentLoaded', function() {
-        const customerSelect = document.querySelector('select[name="customer_id"]');
-        const phoneInput = document.querySelector('input[name="phone"]');
+function editRoomBooking(id) {
+    window.location.href = 'index.php?page=booking-manager&panel=roomBooking-panel&action=edit&id=' + id;
+}
 
-        if (customerSelect && phoneInput) {
-            customerSelect.addEventListener('change', function() {
-                const selectedOption = this.options[this.selectedIndex];
-                const phoneText = selectedOption.text.split(' - ')[1];
-                if (phoneText) {
-                    phoneInput.value = phoneText;
-                }
-            });
-        }
-
-        // Set minimum date for check-in to today
-        const checkInDate = document.querySelector('input[name="check_in_date"]');
-        const checkOutDate = document.querySelector('input[name="check_out_date"]');
-
-        if (checkInDate) {
-            const today = new Date().toISOString().split('T')[0];
-            checkInDate.setAttribute('min', today);
-
-            checkInDate.addEventListener('change', function() {
-                checkOutDate.setAttribute('min', this.value);
-                if (checkOutDate.value && checkOutDate.value <= this.value) {
-                    checkOutDate.value = '';
-                }
-            });
-        }
-    });
-
-    function editRoomBooking(id) {
-        window.location.href = 'index.php?page=booking-manager&panel=roomBooking-panel&action=edit&id=' + id;
+function deleteRoomBooking(id) {
+    if (confirm('Bạn có chắc chắn muốn xóa booking này?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = '<input type="hidden" name="booking_id" value="' + id + '">' +
+            '<input type="hidden" name="delete_booking_room" value="1">';
+        document.body.appendChild(form);
+        form.submit();
     }
-
-    function deleteRoomBooking(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_room" value="1">';
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
-
-    <?php if ($editBookingRoom): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = new bootstrap.Modal(document.getElementById('addRoomBookingModal'));
-            modal.show();
-            // Khởi tạo lại Select2 sau khi modal mở hoàn toàn
-            const modalEl = document.getElementById('addRoomBookingModal');
-            modalEl.addEventListener('shown.bs.modal', function() {
-                setTimeout(initCustomerSelect2Room, 200);
-            }, { once: true });
-        });
-    <?php endif; ?>
-    
-    // Khởi tạo lại Select2 khi modal mở
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('addRoomBookingModal');
-        if (modal) {
-            modal.addEventListener('shown.bs.modal', function() {
-                setTimeout(initCustomerSelect2Room, 200);
-            });
-        }
-        
-        // Khởi tạo lần đầu nếu không trong modal
-        if (typeof jQuery !== 'undefined') {
-            jQuery(document).ready(function() {
-                setTimeout(initCustomerSelect2Room, 300);
-            });
-        }
-    });
-
-    function resetForm() {
-        const form = document.getElementById('bookingForm');
-        if (form) { // ✅ Thêm check null để an toàn
-            form.reset();
-
-            // Xóa booking_id hidden input nếu có
-            const bookingIdInput = form.querySelector('input[name="booking_id"]');
-            if (bookingIdInput) {
-                bookingIdInput.remove();
-            }
-
-            // Reset modal title
-            const modalTitle = document.querySelector('#addRoomBookingModal .modal-title');
-            if (modalTitle) {
-                modalTitle.textContent = 'Thêm Booking Phòng';
-            }
-
-            // Reset submit button
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                submitBtn.textContent = 'Thêm Booking';
-                submitBtn.name = 'add_booking_room';
-            }
-        }
-    }
-
-    function clearEditMode() {
-        const url = new URL(window.location);
-        url.searchParams.delete('action');
-        url.searchParams.delete('id');
-        window.history.replaceState({}, '', url);
-        resetForm();
-    }
-    
-    // Hàm khởi tạo Select2 cho customer
-    function initCustomerSelect2Room() {
-        if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
-            return false;
-        }
-        
-        const $customerSelect = jQuery('#customerSelectRoom');
-        if (!$customerSelect.length) {
-            return false;
-        }
-        
-        // Destroy nếu đã khởi tạo trước đó
-        if ($customerSelect.hasClass('select2-hidden-accessible')) {
-            $customerSelect.select2('destroy');
-        }
-        
-        // Lấy modal để set dropdownParent
-        const $modal = jQuery('#addRoomBookingModal');
-        const dropdownParent = $modal.length ? $modal : jQuery('body');
-        
-        $customerSelect.select2({
-            theme: 'bootstrap-5',
-            placeholder: '-- Chọn khách hàng --',
-            allowClear: true,
-            minimumInputLength: 0,
-            width: '100%',
-            dropdownParent: dropdownParent,
-            language: {
-                noResults: function() {
-                    return "Không tìm thấy khách hàng";
-                },
-                searching: function() {
-                    return "Đang tìm kiếm...";
-                }
-            }
-        });
-        
-        // Tự động điền số điện thoại khi chọn khách hàng
-        $customerSelect.off('change.select2-customer').on('change.select2-customer', function() {
-            const selectedOption = jQuery(this).find('option:selected');
-            const phone = selectedOption.data('phone') || '';
-            jQuery('input[name="phone"]').val(phone);
-        });
-        
-        // Đảm bảo input tìm kiếm có thể gõ được
-        $customerSelect.on('select2:open', function() {
-            setTimeout(function() {
-                const $searchField = jQuery('.select2-search__field');
-                $searchField.attr('placeholder', 'Gõ để tìm kiếm...');
-                $searchField.prop('readonly', false);
-                $searchField.prop('disabled', false);
-                $searchField.focus();
-            }, 100);
-        });
-        
-        return true;
-    }
+}
 </script>
+
+<!-- Modal Thêm/Sửa Booking - REMOVED, now using separate files roomBooking-panel-add.php and roomBooking-panel-edit.php -->

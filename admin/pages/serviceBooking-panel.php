@@ -52,54 +52,113 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $check_booking->close();
         }
 
-        if (empty($errors)) {
-            // INSERT với booking_id có thể NULL
-            // Lấy unit_price từ service để lưu vào booking_service
-            $service_stmt = $mysqli->prepare("SELECT price, unit FROM service WHERE service_id = ?");
-            $service_stmt->bind_param("i", $service_id);
-            $service_stmt->execute();
-            $service_result = $service_stmt->get_result();
-            $service_data = $service_result->fetch_assoc();
-            $service_stmt->close();
-
-            if (!$service_data) {
-                $errors[] = "Không tìm thấy thông tin dịch vụ";
-            }
+        // Xử lý nhiều dịch vụ: service_id có thể là array
+        $service_ids = [];
+        if (isset($_POST['service_id']) && is_array($_POST['service_id'])) {
+            $service_ids = array_map('intval', $_POST['service_id']);
+        } elseif (isset($_POST['service_id']) && !empty($_POST['service_id'])) {
+            $service_ids = [intval($_POST['service_id'])];
         }
-
-        if (empty($errors)) {
-            $unit_price = $service_data['price'] ?? 0;
-            $unit = $service_data['unit'] ?? '';
-
-            // Xử lý booking_id - nếu không có thì không insert cột booking_id
-            if ($booking_id) {
-                $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, booking_id, amount, unit_price, unit, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                $stmt->bind_param("iiissiddsss", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $booking_id, $amount, $unit_price, $unit, $notes, $status);
-            } else {
-                // Không có booking_id - chỉ booking dịch vụ, không insert cột booking_id
-                $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, amount, unit_price, unit, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-                $stmt->bind_param("iiissddsss", $customer_id, $service_id, $quantity, $usage_date, $usage_time, $amount, $unit_price, $unit, $notes, $status);
-            }
-
-            if ($stmt->execute()) {
-                $booking_service_id = $stmt->insert_id;
-                $message = 'Thêm booking dịch vụ thành công!';
-                $messageType = 'success';
-
-                // Tự động tạo hóa đơn nếu status = confirmed
-                if ($status === 'confirmed') {
-                    $invoice_id = createInvoiceForServiceBooking($mysqli, $booking_service_id);
-                    if ($invoice_id) {
-                        $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
-                    }
+        
+        // Lấy các thông tin khác (có thể là array nếu có nhiều dịch vụ)
+        $quantities = isset($_POST['quantity']) && is_array($_POST['quantity']) ? $_POST['quantity'] : [$_POST['quantity'] ?? 1];
+        $usage_dates = isset($_POST['usage_date']) && is_array($_POST['usage_date']) ? $_POST['usage_date'] : [$_POST['usage_date'] ?? ''];
+        $usage_times = isset($_POST['usage_time']) && is_array($_POST['usage_time']) ? $_POST['usage_time'] : [$_POST['usage_time'] ?? ''];
+        $amounts = isset($_POST['amount']) && is_array($_POST['amount']) ? $_POST['amount'] : [$_POST['amount'] ?? 1];
+        $notes_array = isset($_POST['note']) && is_array($_POST['note']) ? $_POST['note'] : [$_POST['note'] ?? ''];
+        $statuses = isset($_POST['status']) && is_array($_POST['status']) ? $_POST['status'] : [$_POST['status'] ?? 'pending'];
+        
+        // Đảm bảo tất cả arrays có cùng số lượng phần tử
+        $max_count = max(count($service_ids), count($quantities), count($usage_dates), count($usage_times), count($amounts));
+        $service_ids = array_pad($service_ids, $max_count, 0);
+        $quantities = array_pad($quantities, $max_count, 1);
+        $usage_dates = array_pad($usage_dates, $max_count, '');
+        $usage_times = array_pad($usage_times, $max_count, '');
+        $amounts = array_pad($amounts, $max_count, 1);
+        $notes_array = array_pad($notes_array, $max_count, '');
+        $statuses = array_pad($statuses, $max_count, 'pending');
+        
+        if (empty($errors) && !empty($service_ids)) {
+            $success_count = 0;
+            $error_count = 0;
+            $created_booking_services = [];
+            
+            // Tạo booking_service cho từng dịch vụ
+            for ($i = 0; $i < $max_count; $i++) {
+                if (empty($service_ids[$i]) || $service_ids[$i] <= 0) {
+                    continue; // Bỏ qua nếu không có service_id
                 }
-
+                
+                $current_service_id = $service_ids[$i];
+                $current_quantity = intval($quantities[$i] ?? 1);
+                $current_usage_date = $usage_dates[$i] ?? '';
+                $current_usage_time = $usage_times[$i] ?? '';
+                $current_amount = floatval($amounts[$i] ?? 1);
+                $current_notes = trim($notes_array[$i] ?? '');
+                $current_status = $statuses[$i] ?? 'pending';
+                
+                // Validate từng dịch vụ
+                if (empty($current_usage_date) || empty($current_usage_time) || $current_amount <= 0) {
+                    $error_count++;
+                    continue;
+                }
+                
+                // Lấy unit_price từ service
+                $service_stmt = $mysqli->prepare("SELECT price, unit FROM service WHERE service_id = ?");
+                $service_stmt->bind_param("i", $current_service_id);
+                $service_stmt->execute();
+                $service_result = $service_stmt->get_result();
+                $service_data = $service_result->fetch_assoc();
+                $service_stmt->close();
+                
+                if (!$service_data) {
+                    $error_count++;
+                    continue;
+                }
+                
+                $unit_price = $service_data['price'] ?? 0;
+                $unit = $service_data['unit'] ?? '';
+                
+                // INSERT booking_service
+                if ($booking_id) {
+                    $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, booking_id, amount, unit_price, unit, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    $stmt->bind_param("iiissiddsss", $customer_id, $current_service_id, $current_quantity, $current_usage_date, $current_usage_time, $booking_id, $current_amount, $unit_price, $unit, $current_notes, $current_status);
+                } else {
+                    $stmt = $mysqli->prepare("INSERT INTO booking_service (customer_id, service_id, quantity, usage_date, usage_time, amount, unit_price, unit, notes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                    $stmt->bind_param("iiissddsss", $customer_id, $current_service_id, $current_quantity, $current_usage_date, $current_usage_time, $current_amount, $unit_price, $unit, $current_notes, $current_status);
+                }
+                
+                if ($stmt->execute()) {
+                    $booking_service_id = $stmt->insert_id;
+                    $created_booking_services[] = $booking_service_id;
+                    $success_count++;
+                    
+                    // Tự động tạo hóa đơn nếu status = confirmed
+                    if ($current_status === 'confirmed') {
+                        $invoice_id = createInvoiceForServiceBooking($mysqli, $booking_service_id);
+                    }
+                } else {
+                    $error_count++;
+                }
+                $stmt->close();
+            }
+            
+            if ($success_count > 0) {
+                $message = 'Đã tạo thành công ' . $success_count . ' booking dịch vụ';
+                if ($success_count > 1) {
+                    $message .= ' (IDs: ' . implode(', ', $created_booking_services) . ')';
+                } else {
+                    $message .= ' (ID: ' . $created_booking_services[0] . ')';
+                }
+                if ($error_count > 0) {
+                    $message .= '. Có ' . $error_count . ' dịch vụ không thể tạo';
+                }
+                $messageType = 'success';
                 $action = '';
             } else {
-                $message = 'Lỗi: ' . $stmt->error;
+                $message = 'Không thể tạo booking dịch vụ. Vui lòng kiểm tra lại thông tin.';
                 $messageType = 'danger';
             }
-            $stmt->close();
         } else {
             $message = implode('<br>', $errors);
             $messageType = 'danger';
@@ -108,14 +167,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['update_service_booking'])) {
         $booking_service_id = intval($_POST['booking_service_id']);
         $customer_id = intval($_POST['customer_id']);
-        $service_id = intval($_POST['service_id']);
-        $quantity = intval($_POST['quantity']);
-        $usage_date = $_POST['usage_date'];
-        $usage_time = $_POST['usage_time'];
+        // Khi update, chỉ có 1 dịch vụ (không phải array)
+        $service_id = isset($_POST['service_id']) && is_array($_POST['service_id']) ? intval($_POST['service_id'][0]) : intval($_POST['service_id'] ?? 0);
+        $quantity = isset($_POST['quantity']) && is_array($_POST['quantity']) ? intval($_POST['quantity'][0]) : intval($_POST['quantity'] ?? 1);
+        $usage_date = isset($_POST['usage_date']) && is_array($_POST['usage_date']) ? $_POST['usage_date'][0] : ($_POST['usage_date'] ?? '');
+        $usage_time = isset($_POST['usage_time']) && is_array($_POST['usage_time']) ? $_POST['usage_time'][0] : ($_POST['usage_time'] ?? '');
         $booking_id = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null;
-        $amount = floatval($_POST['amount']);
-        $notes = trim($_POST['note'] ?? '');
-        $status = $_POST['status'] ?? 'confirmed';
+        $amount = isset($_POST['amount']) && is_array($_POST['amount']) ? floatval($_POST['amount'][0]) : floatval($_POST['amount'] ?? 1);
+        $notes = isset($_POST['note']) && is_array($_POST['note']) ? trim($_POST['note'][0] ?? '') : trim($_POST['note'] ?? '');
+        $status = isset($_POST['status']) && is_array($_POST['status']) ? ($_POST['status'][0] ?? 'confirmed') : ($_POST['status'] ?? 'confirmed');
 
         // Validate dữ liệu
         $errors = [];
@@ -172,10 +232,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $messageType = 'success';
                 
                 // Tự động tạo hóa đơn nếu status = confirmed và chưa có hóa đơn
+                // Đặc biệt: Nếu booking dịch vụ không có booking_id (chỉ booking dịch vụ), luôn tạo hóa đơn khi confirmed
                 if ($status === 'confirmed') {
                     $invoice_id = createInvoiceForServiceBooking($mysqli, $booking_service_id);
                     if ($invoice_id) {
                         $message .= ' Hóa đơn đã được tạo tự động (ID: ' . $invoice_id . ')';
+                    } else {
+                        // Log lỗi nếu không tạo được hóa đơn
+                        error_log("Failed to create invoice for service booking ID: " . $booking_service_id);
+                        $message .= ' (Lưu ý: Không thể tạo hóa đơn tự động, vui lòng tạo thủ công)';
+                    }
+                } else {
+                    // Nếu status không phải confirmed, thông báo cho user
+                    if (!$booking_id) {
+                        $message .= ' (Lưu ý: Để tự động tạo hóa đơn, vui lòng đặt trạng thái là "Đã xác nhận")';
                     }
                 }
                 
@@ -770,68 +840,76 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         <input type="hidden" name="booking_id" value="">
                     <?php endif; ?>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Dịch Vụ *</label>
-                            <select class="form-select" required id="serviceSelect" name="service_id">
-                                <option value="">-- Chọn dịch vụ --</option>
-                                <?php foreach ($services as $service): ?>
-                                    <option value="<?php echo $service['service_id']; ?>"
-                                        <?php echo ($editBookingService && $editBookingService['service_id'] == $service['service_id']) ? 'selected' : ''; ?> data-price="<?php echo $service['price']; ?>">
-                                        <?php echo $service['service_name']; ?> - <?php echo number_format($service['price'], 0, ',', '.'); ?> VNĐ
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Số Người *</label>
-                            <input type="number" name="quantity" class="form-control" min="1" value="<?php echo  $editBookingService ? h($editBookingService['quantity']) : '1'; ?>" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Ngày Sử Dụng *</label>
-                            <input type="date" name="usage_date" class="form-control" required value="<?php echo $editBookingService ? $editBookingService['usage_date'] : ''; ?>">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Giờ Sử Dụng *</label>
-                            <input type="time" name="usage_time" class="form-control" required value="<?php echo $editBookingService ? $editBookingService['usage_time'] : ''; ?>">
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label"> Số lượng *</label>
-                            <input type="number" name="amount" min="1" class="form-control" id="amount" required value="<?php echo $editBookingService ? $editBookingService['amount'] : '1'; ?>">
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Đơn giá (VNĐ)</label>
-                            <input type="number"
-                                class="form-control"
-                                id="unitPrice"
-                                value="<?php echo $editBookingService['price'] ?? 0; ?>"
-                                readonly>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tổng Tiền (VNĐ) *</label>
-                            <input type="number" class="form-control" step="1000" required id="totalAmount"
-                                value="<?php echo h($editBookingService['price'] * $editBookingService['amount']); ?>"
-                                readonly>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Trạng Thái *</label>
-                            <select class="form-select" name="status" required>
-                                <option value="pending" <?php echo ($editBookingService && $editBookingService['status'] == 'pending') ? 'selected' : ''; ?>>Chưa thanh toán</option>
-                                <option value="confirmed" <?php echo ($editBookingService && $editBookingService['status'] == 'confirmed') ? 'selected' : ''; ?>>Đã thanh toán</option>
-                                <option value="cancelled" <?php echo ($editBookingService && $editBookingService['status'] == 'cancelled') ? 'selected' : ''; ?>>Đã hủy</option>
-                            </select>
-                        </div>
-                    </div>
+                    <!-- Danh sách dịch vụ (dynamic) -->
                     <div class="mb-3">
-                        <label class="form-label">Ghi Chú</label>
-                        <textarea class="form-control" name="note" rows="3"><?php echo $editBookingService ? h($editBookingService['notes']) : ''; ?></textarea>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="form-label mb-0"><strong>Danh Sách Dịch Vụ *</strong></label>
+                            <?php if (!$editBookingService): ?>
+                                <button type="button" class="btn btn-sm btn-success" onclick="addServiceRow()">
+                                    <i class="fas fa-plus"></i> Thêm Dịch Vụ
+                                </button>
+                            <?php endif; ?>
+                        </div>
+                        <div id="servicesContainer">
+                            <!-- Service Row Template -->
+                            <div class="service-row border rounded p-3 mb-3" data-row-index="0">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>Dịch Vụ #1</strong>
+                                    <?php if (!$editBookingService): ?>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="removeServiceRow(this)">
+                                            <i class="fas fa-times"></i> Xóa
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Dịch Vụ *</label>
+                                        <select class="form-select form-select-sm service-select" name="service_id[]" required>
+                                            <option value="">-- Chọn dịch vụ --</option>
+                                            <?php foreach ($services as $service): ?>
+                                                <option value="<?php echo $service['service_id']; ?>"
+                                                    <?php echo ($editBookingService && $editBookingService['service_id'] == $service['service_id']) ? 'selected' : ''; ?> 
+                                                    data-price="<?php echo $service['price']; ?>">
+                                                    <?php echo $service['service_name']; ?> - <?php echo number_format($service['price'], 0, ',', '.'); ?> VNĐ
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <label class="form-label small">Số Người *</label>
+                                        <input type="number" name="quantity[]" class="form-control form-control-sm" min="1" value="<?php echo $editBookingService ? h($editBookingService['quantity']) : '1'; ?>" required>
+                                    </div>
+                                    <div class="col-md-3 mb-2">
+                                        <label class="form-label small">Số Lượng *</label>
+                                        <input type="number" name="amount[]" min="1" class="form-control form-control-sm" value="<?php echo $editBookingService ? $editBookingService['amount'] : '1'; ?>" required>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Ngày Sử Dụng *</label>
+                                        <input type="date" name="usage_date[]" class="form-control form-control-sm" required value="<?php echo $editBookingService ? $editBookingService['usage_date'] : ''; ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Giờ Sử Dụng *</label>
+                                        <input type="time" name="usage_time[]" class="form-control form-control-sm" required value="<?php echo $editBookingService ? $editBookingService['usage_time'] : ''; ?>">
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <label class="form-label small">Trạng Thái *</label>
+                                        <select class="form-select form-select-sm" name="status[]" required>
+                                            <option value="pending" <?php echo ($editBookingService && $editBookingService['status'] == 'pending') ? 'selected' : ''; ?>>Chưa thanh toán</option>
+                                            <option value="confirmed" <?php echo ($editBookingService && $editBookingService['status'] == 'confirmed') ? 'selected' : ''; ?>>Đã thanh toán</option>
+                                            <option value="cancelled" <?php echo ($editBookingService && $editBookingService['status'] == 'cancelled') ? 'selected' : ''; ?>>Đã hủy</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12 mb-2">
+                                        <label class="form-label small">Ghi Chú</label>
+                                        <textarea class="form-control form-control-sm" name="note[]" rows="2"><?php echo $editBookingService ? h($editBookingService['notes']) : ''; ?></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -879,6 +957,29 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     // Tự động mở modal edit khi có action=edit
     <?php if ($editBookingService): ?>
         document.addEventListener('DOMContentLoaded', function() {
+            // Populate form with edit data
+            const form = document.querySelector('#addServiceBookingModal form');
+            if (form) {
+                form.querySelector('select[name="customer_id"]').value = '<?php echo $editBookingService['customer_id']; ?>';
+                form.querySelector('input[name="phone"]').value = '<?php echo h($editBookingService['phone']); ?>';
+                form.querySelector('select[name="service_id[]"]').value = '<?php echo $editBookingService['service_id']; ?>';
+                form.querySelector('input[name="quantity[]"]').value = '<?php echo h($editBookingService['quantity']); ?>';
+                form.querySelector('input[name="amount[]"]').value = '<?php echo h($editBookingService['amount']); ?>';
+                form.querySelector('input[name="usage_date[]"]').value = '<?php echo $editBookingService['usage_date']; ?>';
+                form.querySelector('input[name="usage_time[]"]').value = '<?php echo $editBookingService['usage_time']; ?>';
+                form.querySelector('select[name="status[]"]').value = '<?php echo h($editBookingService['status']); ?>';
+                form.querySelector('textarea[name="note[]"]').value = '<?php echo h($editBookingService['notes'] ?? ''); ?>';
+                
+                // Update modal title and button
+                const modalTitle = document.querySelector('#addServiceBookingModal .modal-title');
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (modalTitle) modalTitle.textContent = 'Sửa Booking dịch vụ';
+                if (submitBtn) {
+                    submitBtn.name = 'update_service_booking';
+                    submitBtn.textContent = 'Cập nhật Booking dịch vụ';
+                }
+            }
+            
             const modal = new bootstrap.Modal(document.getElementById('addServiceBookingModal'));
             modal.show();
             // Khởi tạo lại Select2 sau khi modal mở hoàn toàn
@@ -982,6 +1083,71 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
         document.getElementById('totalAmount').value = total;
     }
 
+    // Thêm row dịch vụ mới
+    let serviceRowIndex = 1;
+    function addServiceRow() {
+        const container = document.getElementById('servicesContainer');
+        const firstRow = container.querySelector('.service-row');
+        if (!firstRow) return;
+        
+        const newRow = firstRow.cloneNode(true);
+        const rowIndex = serviceRowIndex++;
+        
+        // Cập nhật số thứ tự
+        newRow.querySelector('strong').textContent = 'Dịch Vụ #' + (rowIndex + 1);
+        newRow.setAttribute('data-row-index', rowIndex);
+        
+        // Reset các giá trị
+        newRow.querySelector('.service-select').value = '';
+        newRow.querySelector('input[name="quantity[]"]').value = '1';
+        newRow.querySelector('input[name="amount[]"]').value = '1';
+        newRow.querySelector('input[name="usage_date[]"]').value = '';
+        newRow.querySelector('input[name="usage_time[]"]').value = '';
+        newRow.querySelector('select[name="status[]"]').value = 'pending';
+        newRow.querySelector('textarea[name="note[]"]').value = '';
+        
+        // Đảm bảo nút xóa luôn hiển thị (trừ khi edit)
+        const removeBtn = newRow.querySelector('button[onclick*="removeServiceRow"]');
+        if (removeBtn) {
+            removeBtn.style.display = 'block';
+        }
+        
+        container.appendChild(newRow);
+        
+        // Re-initialize Select2 cho select mới (nếu có)
+        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+            jQuery(newRow.querySelector('.service-select')).select2({
+                placeholder: '-- Chọn dịch vụ --',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: jQuery('#addServiceBookingModal')
+            });
+        }
+    }
+
+    // Xóa row dịch vụ
+    function removeServiceRow(button) {
+        const container = document.getElementById('servicesContainer');
+        const rows = container.querySelectorAll('.service-row');
+        
+        // Không cho xóa nếu chỉ còn 1 row
+        if (rows.length <= 1) {
+            alert('Phải có ít nhất một dịch vụ');
+            return;
+        }
+        
+        const row = button.closest('.service-row');
+        if (row) {
+            row.remove();
+            
+            // Cập nhật lại số thứ tự
+            const remainingRows = container.querySelectorAll('.service-row');
+            remainingRows.forEach((r, index) => {
+                r.querySelector('strong').textContent = 'Dịch Vụ #' + (index + 1);
+            });
+        }
+    }
+
     function editServiceBooking(id) {
         window.location.href = 'index.php?page=booking-manager&panel=serviceBooking-panel&action=edit&id=' + id;
     }
@@ -996,4 +1162,221 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
             form.submit();
         }
     }
+    
+    // Auto-reset when modal is closed or when "Add" button is clicked
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('addServiceBookingModal');
+        if (modal) {
+            // Clear URL and reset form when modal is closed (không cần reload)
+            modal.addEventListener('hidden.bs.modal', function() {
+                const url = new URL(window.location);
+                url.searchParams.delete('action');
+                url.searchParams.delete('id');
+                window.history.replaceState({}, '', url);
+                
+                // Reset form ngay lập tức
+                const form = modal.querySelector('form');
+                if (form) {
+                    form.reset();
+                    // Reset all input values
+                    form.querySelectorAll('input[type="text"], input[type="tel"], input[type="date"], input[type="time"], input[type="number"], textarea, select').forEach(input => {
+                        if (input.name !== 'page' && input.name !== 'panel' && input.id !== 'customerSelect') {
+                            if (input.type === 'select-one' || input.tagName === 'SELECT') {
+                                input.selectedIndex = 0;
+                            } else {
+                                if (input.name === 'quantity[]' || input.name === 'amount[]') {
+                                    input.value = '1';
+                                } else if (input.name === 'status[]') {
+                                    input.value = 'pending';
+                                } else {
+                                    input.value = '';
+                                }
+                            }
+                        }
+                    });
+                    // Reset Select2 for customer
+                    if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+                        const $customerSelect = jQuery('#customerSelect');
+                        if ($customerSelect.length) {
+                            $customerSelect.val(null).trigger('change');
+                        }
+                    }
+                    // Reset service rows
+                    const container = document.getElementById('servicesContainer');
+                    if (container) {
+                        const rows = container.querySelectorAll('.service-row');
+                        rows.forEach((row, index) => {
+                            if (index > 0) {
+                                row.remove();
+                            } else {
+                                const serviceSelect = row.querySelector('.service-select');
+                                if (serviceSelect) serviceSelect.value = '';
+                                const quantityInput = row.querySelector('input[name="quantity[]"]');
+                                if (quantityInput) quantityInput.value = '1';
+                                const amountInput = row.querySelector('input[name="amount[]"]');
+                                if (amountInput) amountInput.value = '1';
+                                const usageDateInput = row.querySelector('input[name="usage_date[]"]');
+                                if (usageDateInput) usageDateInput.value = '';
+                                const usageTimeInput = row.querySelector('input[name="usage_time[]"]');
+                                if (usageTimeInput) usageTimeInput.value = '';
+                                const statusSelect = row.querySelector('select[name="status[]"]');
+                                if (statusSelect) statusSelect.value = 'pending';
+                                const noteTextarea = row.querySelector('textarea[name="note[]"]');
+                                if (noteTextarea) noteTextarea.value = '';
+                            }
+                        });
+                    }
+                    // Reset modal title and button
+                    const modalTitle = modal.querySelector('.modal-title');
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (modalTitle) modalTitle.textContent = 'Thêm Booking dịch vụ';
+                    if (submitBtn) {
+                        submitBtn.name = 'add_booking_service';
+                        submitBtn.textContent = 'Thêm Booking dịch vụ';
+                    }
+                }
+            });
+            
+            // Reset form when "Add" button is clicked
+            const addButton = document.querySelector('[data-bs-target="#addServiceBookingModal"]');
+            if (addButton) {
+                addButton.addEventListener('click', function() {
+                    const url = new URL(window.location);
+                    url.searchParams.delete('action');
+                    url.searchParams.delete('id');
+                    window.history.replaceState({}, '', url);
+                    setTimeout(function() {
+                        const form = modal.querySelector('form');
+                        if (form) {
+                            form.reset();
+                            // Reset all input values
+                            form.querySelectorAll('input[type="text"], input[type="tel"], input[type="date"], input[type="time"], input[type="number"], textarea, select').forEach(input => {
+                                if (input.name !== 'page' && input.name !== 'panel' && input.id !== 'customerSelect') {
+                                    if (input.type === 'select-one' || input.tagName === 'SELECT') {
+                                        input.selectedIndex = 0;
+                                    } else {
+                                        if (input.name === 'quantity[]' || input.name === 'amount[]') {
+                                            input.value = '1';
+                                        } else if (input.name === 'status[]') {
+                                            input.value = 'pending';
+                                        } else {
+                                            input.value = '';
+                                        }
+                                    }
+                                }
+                            });
+                            // Reset Select2 for customer
+                            if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+                                const $customerSelect = jQuery('#customerSelect');
+                                if ($customerSelect.length) {
+                                    $customerSelect.val(null).trigger('change');
+                                }
+                            }
+                            // Reset service rows
+                            const container = document.getElementById('servicesContainer');
+                            if (container) {
+                                const rows = container.querySelectorAll('.service-row');
+                                rows.forEach((row, index) => {
+                                    if (index > 0) {
+                                        row.remove();
+                                    } else {
+                                        const serviceSelect = row.querySelector('.service-select');
+                                        if (serviceSelect) serviceSelect.value = '';
+                                        const quantityInput = row.querySelector('input[name="quantity[]"]');
+                                        if (quantityInput) quantityInput.value = '1';
+                                        const amountInput = row.querySelector('input[name="amount[]"]');
+                                        if (amountInput) amountInput.value = '1';
+                                        const usageDateInput = row.querySelector('input[name="usage_date[]"]');
+                                        if (usageDateInput) usageDateInput.value = '';
+                                        const usageTimeInput = row.querySelector('input[name="usage_time[]"]');
+                                        if (usageTimeInput) usageTimeInput.value = '';
+                                        const statusSelect = row.querySelector('select[name="status[]"]');
+                                        if (statusSelect) statusSelect.value = 'pending';
+                                        const noteTextarea = row.querySelector('textarea[name="note[]"]');
+                                        if (noteTextarea) noteTextarea.value = '';
+                                    }
+                                });
+                            }
+                            // Reset modal title and button
+                            const modalTitle = modal.querySelector('.modal-title');
+                            const submitBtn = form.querySelector('button[type="submit"]');
+                            if (modalTitle) modalTitle.textContent = 'Thêm Booking dịch vụ';
+                            if (submitBtn) {
+                                submitBtn.name = 'add_booking_service';
+                                submitBtn.textContent = 'Thêm Booking dịch vụ';
+                            }
+                        }
+                    }, 200);
+                });
+            }
+            
+            // Reset form when modal opens if not in edit mode
+            modal.addEventListener('show.bs.modal', function() {
+                const isEditMode = window.location.search.includes('action=edit');
+                if (!isEditMode) {
+                    const form = modal.querySelector('form');
+                    if (form) {
+                        form.reset();
+                        // Reset all input values
+                        form.querySelectorAll('input[type="text"], input[type="tel"], input[type="date"], input[type="time"], input[type="number"], textarea, select').forEach(input => {
+                            if (input.name !== 'page' && input.name !== 'panel' && input.id !== 'customerSelect') {
+                                if (input.type === 'select-one' || input.tagName === 'SELECT') {
+                                    input.selectedIndex = 0;
+                                } else {
+                                    if (input.name === 'quantity[]' || input.name === 'amount[]') {
+                                        input.value = '1';
+                                    } else if (input.name === 'status[]') {
+                                        input.value = 'pending';
+                                    } else {
+                                        input.value = '';
+                                    }
+                                }
+                            }
+                        });
+                        // Reset Select2 for customer
+                        if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+                            const $customerSelect = jQuery('#customerSelect');
+                            if ($customerSelect.length) {
+                                $customerSelect.val(null).trigger('change');
+                            }
+                        }
+                        // Reset service rows to initial state
+                        const container = document.getElementById('servicesContainer');
+                        if (container) {
+                            const rows = container.querySelectorAll('.service-row');
+                            rows.forEach((row, index) => {
+                                if (index > 0) {
+                                    row.remove();
+                                } else {
+                                    // Reset first row
+                                    const serviceSelect = row.querySelector('.service-select');
+                                    if (serviceSelect) serviceSelect.value = '';
+                                    const quantityInput = row.querySelector('input[name="quantity[]"]');
+                                    if (quantityInput) quantityInput.value = '1';
+                                    const amountInput = row.querySelector('input[name="amount[]"]');
+                                    if (amountInput) amountInput.value = '1';
+                                    const usageDateInput = row.querySelector('input[name="usage_date[]"]');
+                                    if (usageDateInput) usageDateInput.value = '';
+                                    const usageTimeInput = row.querySelector('input[name="usage_time[]"]');
+                                    if (usageTimeInput) usageTimeInput.value = '';
+                                    const statusSelect = row.querySelector('select[name="status[]"]');
+                                    if (statusSelect) statusSelect.value = 'pending';
+                                    const noteTextarea = row.querySelector('textarea[name="note[]"]');
+                                    if (noteTextarea) noteTextarea.value = '';
+                                }
+                            });
+                        }
+                        // Reset modal title and button
+                        const modalTitle = modal.querySelector('.modal-title');
+                        const submitBtn = form.querySelector('button[type="submit"]');
+                        if (modalTitle) modalTitle.textContent = 'Thêm Booking dịch vụ';
+                        if (submitBtn) {
+                            submitBtn.name = 'add_booking_service';
+                            submitBtn.textContent = 'Thêm Booking dịch vụ';
+                        }
+                    }
+                }
+            });
+        }
+    });
 </script>

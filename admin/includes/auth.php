@@ -14,7 +14,7 @@ function checkPermission($permissionName) {
     if (!isset($_SESSION['chuc_vu']) || $permissionName === '') {
         return false;
     }
-
+    
     $permissions = getStaffPermissions();
     return in_array($permissionName, $permissions, true);
 }
@@ -51,7 +51,7 @@ function getStaffPermissions() {
         $permissions[] = $row['ten_quyen'];
     }
     $stmt->close();
-
+    
     // Quyền RIÊNG của nhân viên
     $stmt = $mysqli->prepare("
         SELECT q.ten_quyen
@@ -64,7 +64,7 @@ function getStaffPermissions() {
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
         $permissions[] = $row['ten_quyen'];
-    }
+}
     $stmt->close();
 
     // Loại bỏ trùng

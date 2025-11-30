@@ -73,6 +73,12 @@ $canAccessCustomers = $canViewSection('customers-manager');
                     <i class="fa-solid fa-comments"></i><span>Blog & Review</span>
                 </div>
             <?php endif; ?>
+            <?php if ($canViewSection('voucher-manager')): ?>
+                <div class="menu-item <?php echo $current_page === 'voucher-manager' ? 'active' : ''; ?>"
+                    data-page="voucher-manager">
+                    <i class="fa-solid fa-ticket-alt"></i><span>Voucher</span>
+                </div>
+            <?php endif; ?>
             <?php if ($canViewSection('my-tasks')): ?>
                 <div class="menu-item <?php echo $current_page === 'my-tasks' ? 'active' : ''; ?>"
                     data-page="my-tasks">
