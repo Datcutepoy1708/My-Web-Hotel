@@ -36,24 +36,78 @@ class ProfileController extends BaseController {
     }
     
     private function handleUpdateProfile($model, $staff_id) {
+        // Lấy thông tin hiện tại để giữ ảnh cũ nếu không upload mới
+        $currentStaff = $model->getById($staff_id);
+        $anh_dai_dien = $currentStaff['anh_dai_dien'] ?? '';
+        
+        // Xử lý upload ảnh nếu có
+        if (isset($_FILES['anh_dai_dien']) && $_FILES['anh_dai_dien']['error'] == UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/../assets/images/staff/';
+            if (!file_exists($uploadDir)) {
+                mkdir($uploadDir, 0777, true);
+            }
+            
+            $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+            $maxSize = 5 * 1024 * 1024; // 5MB
+            
+            if (in_array($_FILES['anh_dai_dien']['type'], $allowedTypes) && $_FILES['anh_dai_dien']['size'] <= $maxSize) {
+                $extension = strtolower(pathinfo($_FILES['anh_dai_dien']['name'], PATHINFO_EXTENSION));
+                $newFileName = 'staff_' . time() . '_' . uniqid() . '.' . $extension;
+                $targetPath = $uploadDir . $newFileName;
+                
+                if (move_uploaded_file($_FILES['anh_dai_dien']['tmp_name'], $targetPath)) {
+                    // Xóa ảnh cũ nếu có
+                    if (!empty($anh_dai_dien)) {
+                        $oldImagePath = '';
+                        if (strpos($anh_dai_dien, 'client/') !== false) {
+                            // Nếu là đường dẫn cũ từ client
+                            $oldImagePath = __DIR__ . '/../../client/' . str_replace('client/', '', $anh_dai_dien);
+                        } else if (strpos($anh_dai_dien, 'assets/images/staff/') !== false) {
+                            // Nếu là relative path mới
+                            $oldImagePath = __DIR__ . '/../' . $anh_dai_dien;
+                        } else if (strpos($anh_dai_dien, '/') === 0) {
+                            $oldImagePath = __DIR__ . '/../../client' . $anh_dai_dien;
+                        } else {
+                            $oldImagePath = $uploadDir . $anh_dai_dien;
+                        }
+                        
+                        if (file_exists($oldImagePath)) {
+                            @unlink($oldImagePath);
+                        }
+                    }
+                    $anh_dai_dien = 'assets/images/staff/' . $newFileName;
+                }
+            }
+        }
+        
         $data = [
-            'ho_ten' => $_POST['ho_ten'],
-            'email' => $_POST['email'],
-            'so_dien_thoai' => $_POST['so_dien_thoai'],
+            'ho_ten' => $_POST['ho_ten'] ?? '',
+            'dien_thoai' => $_POST['dien_thoai'] ?? '',
             'dia_chi' => $_POST['dia_chi'] ?? '',
             'ngay_sinh' => !empty($_POST['ngay_sinh']) ? $_POST['ngay_sinh'] : null,
-            'gioi_tinh' => $_POST['gioi_tinh'] ?? 'Nam'
+            'gioi_tinh' => $_POST['gioi_tinh'] ?? 'Nam',
+            'cmnd_cccd' => $_POST['cmnd_cccd'] ?? '',
+            'anh_dai_dien' => $anh_dai_dien
         ];
         
-        if ($model->update($staff_id, $data)) {
+        // Update trực tiếp bằng SQL để đảm bảo tất cả field được cập nhật
+        $stmt = $this->mysqli->prepare("UPDATE nhan_vien SET ho_ten=?, dien_thoai=?, ngay_sinh=?, gioi_tinh=?, cmnd_cccd=?, dia_chi=?, anh_dai_dien=? WHERE id_nhan_vien=?");
+        $stmt->bind_param("sssssssi", $data['ho_ten'], $data['dien_thoai'], $data['ngay_sinh'], $data['gioi_tinh'], $data['cmnd_cccd'], $data['dia_chi'], $anh_dai_dien, $staff_id);
+        
+        if ($stmt->execute()) {
+            $_SESSION['ho_ten'] = $data['ho_ten'];
+            $_SESSION['anh_dai_dien'] = $anh_dai_dien;
             $_SESSION['message'] = 'Cập nhật thông tin thành công';
             $_SESSION['messageType'] = 'success';
         } else {
-            $_SESSION['message'] = 'Lỗi khi cập nhật thông tin';
+            $_SESSION['message'] = 'Lỗi khi cập nhật thông tin: ' . $stmt->error;
             $_SESSION['messageType'] = 'danger';
         }
+        $stmt->close();
         
-        $this->redirect('index.php?page=profile');
+        // Dùng JavaScript redirect để tránh lỗi headers already sent
+        echo '<script>window.location.href = "index.php?page=profile&t=' . time() . '";</script>';
+        exit;
     }
     
     private function handleChangePassword($staff_id) {

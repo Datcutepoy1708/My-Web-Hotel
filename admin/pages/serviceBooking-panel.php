@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $usage_time = $_POST['usage_time'];
         $booking_id = !empty($_POST['booking_id']) ? intval($_POST['booking_id']) : null; // Cho phép NULL
         $amount = floatval($_POST['amount']); // Nên dùng floatval thay vì intval cho tiền
-        $notes = trim($_POST['note'] ?? '');
+        $notes = is_array($_POST['note'] ?? '') ? '' : trim($_POST['note'] ?? '');
         $status = $_POST['status'] ?? 'confirmed';
 
         // Xử lý validate dữ liệu

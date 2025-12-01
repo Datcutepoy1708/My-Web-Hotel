@@ -322,21 +322,36 @@ if ($action == 'delete_task' && isset($_POST['id_nhiem_vu'])) {
         exit;
     }
     
-    $stmt = $mysqli->prepare("DELETE FROM nhiem_vu WHERE id_nhiem_vu = ?");
+    // Use soft delete if deleted column exists, otherwise hard delete
+    $checkDeleted = $mysqli->query("SHOW COLUMNS FROM nhiem_vu LIKE 'deleted'");
+    if ($checkDeleted && $checkDeleted->num_rows > 0) {
+        // Soft delete
+        $stmt = $mysqli->prepare("UPDATE nhiem_vu SET deleted = NOW() WHERE id_nhiem_vu = ?");
+    } else {
+        // Hard delete
+        $stmt = $mysqli->prepare("DELETE FROM nhiem_vu WHERE id_nhiem_vu = ?");
+    }
     $stmt->bind_param("i", $id_nhiem_vu);
     
     if ($stmt->execute()) {
-        // Ghi lịch sử
-        $loai_thay_doi = 'Xóa nhiệm vụ';
-        $noi_dung = "Xóa nhiệm vụ: " . $task['ten_nhiem_vu'];
-        $id_nhan_vien_gan_phien = isset($_SESSION['id_nhan_vien']) ? intval($_SESSION['id_nhan_vien']) : null;
-        $historyStmt = $mysqli->prepare("
-            INSERT INTO lich_su_thay_doi (id_nhan_vien, id_nhiem_vu, loai_thay_doi, noi_dung_thay_doi, nguoi_thay_doi)
-            VALUES (?, ?, ?, ?, ?)
-        ");
-        $historyStmt->bind_param("iissi", $task['id_nhan_vien_duoc_gan'], $id_nhiem_vu, $loai_thay_doi, $noi_dung, $id_nhan_vien_gan_phien);
-        $historyStmt->execute();
-        $historyStmt->close();
+        // Ghi lịch sử (chỉ nếu bảng tồn tại)
+        try {
+            $loai_thay_doi = 'Xóa nhiệm vụ';
+            $noi_dung = "Xóa nhiệm vụ: " . $task['ten_nhiem_vu'];
+            $id_nhan_vien_gan_phien = isset($_SESSION['id_nhan_vien']) ? intval($_SESSION['id_nhan_vien']) : null;
+            $historyStmt = $mysqli->prepare("
+                INSERT INTO lich_su_thay_doi (id_nhan_vien, id_nhiem_vu, loai_thay_doi, noi_dung_thay_doi, nguoi_thay_doi)
+                VALUES (?, ?, ?, ?, ?)
+            ");
+            if ($historyStmt) {
+                $historyStmt->bind_param("iissi", $task['id_nhan_vien_duoc_gan'], $id_nhiem_vu, $loai_thay_doi, $noi_dung, $id_nhan_vien_gan_phien);
+                $historyStmt->execute();
+                $historyStmt->close();
+            }
+        } catch (Exception $e) {
+            // Ignore history logging errors
+            error_log("History logging error: " . $e->getMessage());
+        }
         
         echo json_encode(['success' => true, 'message' => 'Xóa nhiệm vụ thành công']);
     } else {

@@ -171,20 +171,23 @@ if ($action == 'edit' && isset($_GET['id'])) {
 }
 
 // Lấy danh sách booking chưa có hóa đơn (chỉ booking phòng)
+// Cũng lấy cả booking đã có hóa đơn để có thể tạo hóa đơn mới nếu cần
 $bookingsWithoutInvoice = [];
 $bookingsQuery = $mysqli->query("
     SELECT b.booking_id, b.check_in_date, b.check_out_date, 
            c.full_name, c.phone, c.email,
-           r.room_number, rt.room_type_name
+           r.room_number,
+           rt.room_type_name,
+           CASE WHEN i.invoice_id IS NULL THEN 0 ELSE 1 END as has_invoice
     FROM booking b
     INNER JOIN customer c ON b.customer_id = c.customer_id
     INNER JOIN room r ON b.room_id = r.room_id
     INNER JOIN room_type rt ON r.room_type_id = rt.room_type_id
     LEFT JOIN invoice i ON b.booking_id = i.booking_id AND i.deleted IS NULL
     WHERE b.deleted IS NULL 
-    AND i.invoice_id IS NULL
     AND b.status NOT IN ('Cancelled')
-    ORDER BY b.check_in_date DESC
+    ORDER BY has_invoice ASC, b.check_in_date DESC
+    LIMIT 100
 ");
 if ($bookingsQuery) {
     $bookingsWithoutInvoice = $bookingsQuery->fetch_all(MYSQLI_ASSOC);
@@ -891,8 +894,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                 <small class="text-muted">Booking ID không thể thay đổi khi chỉnh sửa hóa đơn</small>
                             <?php else: ?>
                                 <!-- Khi thêm mới: select bình thường -->
-                                <select class="form-select booking-search" id="booking_id" name="booking_id" required>
-                                    <option value="">-- Chọn booking chưa có hóa đơn --</option>
+                                <select class="form-select booking-search" id="booking_id" name="booking_id">
+                                    <option value="">-- Chọn booking (không bắt buộc) --</option>
                                     <?php foreach ($bookingsWithoutInvoice as $booking): ?>
                                         <option value="<?php echo $booking['booking_id']; ?>"
                                             data-customer-name="<?php echo h($booking['full_name']); ?>"
@@ -903,10 +906,13 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                             <?php echo h($booking['full_name']); ?> -
                                             Phòng <?php echo h($booking['room_number']); ?> -
                                             <?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?>
+                                            <?php if (isset($booking['has_invoice']) && $booking['has_invoice']): ?>
+                                                (Đã có hóa đơn)
+                                            <?php endif; ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <small class="text-muted">Hoặc nhập Booking ID thủ công nếu không có trong danh sách</small>
+                                <small class="text-muted">Có thể tạo hóa đơn không cần booking ID (chỉ dịch vụ). Hoặc chọn booking để tự động điền thông tin.</small>
                             <?php endif; ?>
                         </div>
                         <div class="col-md-6 mb-3">

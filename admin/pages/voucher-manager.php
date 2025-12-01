@@ -16,6 +16,51 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
 
+// Hàm upload ảnh cho voucher
+if (!function_exists('uploadVoucherImage')) {
+function uploadVoucherImage($file, $oldImage = '') {
+    if (!isset($file['name']) || empty($file['name'])) {
+        return $oldImage;
+    }
+    
+    $uploadDir = __DIR__ . '/../assets/images/voucher/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!in_array($file['type'], $allowedTypes)) {
+        return false;
+    }
+    
+    if ($file['size'] > $maxSize) {
+        return false;
+    }
+    
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $newFileName = 'voucher_' . time() . '_' . uniqid() . '.' . $extension;
+    $targetPath = $uploadDir . $newFileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        if ($oldImage && !empty($oldImage)) {
+            $oldPath = '';
+            if (strpos($oldImage, 'client/') !== false) {
+                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldImage);
+            } else {
+                $oldPath = __DIR__ . '/../' . $oldImage;
+            }
+            if (file_exists($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+        return 'assets/images/voucher/' . $newFileName;
+    }
+    return false;
+}
+} // End function_exists check
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_voucher'])) {
         if (!$canCreateVoucher) {
@@ -25,7 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $code = trim($_POST['code']);
             $name = trim($_POST['name']);
             $description = trim($_POST['description'] ?? '');
-            $image = trim($_POST['image'] ?? '');
+            
+            // Xử lý upload ảnh
+            $image = '';
+            if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+                $uploadResult = uploadVoucherImage($_FILES['image']);
+                if ($uploadResult !== false) {
+                    $image = $uploadResult;
+                }
+            } else {
+                $image = trim($_POST['image'] ?? '');
+            }
             
             $discount_type = $_POST['discount_type'] ?? 'percent';
             $discount_value = floatval($_POST['discount_value']);
@@ -94,8 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $message = 'Thêm voucher thành công!';
                         $messageType = 'success';
                         $action = '';
-                        header("Location: index.php?page=voucher-manager");
-                        exit;
+                        if (function_exists('safe_redirect')) {
+                            safe_redirect("index.php?page=voucher-manager");
+                        } else {
+                            echo "<script>window.location.href = 'index.php?page=voucher-manager';</script>";
+                            exit;
+                        }
                     } else {
                         $message = 'Lỗi: ' . $stmt->error;
                         $messageType = 'danger';
@@ -115,7 +174,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $code = trim($_POST['code']);
             $name = trim($_POST['name']);
             $description = trim($_POST['description'] ?? '');
-            $image = trim($_POST['image'] ?? '');
+            
+            // Lấy ảnh cũ
+            $oldImageStmt = $mysqli->prepare("SELECT image FROM voucher WHERE voucher_id = ?");
+            $oldImageStmt->bind_param("i", $voucher_id);
+            $oldImageStmt->execute();
+            $oldImageResult = $oldImageStmt->get_result();
+            $oldImage = $oldImageResult->fetch_assoc()['image'] ?? '';
+            $oldImageStmt->close();
+            
+            // Xử lý upload ảnh
+            $image = $oldImage;
+            if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+                $uploadResult = uploadVoucherImage($_FILES['image'], $oldImage);
+                if ($uploadResult !== false) {
+                    $image = $uploadResult;
+                }
+            } else {
+                $image = trim($_POST['image'] ?? $oldImage);
+            }
             
             $discount_type = $_POST['discount_type'] ?? 'percent';
             $discount_value = floatval($_POST['discount_value']);
@@ -173,8 +250,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute()) {
                     $message = 'Cập nhật voucher thành công!';
                     $messageType = 'success';
-                    header("Location: index.php?page=voucher-manager");
-                    exit;
+                    if (function_exists('safe_redirect')) {
+                        safe_redirect("index.php?page=voucher-manager");
+                    } else {
+                        echo "<script>window.location.href = 'index.php?page=voucher-manager';</script>";
+                        exit;
+                    }
                 } else {
                     $message = 'Lỗi: ' . $stmt->error;
                     $messageType = 'danger';
@@ -196,8 +277,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($stmt->execute()) {
                 $message = 'Xóa voucher thành công!';
                 $messageType = 'success';
-                header("Location: index.php?page=voucher-manager");
-                exit;
+                if (function_exists('safe_redirect')) {
+                    safe_redirect("index.php?page=voucher-manager");
+                } else {
+                    echo "<script>window.location.href = 'index.php?page=voucher-manager';</script>";
+                    exit;
+                }
             } else {
                 $message = 'Lỗi: ' . $stmt->error;
                 $messageType = 'danger';
@@ -547,10 +632,27 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                                 <textarea class="form-control" name="description" rows="3" maxlength="300"><?php echo h($editVoucher['description'] ?? ''); ?></textarea>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Hình Ảnh (URL)</label>
-                                <input type="text" class="form-control" name="image" 
-                                    value="<?php echo h($editVoucher['image'] ?? ''); ?>" 
-                                    placeholder="https://...">
+                                <label class="form-label">Hình Ảnh</label>
+                                <div class="image-upload-area" onclick="document.getElementById('voucherImage').click()"
+                                    style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 5px; cursor: pointer;">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                                    <p class="text-muted mb-0">Click để chọn ảnh</p>
+                                    <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
+                                </div>
+                                <input type="file" id="voucherImage" name="image" accept="image/*"
+                                    style="display: none" onchange="previewImage(this, 'voucherPreview')" />
+                                <input type="hidden" name="image" value="<?php echo h($editVoucher['image'] ?? ''); ?>" id="voucherImageHidden">
+                                <?php if ($editVoucher && !empty($editVoucher['image'])): ?>
+                                <img id="voucherPreview" class="image-preview mt-3"
+                                    src="../<?php echo h($editVoucher['image']); ?>"
+                                    style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
+                                <?php else: ?>
+                                <img id="voucherPreview" class="image-preview mt-3"
+                                    style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
+                                <?php endif; ?>
+                                <div class="mt-2">
+                                    <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
+                                </div>
                             </div>
                         </div>
                         
@@ -968,10 +1070,126 @@ document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('voucherForm');
             if (form) {
                 form.reset();
+                
+                // Reset all input values
+                form.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(input => {
+                    if (input.name !== 'page' && input.name !== 'panel') {
+                        if (input.type === 'date') {
+                            input.value = '';
+                        } else if (input.type === 'number') {
+                            if (input.name === 'total_uses') input.value = '100';
+                            else if (input.name === 'per_customer') input.value = '1';
+                            else if (input.name === 'priority') input.value = '0';
+                            else input.value = '';
+                        } else {
+                            input.value = '';
+                        }
+                    }
+                });
+                
+                // Reset all selects
+                form.querySelectorAll('select').forEach(select => {
+                    if (select.name === 'discount_type') select.value = 'percent';
+                    else if (select.name === 'status') select.value = 'active';
+                    else if (select.name === 'apply_to') select.value = 'all';
+                    else select.selectedIndex = 0;
+                });
+                
+                // Reset all checkboxes
+                form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                
+                // Reset image preview
+                const imagePreview = document.getElementById('voucherPreview');
+                if (imagePreview) {
+                    imagePreview.style.display = 'none';
+                    imagePreview.src = '';
+                }
+                const imageInput = document.getElementById('voucherImage');
+                if (imageInput) imageInput.value = '';
+                
                 // Reset tabs to first
                 const firstTab = document.getElementById('basic-tab');
                 if (firstTab) {
                     firstTab.click();
+                }
+                
+                // Reset modal title
+                const modalTitle = modal.querySelector('.modal-title');
+                if (modalTitle) modalTitle.textContent = 'Thêm Voucher';
+                
+                // Reset submit button
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.name = 'add_voucher';
+                    submitBtn.textContent = 'Thêm Voucher';
+                }
+            }
+        });
+        
+        // Reset form when modal opens if not in edit mode
+        modal.addEventListener('show.bs.modal', function() {
+            const isEditMode = window.location.search.includes('action=edit');
+            if (!isEditMode) {
+                const form = document.getElementById('voucherForm');
+                if (form) {
+                    form.reset();
+                    
+                    // Reset all input values
+                    form.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(input => {
+                        if (input.name !== 'page' && input.name !== 'panel') {
+                            if (input.type === 'date') {
+                                input.value = '';
+                            } else if (input.type === 'number') {
+                                if (input.name === 'total_uses') input.value = '100';
+                                else if (input.name === 'per_customer') input.value = '1';
+                                else if (input.name === 'priority') input.value = '0';
+                                else input.value = '';
+                            } else {
+                                input.value = '';
+                            }
+                        }
+                    });
+                    
+                    // Reset all selects
+                    form.querySelectorAll('select').forEach(select => {
+                        if (select.name === 'discount_type') select.value = 'percent';
+                        else if (select.name === 'status') select.value = 'active';
+                        else if (select.name === 'apply_to') select.value = 'all';
+                        else select.selectedIndex = 0;
+                    });
+                    
+                    // Reset all checkboxes
+                    form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    
+                    // Reset image preview
+                    const imagePreview = document.getElementById('voucherPreview');
+                    if (imagePreview) {
+                        imagePreview.style.display = 'none';
+                        imagePreview.src = '';
+                    }
+                    const imageInput = document.getElementById('voucherImage');
+                    if (imageInput) imageInput.value = '';
+                    
+                    // Reset tabs to first
+                    const firstTab = document.getElementById('basic-tab');
+                    if (firstTab) {
+                        firstTab.click();
+                    }
+                    
+                    // Reset modal title
+                    const modalTitle = modal.querySelector('.modal-title');
+                    if (modalTitle) modalTitle.textContent = 'Thêm Voucher';
+                    
+                    // Reset submit button
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.name = 'add_voucher';
+                        submitBtn.textContent = 'Thêm Voucher';
+                    }
                 }
             }
         });
@@ -984,6 +1202,72 @@ document.addEventListener('DOMContentLoaded', function() {
             url.searchParams.delete('action');
             url.searchParams.delete('id');
             window.history.replaceState({}, '', url);
+            
+            // Reset form after a short delay to ensure modal is ready
+            setTimeout(function() {
+                const form = document.getElementById('voucherForm');
+                if (form) {
+                    form.reset();
+                    
+                    // Reset all input values
+                    form.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(input => {
+                        if (input.name !== 'page' && input.name !== 'panel') {
+                            if (input.type === 'date') {
+                                input.value = '';
+                            } else if (input.type === 'number') {
+                                if (input.name === 'total_uses') input.value = '100';
+                                else if (input.name === 'per_customer') input.value = '1';
+                                else if (input.name === 'priority') input.value = '0';
+                                else input.value = '';
+                            } else {
+                                input.value = '';
+                            }
+                        }
+                    });
+                    
+                    // Reset all selects
+                    form.querySelectorAll('select').forEach(select => {
+                        if (select.name === 'discount_type') select.value = 'percent';
+                        else if (select.name === 'status') select.value = 'active';
+                        else if (select.name === 'apply_to') select.value = 'all';
+                        else select.selectedIndex = 0;
+                    });
+                    
+                    // Reset all checkboxes
+                    form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                        checkbox.checked = false;
+                    });
+                    
+                    // Reset image preview
+                    const imagePreview = document.getElementById('voucherPreview');
+                    if (imagePreview) {
+                        imagePreview.style.display = 'none';
+                        imagePreview.src = '';
+                    }
+                    const imageInput = document.getElementById('voucherImage');
+                    if (imageInput) imageInput.value = '';
+                    
+                    // Reset tabs to first
+                    const firstTab = document.getElementById('basic-tab');
+                    if (firstTab) {
+                        firstTab.click();
+                    }
+                    
+                    // Reset modal title
+                    const modal = document.getElementById('addVoucherModal');
+                    if (modal) {
+                        const modalTitle = modal.querySelector('.modal-title');
+                        if (modalTitle) modalTitle.textContent = 'Thêm Voucher';
+                    }
+                    
+                    // Reset submit button
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.name = 'add_voucher';
+                        submitBtn.textContent = 'Thêm Voucher';
+                    }
+                }
+            }, 200);
         });
     });
 });

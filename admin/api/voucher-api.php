@@ -155,7 +155,7 @@ if ($action == 'view' && isset($_GET['id'])) {
                 <table class="table table-sm">
                     <tr><td><strong>Người tạo:</strong></td><td><?php echo h($voucher['created_by_name'] ?: 'N/A'); ?></td></tr>
                     <tr><td><strong>Ngày tạo:</strong></td><td><?php echo formatDate($voucher['created_at']); ?></td></tr>
-                    <?php if ($voucher['updated_at']): ?>
+                    <?php if (!empty($voucher['updated_at'])): ?>
                     <tr><td><strong>Ngày cập nhật:</strong></td><td><?php echo formatDate($voucher['updated_at']); ?></td></tr>
                     <?php endif; ?>
                     <tr><td><strong>Đã gán cho:</strong></td><td><?php echo $voucher['assigned_count']; ?> khách hàng</td></tr>
@@ -192,12 +192,10 @@ if ($action == 'usage' && isset($_GET['id'])) {
     // Lấy lịch sử sử dụng
     $stmt = $mysqli->prepare("SELECT vu.*, 
         c.full_name as customer_name, c.phone as customer_phone,
-        i.invoice_id, i.total_amount, i.discount,
-        nv.ho_ten as used_by_name
+        i.invoice_id, i.total_amount, i.discount
         FROM voucher_usage vu
         LEFT JOIN customer c ON vu.customer_id = c.customer_id
         LEFT JOIN invoice i ON vu.invoice_id = i.invoice_id
-        LEFT JOIN nhan_vien nv ON vu.used_by = nv.id_nhan_vien
         WHERE vu.voucher_id = ?
         ORDER BY vu.used_at DESC
         LIMIT 100");
@@ -226,7 +224,6 @@ if ($action == 'usage' && isset($_GET['id'])) {
                         <th>Khách hàng</th>
                         <th>Hóa đơn</th>
                         <th>Giá trị giảm</th>
-                        <th>Người xử lý</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -253,9 +250,6 @@ if ($action == 'usage' && isset($_GET['id'])) {
                             </td>
                             <td>
                                 <span class="text-success">-<?php echo formatCurrency($usage['discount_amount']); ?></span>
-                            </td>
-                            <td>
-                                <?php echo h($usage['used_by_name'] ?: 'N/A'); ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
@@ -293,4 +287,12 @@ if ($action == 'assigned_customers' && isset($_GET['id'])) {
 }
 
 echo json_encode(['success' => false, 'message' => 'Action không hợp lệ']);
+
+
+
+
+
+
+
+
 

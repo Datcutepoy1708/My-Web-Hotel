@@ -16,6 +16,49 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
 
+// Hàm upload ảnh cho dịch vụ
+function uploadServiceImage($file, $oldImage = '') {
+    if (!isset($file['name']) || empty($file['name'])) {
+        return $oldImage;
+    }
+    
+    $uploadDir = __DIR__ . '/../assets/images/service/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!in_array($file['type'], $allowedTypes)) {
+        return false;
+    }
+    
+    if ($file['size'] > $maxSize) {
+        return false;
+    }
+    
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $newFileName = 'service_' . time() . '_' . uniqid() . '.' . $extension;
+    $targetPath = $uploadDir . $newFileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        if ($oldImage && !empty($oldImage)) {
+            $oldPath = '';
+            if (strpos($oldImage, 'client/') !== false) {
+                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldImage);
+            } else {
+                $oldPath = __DIR__ . '/../' . $oldImage;
+            }
+            if (file_exists($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+        return 'assets/images/service/' . $newFileName;
+    }
+    return false;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_service'])) {
         if (!$canCreateService) {
@@ -28,9 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $price = floatval($_POST['price']);
         $unit = trim($_POST['unit'] ?? '');
         $status = $_POST['status'] ?? 'Active';
+        
+        $image = '';
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $uploadResult = uploadServiceImage($_FILES['image']);
+            if ($uploadResult !== false) {
+                $image = $uploadResult;
+            }
+        }
 
-        $stmt = $mysqli->prepare("INSERT INTO service (service_name, description, service_type, price, unit, status) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("sssdss", $service_name, $description, $service_type, $price, $unit, $status);
+        $stmt = $mysqli->prepare("INSERT INTO service (service_name, description, service_type, price, unit, status, image) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sssdsss", $service_name, $description, $service_type, $price, $unit, $status, $image);
 
         if ($stmt->execute()) {
             $message = 'Thêm dịch vụ thành công!';
@@ -55,9 +106,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $price = floatval($_POST['price']);
         $unit = trim($_POST['unit'] ?? '');
         $status = $_POST['status'] ?? 'Active';
+        
+        // Lấy ảnh cũ
+        $oldImageStmt = $mysqli->prepare("SELECT image FROM service WHERE service_id = ?");
+        $oldImageStmt->bind_param("i", $service_id);
+        $oldImageStmt->execute();
+        $oldImageResult = $oldImageStmt->get_result();
+        $oldImage = $oldImageResult->fetch_assoc()['image'] ?? '';
+        $oldImageStmt->close();
+        
+        $image = $oldImage;
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $uploadResult = uploadServiceImage($_FILES['image'], $oldImage);
+            if ($uploadResult !== false) {
+                $image = $uploadResult;
+            }
+        }
 
-        $stmt = $mysqli->prepare("UPDATE service SET service_name=?, description=?, service_type=?, price=?, unit=?, status=? WHERE service_id=? AND deleted IS NULL");
-        $stmt->bind_param("sssdssi", $service_name, $description, $service_type, $price, $unit, $status, $service_id);
+        $stmt = $mysqli->prepare("UPDATE service SET service_name=?, description=?, service_type=?, price=?, unit=?, status=?, image=? WHERE service_id=? AND deleted IS NULL");
+        $stmt->bind_param("sssdsssi", $service_name, $description, $service_type, $price, $unit, $status, $image, $service_id);
 
         if ($stmt->execute()) {
             $message = 'Cập nhật dịch vụ thành công!';
@@ -300,7 +367,7 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                 <h5 class="modal-title"><?php echo $editService ? 'Sửa' : 'Thêm'; ?> Dịch Vụ</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <?php if ($editService): ?>
                         <input type="hidden" name="service_id" value="<?php echo $editService['service_id']; ?>">
@@ -344,6 +411,28 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                             rows="3"><?php echo h($editService['description'] ?? ''); ?></textarea>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Ảnh Dịch Vụ</label>
+                        <div class="image-upload-area" onclick="document.getElementById('serviceImage').click()"
+                            style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 5px; cursor: pointer;">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">Click để chọn ảnh</p>
+                            <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
+                        </div>
+                        <input type="file" id="serviceImage" name="image" accept="image/*"
+                            style="display: none" onchange="previewImage(this, 'servicePreview')" />
+                        <?php if ($editService && !empty($editService['image'])): ?>
+                        <img id="servicePreview" class="image-preview mt-3"
+                            src="../<?php echo h($editService['image']); ?>"
+                            style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
+                        <?php else: ?>
+                        <img id="servicePreview" class="image-preview mt-3"
+                            style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
+                        <?php endif; ?>
+                        <div class="mt-2">
+                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Trạng Thái *</label>
                         <select class="form-select" name="status" required>
                             <option value="Active"
@@ -368,6 +457,21 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
 </div>
 
 <script>
+    // Preview image function
+    function previewImage(input, previewId) {
+        const preview = document.getElementById(previewId);
+        if (!preview) return;
+        
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                preview.src = e.target.result;
+                preview.style.display = "block";
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
     // ==================== HELPER FUNCTIONS ====================
 
     // Hàm xóa query string edit - PHẢI ở ngoài

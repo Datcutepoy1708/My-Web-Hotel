@@ -16,6 +16,50 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
 
+// Hàm upload ảnh cho loại phòng
+function uploadRoomTypeImage($file, $oldImage = '')
+{
+    if (!isset($file['name']) || empty($file['name'])) {
+        return $oldImage;
+    }
+
+    $uploadDir = __DIR__ . '/../assets/images/room-type/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!in_array($file['type'], $allowedTypes)) {
+        return false;
+    }
+
+    if ($file['size'] > $maxSize) {
+        return false;
+    }
+
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $newFileName = 'roomtype_' . time() . '_' . uniqid() . '.' . $extension;
+    $targetPath = $uploadDir . $newFileName;
+
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        if ($oldImage && !empty($oldImage)) {
+            $oldPath = '';
+            if (strpos($oldImage, 'client/') !== false) {
+                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldImage);
+            } else {
+                $oldPath = __DIR__ . '/../' . $oldImage;
+            }
+            if (file_exists($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+        return 'assets/images/room-type/' . $newFileName;
+    }
+    return false;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_room_type']) && $canCreateRoomType) {
         $room_type_name = trim($_POST['room_type_name']);
@@ -26,8 +70,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $area = floatval($_POST['area'] ?? 0);
         $status = $_POST['status'] ?? 'active';
 
-        $stmt = $mysqli->prepare("INSERT INTO room_type (room_type_name, description, base_price, capacity, status, amenities, area) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssdissd", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area);
+        $image = '';
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $uploadResult = uploadRoomTypeImage($_FILES['image']);
+            if ($uploadResult !== false) {
+                $image = $uploadResult;
+            }
+        }
+
+        $stmt = $mysqli->prepare("INSERT INTO room_type (room_type_name, description, base_price, capacity, status, amenities, area, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("ssdissds", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area, $image);
 
         if ($stmt->execute()) {
             $message = 'Thêm loại phòng thành công!';
@@ -38,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['update_room_type']) && $canEditRoomType) {
         $room_type_id = intval($_POST['room_type_id']);
         $room_type_name = trim($_POST['room_type_name']);
@@ -49,6 +101,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $area = floatval($_POST['area'] ?? 0);
         $status = $_POST['status'] ?? 'active';
 
+        // Lấy ảnh cũ
+        $oldImageStmt = $mysqli->prepare("SELECT image FROM room_type WHERE room_type_id = ?");
+        $oldImageStmt->bind_param("i", $room_type_id);
+        $oldImageStmt->execute();
+        $oldImageResult = $oldImageStmt->get_result();
+        $oldImage = $oldImageResult->fetch_assoc()['image'] ?? '';
+        $oldImageStmt->close();
+
+        $image = $oldImage;
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $uploadResult = uploadRoomTypeImage($_FILES['image'], $oldImage);
+            if ($uploadResult !== false) {
+                $image = $uploadResult;
+            }
+        }
+
         $stmt = $mysqli->prepare("UPDATE room_type 
                                   SET room_type_name=?, 
                                       description=?, 
@@ -56,10 +124,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                       capacity=?, 
                                       status=?, 
                                       amenities=?, 
-                                      area=? 
+                                      area=?,
+                                      image=?
                                   WHERE room_type_id=? 
                                   AND deleted IS NULL");
-        $stmt->bind_param("ssdissdi", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area, $room_type_id);
+        $stmt->bind_param("ssdissdsi", $room_type_name, $description, $base_price, $capacity, $status, $amenities, $area, $image, $room_type_id);
 
         if ($stmt->execute()) {
             $message = 'Cập nhật loại phòng thành công!';
@@ -70,12 +139,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-    
+
     if (isset($_POST['delete_room_type']) && $canDeleteRoomType) {
         $room_type_id = intval($_POST['room_type_id']);
         $stmt = $mysqli->prepare("UPDATE room_type SET deleted = NOW() WHERE room_type_id = ?");
         $stmt->bind_param("i", $room_type_id);
-        
+
         if ($stmt->execute()) {
             $message = 'Xóa loại phòng thành công!';
             $messageType = 'success';
@@ -155,11 +224,11 @@ if ($totalRoomTypes > 0) {
               GROUP BY rt.room_type_id
               $orderBy
               LIMIT ? OFFSET ?";
-    
+
     $params[] = $perPage;
     $params[] = $offset;
     $types .= 'ii';
-    
+
     $stmt = $mysqli->prepare($query);
     if (!empty($params)) {
         $stmt->bind_param($types, ...$params);
@@ -188,12 +257,12 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Loại Phòng</h3>
         <?php if ($canCreateRoomType): ?>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
-            <i class="fas fa-plus"></i> Thêm Loại Phòng
-        </button>
+            <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomTypeModal">
+                <i class="fas fa-plus"></i> Thêm Loại Phòng
+            </button>
         <?php endif; ?>
     </div>
-    
+
     <div class="filter-section">
         <form method="GET" action="">
             <input type="hidden" name="page" value="room-manager">
@@ -226,7 +295,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             </div>
         </form>
     </div>
-    
+
     <!-- Bảng danh sách loại phòng -->
     <div class="table-container">
         <table class="table table-hover" id="roomsTable">
@@ -285,16 +354,16 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 <?php if ($canEditRoomType): ?>
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+                                    <button class="btn btn-sm btn-outline-warning"
+                                        onclick="editRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                 <?php endif; ?>
                                 <?php if ($canDeleteRoomType): ?>
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deleteRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                    <button class="btn btn-sm btn-outline-danger"
+                                        onclick="deleteRoomTypes(<?php echo $rt['room_type_id']; ?>)" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 <?php endif; ?>
                             </td>
                         </tr>
@@ -335,10 +404,10 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
                                         <?php if ($canEditRoomType): ?>
-                                        <button type="button" class="btn btn-primary"
-                                            onclick="editRoomTypeFromView(<?php echo $rt['room_type_id']; ?>)">
-                                            Chỉnh Sửa
-                                        </button>
+                                            <button type="button" class="btn btn-primary"
+                                                onclick="editRoomTypeFromView(<?php echo $rt['room_type_id']; ?>)">
+                                                Chỉnh Sửa
+                                            </button>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -349,7 +418,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             </tbody>
         </table>
     </div>
-    
+
     <!-- Pagination -->
     <?php echo getPagination($totalRoomTypes, $perPage, $pageNum, $baseUrl); ?>
 </div>
@@ -362,7 +431,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 <h5 class="modal-title"><?php echo $editRoomTypes ? 'Sửa' : 'Thêm'; ?> Loại Phòng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <?php if ($editRoomTypes): ?>
                         <input type="hidden" name="room_type_id" value="<?php echo $editRoomTypes['room_type_id']; ?>">
@@ -370,7 +439,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
 
                     <div class="mb-3">
                         <label class="form-label">Tên loại phòng *</label>
-                        <input type="text" class="form-control" name="room_type_name" required 
+                        <input type="text" class="form-control" name="room_type_name" required
                             value="<?php echo h($editRoomTypes['room_type_name'] ?? ''); ?>">
                     </div>
                     <div class="mb-3">
@@ -380,25 +449,25 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Giá cơ bản (VNĐ) *</label>
-                            <input type="number" class="form-control" name="base_price" step="0.01" required 
+                            <input type="number" class="form-control" name="base_price" step="0.01" required
                                 value="<?php echo h($editRoomTypes['base_price'] ?? ''); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Sức chứa (người) *</label>
-                            <input type="number" class="form-control" name="capacity" required 
+                            <input type="number" class="form-control" name="capacity" required
                                 value="<?php echo h($editRoomTypes['capacity'] ?? ''); ?>">
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Diện tích (m²)</label>
-                            <input type="number" class="form-control" name="area" step="0.01" 
+                            <input type="number" class="form-control" name="area" step="0.01"
                                 value="<?php echo h($editRoomTypes['area'] ?? ''); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tiện nghi</label>
                             <input type="text" class="form-control" name="amenities"
-                                placeholder="VD: WiFi, TV, Điều hòa..." 
+                                placeholder="VD: WiFi, TV, Điều hòa..."
                                 value="<?php echo h($editRoomTypes['amenities'] ?? ''); ?>">
                         </div>
                     </div>
@@ -412,6 +481,28 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <option value="maintenance" <?php echo ($editRoomTypes['status'] ?? '') == 'maintenance' ? 'selected' : ''; ?>>
                                 Bảo trì</option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh Loại Phòng</label>
+                        <div class="image-upload-area" onclick="document.getElementById('roomTypeImage').click()"
+                            style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 5px; cursor: pointer;">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">Click để chọn ảnh</p>
+                            <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
+                        </div>
+                        <input type="file" id="roomTypeImage" name="image" accept="image/*"
+                            style="display: none" onchange="previewImage(this, 'roomTypePreview')" />
+                        <?php if ($editRoomTypes && !empty($editRoomTypes['image'])): ?>
+                            <img id="roomTypePreview" class="image-preview mt-3"
+                                src="../<?php echo h($editRoomTypes['image']); ?>"
+                                style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
+                        <?php else: ?>
+                            <img id="roomTypePreview" class="image-preview mt-3"
+                                style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
+                        <?php endif; ?>
+                        <div class="mt-2">
+                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -432,17 +523,17 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         url.searchParams.delete('action');
         url.searchParams.delete('id');
         window.history.replaceState({}, '', url);
-        
+
         // Reset form
         const form = document.querySelector('#addRoomTypeModal form');
         if (!form) return;
-        
+
         // Xóa room_type_id hidden input nếu có
         const roomTypeIdInput = form.querySelector('input[name="room_type_id"]');
         if (roomTypeIdInput) {
             roomTypeIdInput.remove();
         }
-        
+
         // Reset tất cả fields một cách rõ ràng - override giá trị từ PHP
         const roomTypeName = form.querySelector('input[name="room_type_name"]');
         const description = form.querySelector('textarea[name="description"]');
@@ -451,7 +542,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         const area = form.querySelector('input[name="area"]');
         const amenities = form.querySelector('input[name="amenities"]');
         const status = form.querySelector('select[name="status"]');
-        
+
         // Force reset từng field
         if (roomTypeName) {
             roomTypeName.value = '';
@@ -486,10 +577,10 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 activeOption.selected = true;
             }
         }
-        
+
         // Reset form để clear tất cả default values
         form.reset();
-        
+
         // Sau khi reset, set lại values để đảm bảo
         if (roomTypeName) roomTypeName.value = '';
         if (description) description.value = '';
@@ -502,13 +593,13 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             const activeOption = status.querySelector('option[value="active"]');
             if (activeOption) activeOption.selected = true;
         }
-        
+
         // Reset modal title
         const modalTitle = document.querySelector('#addRoomTypeModal .modal-title');
         if (modalTitle) {
             modalTitle.textContent = 'Thêm Loại Phòng';
         }
-        
+
         // Reset submit button
         const submitBtn = form.querySelector('button[type="submit"]');
         if (submitBtn) {
@@ -520,7 +611,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     function editRoomTypes(id) {
         window.location.href = 'index.php?page=room-manager&panel=roomType-panel&action=edit&id=' + id;
     }
-    
+
     <?php if ($editRoomTypes): ?>
         document.addEventListener('DOMContentLoaded', function() {
             // Populate form with edit data
@@ -533,7 +624,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 const area = form.querySelector('input[name="area"]');
                 const amenities = form.querySelector('input[name="amenities"]');
                 const status = form.querySelector('select[name="status"]');
-                
+
                 if (roomTypeName) roomTypeName.value = '<?php echo h($editRoomTypes['room_type_name']); ?>';
                 if (description) description.value = '<?php echo h($editRoomTypes['description'] ?? ''); ?>';
                 if (basePrice) basePrice.value = '<?php echo h($editRoomTypes['base_price']); ?>';
@@ -541,7 +632,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 if (area) area.value = '<?php echo h($editRoomTypes['area'] ?? ''); ?>';
                 if (amenities) amenities.value = '<?php echo h($editRoomTypes['amenities'] ?? ''); ?>';
                 if (status) status.value = '<?php echo h($editRoomTypes['status']); ?>';
-                
+
                 // Update modal title and button
                 const modalTitle = document.querySelector('#addRoomTypeModal .modal-title');
                 const submitBtn = form.querySelector('button[type="submit"]');
@@ -551,7 +642,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     submitBtn.textContent = 'Cập nhật Loại Phòng';
                 }
             }
-            
+
             // Delay để đảm bảo modal đã được render
             setTimeout(function() {
                 const modalEl = document.getElementById('addRoomTypeModal');
@@ -562,7 +653,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             }, 100);
         });
     <?php endif; ?>
-    
+
     // Auto-reset modal when closed or when "Add" button is clicked
     document.addEventListener('DOMContentLoaded', function() {
         const modal = document.getElementById('addRoomTypeModal');
@@ -578,7 +669,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     resetRoomTypeForm();
                 }, 100);
             });
-            
+
             // Reset form when "Add" button is clicked
             const addButton = document.querySelector('[data-bs-target="#addRoomTypeModal"]');
             if (addButton) {
@@ -594,7 +685,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     }, 50);
                 });
             }
-            
+
             // Reset form when modal opens if not in edit mode
             modal.addEventListener('show.bs.modal', function() {
                 const isEditMode = window.location.search.includes('action=edit');
@@ -637,4 +728,5 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             form.submit();
         }
     }
+
 </script>

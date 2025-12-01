@@ -96,7 +96,11 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
     <?php foreach ($blogs as $blog): ?>
     <div class="content-item">
         <div class="image">
-            <img src=<?php echo $blog['thumbnail']; ?> alt="Blog" class="content-thumbnail" />
+            <?php if (!empty($blog['thumbnail'])): ?>
+                <img src="../<?php echo h($blog['thumbnail']); ?>" alt="Blog" class="content-thumbnail" />
+            <?php else: ?>
+                <img src="../assets/images/placeholder.jpg" alt="Blog" class="content-thumbnail" />
+            <?php endif; ?>
         </div>
         <div class="content-details">
             <div class="content-title">
@@ -164,8 +168,11 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                             </div>
                         </div>
 
-                        <img src=<?php echo $blog['thumbnail']; ?> alt="Blog" class="blog-preview-image"
-                            id="previewImage" />
+                        <?php if (!empty($blog['thumbnail'])): ?>
+                            <img src="../<?php echo h($blog['thumbnail']); ?>" alt="Blog" class="blog-preview-image" id="previewImage" />
+                        <?php else: ?>
+                            <img src="../assets/images/placeholder.jpg" alt="Blog" class="blog-preview-image" id="previewImage" />
+                        <?php endif; ?>
 
                         <div class="blog-preview-body" id="previewBody">
                             <p>
@@ -238,7 +245,7 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
 
                             <div class="mb-3">
                                 <label class="form-label">Nội Dung *</label>
-                                <textarea class="form-control" name="content" rows="10" required
+                                <textarea class="form-control" id="blogEditor" name="content" rows="10" required
                                     placeholder="Nhập nội dung bài viết..."><?php echo h($editBlog['content'] ?? ''); ?></textarea>
                             </div>
                         </div>
@@ -292,12 +299,15 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                                     style="display: none" onchange="previewImage(this, 'blogPreview')" />
                                 <?php if ($editBlog && !empty($editBlog['thumbnail'])): ?>
                                 <img id="blogPreview" class="image-preview mt-3"
-                                    src="<?php echo h($editBlog['thumbnail']); ?>"
-                                    style="max-width: 100%; max-height: 200px; border-radius: 5px;" />
+                                    src="../<?php echo h($editBlog['thumbnail']); ?>"
+                                    style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
                                 <?php else: ?>
                                 <img id="blogPreview" class="image-preview mt-3"
                                     style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
                                 <?php endif; ?>
+                                <div class="mt-2">
+                                    <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
+                                </div>
                             </div>
                         </div>
                     </div>

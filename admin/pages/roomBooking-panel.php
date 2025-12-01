@@ -183,8 +183,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                     $messageType = "success";
                     $action = '';
-                    header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
-                    exit;
+                    if (function_exists('safe_redirect')) {
+                        safe_redirect("index.php?page=booking-manager&panel=roomBooking-panel");
+                    } else {
+                        echo "<script>window.location.href = 'index.php?page=booking-manager&panel=roomBooking-panel';</script>";
+                        exit;
+                    }
                 } else {
                     $message = "Không thể tạo booking. Tất cả các phòng đã được đặt trong khoảng thời gian này.";
                     $messageType = "danger";
@@ -243,8 +247,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
             }
             
-            header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
-            exit;
+            if (function_exists('safe_redirect')) {
+                safe_redirect("index.php?page=booking-manager&panel=roomBooking-panel");
+            } else {
+                echo "<script>window.location.href = 'index.php?page=booking-manager&panel=roomBooking-panel';</script>";
+                exit;
+            }
         } else {
             $message = 'Lỗi: ' . $stmt->error;
             $messageType = 'danger';
@@ -260,8 +268,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($stmt->execute()) {
             $message = 'Xóa booking thành công';
             $messageType = 'success';
-            header("Location: index.php?page=booking-manager&panel=roomBooking-panel");
-            exit;
+            if (function_exists('safe_redirect')) {
+                safe_redirect("index.php?page=booking-manager&panel=roomBooking-panel");
+            } else {
+                echo "<script>window.location.href = 'index.php?page=booking-manager&panel=roomBooking-panel';</script>";
+                exit;
+            }
         } else {
             $message = 'Xóa booking thất bại';
             $messageType = 'danger';

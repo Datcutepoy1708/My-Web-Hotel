@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $canViewSection = function ($sectionKey) {
     return function_exists('canAccessSection') ? canAccessSection($sectionKey) : true;
 };
@@ -8,11 +8,32 @@ $canAccessCustomers = $canViewSection('customers-manager');
     <div>
         <div class="header" style="cursor: pointer;" onclick="window.location.href='index.php?page=profile'">
             <?php
-            $avatarUrl = !empty($_SESSION['anh_dai_dien'])
-                ? '/My-Web-Hotel/' . $_SESSION['anh_dai_dien']
-                : '/My-Web-Hotel/client/assets/images/user3.jpg';
+            $avatarUrl = '';
+            $fallbackAvatar = '';
+            if (!empty($_SESSION['anh_dai_dien'])) {
+                // Check if path is relative or absolute
+                if (strpos($_SESSION['anh_dai_dien'], 'assets/images/staff/') !== false) {
+                    // Use absolute path like CSS files
+                    $avatarUrl = '/My-Web-Hotel/admin/' . $_SESSION['anh_dai_dien'];
+                } elseif (strpos($_SESSION['anh_dai_dien'], '/') === 0) {
+                    $avatarUrl = $_SESSION['anh_dai_dien'];
+                } else {
+                    // Assume it's just filename, use absolute path
+                    $avatarUrl = '/My-Web-Hotel/admin/assets/images/staff/' . $_SESSION['anh_dai_dien'];
+                }
+                // Fallback to UI avatar if image fails
+                $hoTen = isset($_SESSION['ho_ten']) ? $_SESSION['ho_ten'] : 'Admin';
+                $fallbackAvatar = 'https://ui-avatars.com/api/?name=' . urlencode($hoTen) . '&background=d4b896&color=fff&size=150';
+            } else {
+                // Use UI avatar generator if no avatar
+                $hoTen = isset($_SESSION['ho_ten']) ? $_SESSION['ho_ten'] : 'Admin';
+                $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($hoTen) . '&background=d4b896&color=fff&size=150';
+                $fallbackAvatar = $avatarUrl;
+            }
             ?>
-            <img src="<?php echo htmlspecialchars($avatarUrl); ?>" alt="avatar" />
+            <img src="<?php echo htmlspecialchars($avatarUrl); ?>" alt="avatar" 
+                 onerror="if(this.src !== this.getAttribute('data-fallback')) { this.src = this.getAttribute('data-fallback'); } else { this.style.display='none'; }" 
+                 data-fallback="<?php echo htmlspecialchars($fallbackAvatar); ?>" />
             <div class="info">
                 <strong><?php echo isset($_SESSION['ho_ten']) ? htmlspecialchars($_SESSION['ho_ten']) : 'Admin'; ?></strong><br />
                 <small><?php echo isset($_SESSION['chuc_vu']) ? htmlspecialchars($_SESSION['chuc_vu']) : ''; ?></small>

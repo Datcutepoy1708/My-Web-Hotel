@@ -22,7 +22,7 @@ function uploadAvatar($file, $oldAvatar = '') {
         return $oldAvatar;
     }
     
-    $uploadDir = '../../client/assets/images/staff/';
+    $uploadDir = __DIR__ . '/../assets/images/staff/';
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
@@ -44,8 +44,16 @@ function uploadAvatar($file, $oldAvatar = '') {
     
     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         // Xóa ảnh cũ nếu có
-        if ($oldAvatar && file_exists($uploadDir . basename($oldAvatar))) {
-            unlink($uploadDir . basename($oldAvatar));
+        if ($oldAvatar && !empty($oldAvatar)) {
+            $oldPath = '';
+            if (strpos($oldAvatar, 'client/') !== false) {
+                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldAvatar);
+            } else {
+                $oldPath = __DIR__ . '/../' . $oldAvatar;
+            }
+            if (file_exists($oldPath)) {
+                @unlink($oldPath);
+            }
         }
         return 'assets/images/staff/' . $newFileName;
     }
@@ -149,8 +157,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($stmt->execute()) {
             $message = 'Xóa nhân viên thành công!';
             $messageType = 'success';
-            header("Location: index.php?page=staff-manager&panel=staff-panel");
-            exit;
+            if (function_exists('safe_redirect')) {
+                safe_redirect("index.php?page=staff-manager&panel=staff-panel");
+            } else {
+                echo "<script>window.location.href = 'index.php?page=staff-manager&panel=staff-panel';</script>";
+                exit;
+            }
         } else {
             $message = 'Xóa nhân viên thất bại';
             $messageType = 'danger';
@@ -686,8 +698,9 @@ function viewEmployee(id) {
                 const content = `
                     <div class="row">
                         <div class="col-md-4 text-center">
-                            <img src="/My-Web-Hotel/${nv.anh_dai_dien || 'client/assets/images/user3.jpg'}" 
-                                class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" alt="Avatar">
+                            <img src="${nv.anh_dai_dien ? '../' + nv.anh_dai_dien : 'https://ui-avatars.com/api/?name=' + encodeURIComponent(nv.ho_ten || 'Staff') + '&background=d4b896&color=fff&size=150'}" 
+                                class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;" alt="Avatar"
+                                onerror="if(this.src.indexOf('ui-avatars.com') === -1) { this.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent('${nv.ho_ten || 'Staff'}') + '&background=d4b896&color=fff&size=150'; }">
                         </div>
                         <div class="col-md-8">
                             <h5>${nv.ho_ten}</h5>

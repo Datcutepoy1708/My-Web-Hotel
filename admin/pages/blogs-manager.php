@@ -25,66 +25,170 @@ function createSlug($title)
     return trim($slug, '-');
 }
 
+// Xử lý upload ảnh thumbnail cho blog
+function uploadBlogThumbnail($file, $oldThumbnail = '') {
+    if (!isset($file['name']) || empty($file['name'])) {
+        return $oldThumbnail;
+    }
+    
+    // Tạo thư mục upload nếu chưa có
+    $uploadDir = __DIR__ . '/../assets/images/blog/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!in_array($file['type'], $allowedTypes)) {
+        return false;
+    }
+    
+    if ($file['size'] > $maxSize) {
+        return false;
+    }
+    
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $newFileName = 'blog_' . time() . '_' . uniqid() . '.' . $extension;
+    $targetPath = $uploadDir . $newFileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        // Xóa ảnh cũ nếu có
+        if ($oldThumbnail && !empty($oldThumbnail)) {
+            // Xử lý đường dẫn cũ (có thể là client/ hoặc admin/)
+            $oldPath = '';
+            if (strpos($oldThumbnail, 'client/') !== false) {
+                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldThumbnail);
+            } else {
+                $oldPath = __DIR__ . '/../' . $oldThumbnail;
+            }
+            if (file_exists($oldPath)) {
+                @unlink($oldPath);
+            }
+        }
+        return 'assets/images/blog/' . $newFileName;
+    }
+    return false;
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_blog'])) {
-        $title = trim($_POST['title']);
-        $slug = createSlug($title);
-        $description = trim($_POST['description'] ?? '');
-        $content = trim($_POST['content']);
-        $category = trim($_POST['category'] ?? '');
-        $status = $_POST['status'] ?? 'Draft';
-
-        // Kiểm tra slug unique
-        $checkStmt = $mysqli->prepare("SELECT blog_id FROM blog WHERE slug = ? AND deleted IS NULL");
-        $checkStmt->bind_param("s", $slug);
-        $checkStmt->execute();
-        if ($checkStmt->get_result()->num_rows > 0) {
-            $slug .= '-' . time();
-        }
-        $checkStmt->close();
-
-        $stmt = $mysqli->prepare("INSERT INTO blog (title, slug, description, content, category, status) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssss", $title, $slug, $description, $content, $category, $status);
-
-        if ($stmt->execute()) {
-            $message = 'Thêm bài viết thành công!';
-            $messageType = 'success';
-        } else {
-            $message = 'Lỗi: ' . $stmt->error;
+        if (!$canCreateContent) {
+            $message = 'Bạn không có quyền thêm bài viết.';
             $messageType = 'danger';
+        } else {
+            $title = trim($_POST['title']);
+            $slug = createSlug($title);
+            $description = trim($_POST['description'] ?? '');
+            $content = trim($_POST['content']);
+            $category = trim($_POST['category'] ?? '');
+            $status = $_POST['status'] ?? 'Draft';
+
+            // Kiểm tra slug unique
+            $checkStmt = $mysqli->prepare("SELECT blog_id FROM blog WHERE slug = ? AND deleted IS NULL");
+            $checkStmt->bind_param("s", $slug);
+            $checkStmt->execute();
+            if ($checkStmt->get_result()->num_rows > 0) {
+                $slug .= '-' . time();
+            }
+            $checkStmt->close();
+
+            // Xử lý upload ảnh thumbnail
+            $thumbnail = '';
+            if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] == 0) {
+                $uploadResult = uploadBlogThumbnail($_FILES['thumbnail']);
+                if ($uploadResult !== false) {
+                    $thumbnail = $uploadResult;
+                } else {
+                    $message = 'Lỗi: Không thể upload ảnh. Vui lòng kiểm tra định dạng và kích thước file (tối đa 5MB).';
+                    $messageType = 'danger';
+                }
+            }
+
+            if ($messageType != 'danger') {
+                $stmt = $mysqli->prepare("INSERT INTO blog (title, slug, description, content, category, status, thumbnail) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt->bind_param("sssssss", $title, $slug, $description, $content, $category, $status, $thumbnail);
+
+                if ($stmt->execute()) {
+                    $message = 'Thêm bài viết thành công!';
+                    $messageType = 'success';
+                    if (function_exists('safe_redirect')) {
+                        safe_redirect("index.php?page=blogs-manager&panel=blog-panel");
+                    } else {
+                        echo "<script>window.location.href = 'index.php?page=blogs-manager&panel=blog-panel';</script>";
+                        exit;
+                    }
+                } else {
+                    $message = 'Lỗi: ' . $stmt->error;
+                    $messageType = 'danger';
+                }
+                $stmt->close();
+            }
         }
-        $stmt->close();
     }
 
     if (isset($_POST['update_blog'])) {
-        $blog_id = intval($_POST['blog_id']);
-        $title = trim($_POST['title']);
-        $slug = createSlug($title);
-        $description = trim($_POST['description'] ?? '');
-        $content = trim($_POST['content']);
-        $category = trim($_POST['category'] ?? '');
-        $status = $_POST['status'] ?? 'Draft';
-
-        // Kiểm tra slug unique (trừ chính nó)
-        $checkStmt = $mysqli->prepare("SELECT blog_id FROM blog WHERE slug = ? AND blog_id != ? AND deleted IS NULL");
-        $checkStmt->bind_param("si", $slug, $blog_id);
-        $checkStmt->execute();
-        if ($checkStmt->get_result()->num_rows > 0) {
-            $slug .= '-' . time();
-        }
-        $checkStmt->close();
-
-        $stmt = $mysqli->prepare("UPDATE blog SET title=?, slug=?, description=?, content=?, category=?, status=? WHERE blog_id=? AND deleted IS NULL");
-        $stmt->bind_param("ssssssi", $title, $slug, $description, $content, $category, $status, $blog_id);
-
-        if ($stmt->execute()) {
-            $message = 'Cập nhật bài viết thành công!';
-            $messageType = 'success';
-        } else {
-            $message = 'Lỗi: ' . $stmt->error;
+        if (!$canEditContent) {
+            $message = 'Bạn không có quyền chỉnh sửa bài viết.';
             $messageType = 'danger';
+        } else {
+            $blog_id = intval($_POST['blog_id']);
+            $title = trim($_POST['title']);
+            $slug = createSlug($title);
+            $description = trim($_POST['description'] ?? '');
+            $content = trim($_POST['content']);
+            $category = trim($_POST['category'] ?? '');
+            $status = $_POST['status'] ?? 'Draft';
+
+            // Kiểm tra slug unique (trừ chính nó)
+            $checkStmt = $mysqli->prepare("SELECT blog_id FROM blog WHERE slug = ? AND blog_id != ? AND deleted IS NULL");
+            $checkStmt->bind_param("si", $slug, $blog_id);
+            $checkStmt->execute();
+            if ($checkStmt->get_result()->num_rows > 0) {
+                $slug .= '-' . time();
+            }
+            $checkStmt->close();
+
+            // Lấy ảnh cũ
+            $oldThumbnailStmt = $mysqli->prepare("SELECT thumbnail FROM blog WHERE blog_id = ?");
+            $oldThumbnailStmt->bind_param("i", $blog_id);
+            $oldThumbnailStmt->execute();
+            $oldThumbnailResult = $oldThumbnailStmt->get_result();
+            $oldThumbnail = $oldThumbnailResult->fetch_assoc()['thumbnail'] ?? '';
+            $oldThumbnailStmt->close();
+
+            $thumbnail = $oldThumbnail;
+            // Xử lý upload ảnh thumbnail mới nếu có
+            if (isset($_FILES['thumbnail']) && $_FILES['thumbnail']['error'] == 0) {
+                $uploadResult = uploadBlogThumbnail($_FILES['thumbnail'], $oldThumbnail);
+                if ($uploadResult !== false) {
+                    $thumbnail = $uploadResult;
+                } else {
+                    $message = 'Lỗi: Không thể upload ảnh. Vui lòng kiểm tra định dạng và kích thước file (tối đa 5MB).';
+                    $messageType = 'danger';
+                }
+            }
+
+            if ($messageType != 'danger') {
+                $stmt = $mysqli->prepare("UPDATE blog SET title=?, slug=?, description=?, content=?, category=?, status=?, thumbnail=? WHERE blog_id=? AND deleted IS NULL");
+                $stmt->bind_param("sssssssi", $title, $slug, $description, $content, $category, $status, $thumbnail, $blog_id);
+
+                if ($stmt->execute()) {
+                    $message = 'Cập nhật bài viết thành công!';
+                    $messageType = 'success';
+                    if (function_exists('safe_redirect')) {
+                        safe_redirect("index.php?page=blogs-manager&panel=blog-panel");
+                    } else {
+                        echo "<script>window.location.href = 'index.php?page=blogs-manager&panel=blog-panel';</script>";
+                        exit;
+                    }
+                } else {
+                    $message = 'Lỗi: ' . $stmt->error;
+                    $messageType = 'danger';
+                }
+                $stmt->close();
+            }
         }
-        $stmt->close();
     }
 
     if (isset($_POST['delete_blog'])) {

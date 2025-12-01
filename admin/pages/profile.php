@@ -1,6 +1,9 @@
 <?php
-$message = '';
-$messageType = '';
+// Lấy message từ session nếu có
+$message = isset($_SESSION['message']) ? $_SESSION['message'] : '';
+$messageType = isset($_SESSION['messageType']) ? $_SESSION['messageType'] : '';
+unset($_SESSION['message']);
+unset($_SESSION['messageType']);
 
 // Lấy thông tin nhân viên hiện tại
 $id_nhan_vien = $_SESSION['id_nhan_vien'];
@@ -12,7 +15,9 @@ $nhanVien = $result->fetch_assoc();
 $stmt->close();
 
 // Cập nhật thông tin cá nhân
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
+// Chỉ xử lý nếu không được gọi từ ProfileController (ProfileController đã xử lý POST)
+$processedByController = isset($_SESSION['message']) && isset($_SESSION['messageType']);
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile']) && !$processedByController) {
     $ho_ten = trim($_POST['ho_ten']);
     $dien_thoai = trim($_POST['dien_thoai'] ?? '');
     $ngay_sinh = !empty($_POST['ngay_sinh']) ? $_POST['ngay_sinh'] : null;
@@ -21,29 +26,60 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     $dia_chi = trim($_POST['dia_chi'] ?? '');
     
     // Upload ảnh nếu có
-    $anh_dai_dien = $nhanVien['anh_dai_dien'];
-    if (isset($_FILES['anh_dai_dien']) && $_FILES['anh_dai_dien']['error'] == 0) {
-        $uploadDir = '../../client/assets/images/staff/';
+    $anh_dai_dien = $nhanVien['anh_dai_dien'] ?? '';
+    $uploadError = '';
+    
+    if (isset($_FILES['anh_dai_dien']) && $_FILES['anh_dai_dien']['error'] == UPLOAD_ERR_OK) {
+        $uploadDir = __DIR__ . '/../assets/images/staff/';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
         
-        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
         $maxSize = 5 * 1024 * 1024; // 5MB
         
-        if (in_array($_FILES['anh_dai_dien']['type'], $allowedTypes) && $_FILES['anh_dai_dien']['size'] <= $maxSize) {
-            $extension = pathinfo($_FILES['anh_dai_dien']['name'], PATHINFO_EXTENSION);
+        // Kiểm tra lỗi upload
+        if ($_FILES['anh_dai_dien']['error'] != UPLOAD_ERR_OK) {
+            $uploadError = 'Lỗi upload: ' . $_FILES['anh_dai_dien']['error'];
+        } elseif (!in_array($_FILES['anh_dai_dien']['type'], $allowedTypes)) {
+            $uploadError = 'Định dạng file không hợp lệ. Chỉ chấp nhận: JPG, PNG, GIF, WEBP';
+        } elseif ($_FILES['anh_dai_dien']['size'] > $maxSize) {
+            $uploadError = 'File quá lớn. Kích thước tối đa: 5MB';
+        } else {
+            $extension = strtolower(pathinfo($_FILES['anh_dai_dien']['name'], PATHINFO_EXTENSION));
             $newFileName = 'staff_' . time() . '_' . uniqid() . '.' . $extension;
             $targetPath = $uploadDir . $newFileName;
             
             if (move_uploaded_file($_FILES['anh_dai_dien']['tmp_name'], $targetPath)) {
                 // Xóa ảnh cũ nếu có
-                if ($anh_dai_dien && file_exists($uploadDir . basename($anh_dai_dien))) {
-                    unlink($uploadDir . basename($anh_dai_dien));
+                if (!empty($anh_dai_dien)) {
+                    $oldImagePath = '';
+                    if (strpos($anh_dai_dien, 'client/') !== false) {
+                        // Nếu là đường dẫn cũ từ client
+                        $oldImagePath = __DIR__ . '/../../client/' . str_replace('client/', '', $anh_dai_dien);
+                    } else if (strpos($anh_dai_dien, 'assets/images/staff/') !== false) {
+                        // Nếu là relative path mới
+                        $oldImagePath = __DIR__ . '/../' . $anh_dai_dien;
+                    } else if (strpos($anh_dai_dien, '/') === 0) {
+                        // Nếu là absolute path
+                        $oldImagePath = __DIR__ . '/../../client' . $anh_dai_dien;
+                    } else {
+                        // Nếu chỉ là tên file
+                        $oldImagePath = $uploadDir . $anh_dai_dien;
+                    }
+                    
+                    if (file_exists($oldImagePath)) {
+                        @unlink($oldImagePath);
+                    }
                 }
                 $anh_dai_dien = 'assets/images/staff/' . $newFileName;
+            } else {
+                $uploadError = 'Không thể di chuyển file đã upload';
             }
         }
+    } elseif (isset($_FILES['anh_dai_dien']) && $_FILES['anh_dai_dien']['error'] != UPLOAD_ERR_NO_FILE) {
+        // Có file nhưng có lỗi
+        $uploadError = 'Lỗi upload file. Mã lỗi: ' . $_FILES['anh_dai_dien']['error'];
     }
     
     // Cập nhật mật khẩu nếu có
@@ -66,21 +102,33 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
         $_SESSION['ho_ten'] = $ho_ten;
         $_SESSION['anh_dai_dien'] = $anh_dai_dien;
         
-        $message = 'Cập nhật thông tin thành công!';
-        $messageType = 'success';
+        $stmt->close();
         
-        // Reload lại thông tin
+        // Reload lại thông tin từ database để đảm bảo có dữ liệu mới nhất
         $stmt = $mysqli->prepare("SELECT * FROM nhan_vien WHERE id_nhan_vien = ?");
         $stmt->bind_param("i", $id_nhan_vien);
         $stmt->execute();
         $result = $stmt->get_result();
         $nhanVien = $result->fetch_assoc();
         $stmt->close();
+        
+        if ($uploadError) {
+            $message = 'Cập nhật thông tin thành công! ' . $uploadError;
+            $messageType = 'warning';
+        } else {
+            $message = 'Cập nhật thông tin thành công!';
+            $messageType = 'success';
+        }
+        // Không cần reload trang, chỉ cần cập nhật avatar bằng JavaScript
+        $updateAvatar = true;
     } else {
         $message = 'Lỗi: ' . $stmt->error;
+        if ($uploadError) {
+            $message .= ' | ' . $uploadError;
+        }
         $messageType = 'danger';
+        $stmt->close();
     }
-    $stmt->close();
 }
 ?>
 
@@ -94,6 +142,52 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             <?php echo h($message); ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        <?php if (isset($updateAvatar) && $updateAvatar && !empty($nhanVien['anh_dai_dien'])): ?>
+        <script>
+            // Cập nhật avatar sau khi upload thành công
+            document.addEventListener('DOMContentLoaded', function() {
+                const timestamp = new Date().getTime();
+                const avatarImg = document.getElementById('profileAvatar');
+                if (avatarImg) {
+                    // Lấy URL từ attribute data hoặc src hiện tại
+                    let currentSrc = avatarImg.getAttribute('data-original-src') || avatarImg.src;
+                    
+                    // Bỏ qua nếu là data URL (từ FileReader preview)
+                    if (currentSrc && currentSrc.startsWith('data:')) {
+                        return;
+                    }
+                    
+                    // Lấy URL gốc không có query string
+                    let baseUrl = currentSrc;
+                    const queryIndex = baseUrl.indexOf('?');
+                    if (queryIndex !== -1) {
+                        baseUrl = baseUrl.substring(0, queryIndex);
+                    }
+                    
+                    // Chỉ cập nhật nếu URL hợp lệ và không rỗng
+                    if (baseUrl && baseUrl.length > 0 && baseUrl !== '?v' && !baseUrl.startsWith('data:')) {
+                        avatarImg.src = baseUrl + '?v=' + timestamp;
+                    }
+                }
+                
+                // Cập nhật avatar trong sidebar
+                const sidebarAvatar = document.querySelector('.sidebar .header img');
+                if (sidebarAvatar) {
+                    let sidebarSrc = sidebarAvatar.src;
+                    // Bỏ qua nếu là data URL
+                    if (sidebarSrc && !sidebarSrc.startsWith('data:')) {
+                        const sidebarQueryIndex = sidebarSrc.indexOf('?');
+                        if (sidebarQueryIndex !== -1) {
+                            sidebarSrc = sidebarSrc.substring(0, sidebarQueryIndex);
+                        }
+                        if (sidebarSrc && sidebarSrc.length > 0 && sidebarSrc !== '?v') {
+                            sidebarAvatar.src = sidebarSrc + '?v=' + timestamp;
+                        }
+                    }
+                }
+            });
+        </script>
+        <?php endif; ?>
     <?php endif; ?>
 
     <div class="row">
@@ -101,11 +195,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
             <div class="card">
                 <div class="card-body text-center">
                     <?php 
-                    $avatarUrl = !empty($nhanVien['anh_dai_dien']) 
-                        ? '../../' . $nhanVien['anh_dai_dien'] 
-                        : 'https://ui-avatars.com/api/?name=' . urlencode($nhanVien['ho_ten']) . '&background=d4b896&color=fff&size=200';
+                    $avatarUrl = '';
+                    if (!empty($nhanVien['anh_dai_dien'])) {
+                        // Check if path is relative or absolute
+                        if (strpos($nhanVien['anh_dai_dien'], 'assets/images/staff/') !== false) {
+                            // Use absolute path like CSS files
+                            $avatarUrl = '/My-Web-Hotel/admin/' . $nhanVien['anh_dai_dien'];
+                        } elseif (strpos($nhanVien['anh_dai_dien'], '/') === 0) {
+                            $avatarUrl = $nhanVien['anh_dai_dien'];
+                        } else {
+                            // Assume it's just filename, use absolute path
+                            $avatarUrl = '/My-Web-Hotel/admin/assets/images/staff/' . $nhanVien['anh_dai_dien'];
+                        }
+                        // Chỉ thêm cache-busting nếu URL hợp lệ
+                        if (!empty($avatarUrl) && $avatarUrl !== '?v=') {
+                            $avatarUrl .= '?v=' . (isset($_GET['t']) ? $_GET['t'] : time());
+                        }
+                    } else {
+                        $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($nhanVien['ho_ten']) . '&background=d4b896&color=fff&size=200';
+                    }
                     ?>
-                    <img src="<?php echo h($avatarUrl); ?>" alt="Avatar" class="rounded-circle mb-3" style="width: 200px; height: 200px; object-fit: cover;">
+                    <img src="<?php echo h($avatarUrl); ?>" alt="Avatar" id="profileAvatar" 
+                         data-original-src="<?php echo h($avatarUrl); ?>"
+                         class="rounded-circle mb-3" style="width: 200px; height: 200px; object-fit: cover;" 
+                         onerror="this.onerror=null; this.src='https://ui-avatars.com/api/?name=<?php echo urlencode($nhanVien['ho_ten']); ?>&background=d4b896&color=fff&size=200';">
                     <h4><?php echo h($nhanVien['ho_ten']); ?></h4>
                     <p class="text-muted"><?php echo h($nhanVien['ma_nhan_vien']); ?></p>
                     <p class="badge bg-primary"><?php echo h($nhanVien['chuc_vu']); ?></p>
@@ -219,7 +332,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    const img = document.querySelector('.card-body img');
+                    const img = document.getElementById('profileAvatar');
                     if (img) {
                         img.src = e.target.result;
                     }
@@ -227,6 +340,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 reader.readAsDataURL(file);
             }
         });
+    }
+    
+    // Xóa tham số t khỏi URL nếu có (từ lần reload trước)
+    if (window.location.search.includes('t=')) {
+        const url = new URL(window.location);
+        url.searchParams.delete('t');
+        window.history.replaceState({}, '', url);
     }
 });
 </script>

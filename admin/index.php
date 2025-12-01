@@ -3,6 +3,19 @@ session_start();
 require 'includes/connect.php';
 require 'includes/auth.php'; // Kiểm tra đăng nhập
 
+// Helper function for safe redirects
+if (!function_exists('safe_redirect')) {
+    function safe_redirect($url) {
+        if (headers_sent()) {
+            echo "<script>window.location.href = '" . htmlspecialchars($url, ENT_QUOTES) . "';</script>";
+            exit;
+        } else {
+            header("Location: {$url}");
+            exit;
+        }
+    }
+}
+
 // Try to use MVC Router
 $useMVC = true; // Set to false to use old pages structure
 
