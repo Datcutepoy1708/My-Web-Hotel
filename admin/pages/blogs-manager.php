@@ -32,7 +32,7 @@ function uploadBlogThumbnail($file, $oldThumbnail = '') {
     }
     
     // Tạo thư mục upload nếu chưa có
-    $uploadDir = __DIR__ . '/../assets/images/blog/';
+    $uploadDir = '../../client/assets/images/blog/';
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
@@ -55,15 +55,9 @@ function uploadBlogThumbnail($file, $oldThumbnail = '') {
     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         // Xóa ảnh cũ nếu có
         if ($oldThumbnail && !empty($oldThumbnail)) {
-            // Xử lý đường dẫn cũ (có thể là client/ hoặc admin/)
-            $oldPath = '';
-            if (strpos($oldThumbnail, 'client/') !== false) {
-                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldThumbnail);
-            } else {
-                $oldPath = __DIR__ . '/../' . $oldThumbnail;
-            }
+            $oldPath = '../../client/' . $oldThumbnail;
             if (file_exists($oldPath)) {
-                @unlink($oldPath);
+                unlink($oldPath);
             }
         }
         return 'assets/images/blog/' . $newFileName;
@@ -112,12 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute()) {
                     $message = 'Thêm bài viết thành công!';
                     $messageType = 'success';
-                    if (function_exists('safe_redirect')) {
-                        safe_redirect("index.php?page=blogs-manager&panel=blog-panel");
-                    } else {
-                        echo "<script>window.location.href = 'index.php?page=blogs-manager&panel=blog-panel';</script>";
-                        exit;
-                    }
+                    header("Location: index.php?page=blogs-manager&panel=blog-panel");
+                    exit;
                 } else {
                     $message = 'Lỗi: ' . $stmt->error;
                     $messageType = 'danger';
@@ -176,12 +166,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute()) {
                     $message = 'Cập nhật bài viết thành công!';
                     $messageType = 'success';
-                    if (function_exists('safe_redirect')) {
-                        safe_redirect("index.php?page=blogs-manager&panel=blog-panel");
-                    } else {
-                        echo "<script>window.location.href = 'index.php?page=blogs-manager&panel=blog-panel';</script>";
-                        exit;
-                    }
+                    header("Location: index.php?page=blogs-manager&panel=blog-panel");
+                    exit;
                 } else {
                     $message = 'Lỗi: ' . $stmt->error;
                     $messageType = 'danger';

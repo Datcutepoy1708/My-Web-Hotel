@@ -1,3 +1,89 @@
+<<<<<<< HEAD
+=======
+(function autoFillBookingData() {
+  // Chỉ chạy sau khi DOM load xong
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fillBookingForm);
+  } else {
+    fillBookingForm();
+  }
+
+  function fillBookingForm() {
+    const bookingDataStr = sessionStorage.getItem("bookingData");
+
+    if (!bookingDataStr) return; // Không có dữ liệu từ trang chi tiết
+
+    try {
+      const bookingData = JSON.parse(bookingDataStr);
+
+      // Điền thông tin phòng
+      const roomNameInput = document.getElementById("roomName");
+      const roomTypeSelect = document.getElementById("roomType");
+      const guestCountInput = document.getElementById("guestCount");
+      const childCountInput = document.getElementById("childCount");
+      const roomPriceInput = document.getElementById("roomPrice");
+      const checkinInput = document.getElementById("checkinTime");
+      const checkoutInput = document.getElementById("checkoutTime");
+
+      if (roomNameInput && bookingData.roomName) {
+        roomNameInput.value = bookingData.roomName;
+        roomNameInput.readOnly = true;
+        roomNameInput.style.backgroundColor = "#f5f5f5";
+      }
+
+      if (roomTypeSelect && bookingData.roomType) {
+        for (let i = 0; i < roomTypeSelect.options.length; i++) {
+          if (roomTypeSelect.options[i].value === bookingData.roomType) {
+            roomTypeSelect.selectedIndex = i;
+            roomTypeSelect.disabled = true;
+            roomTypeSelect.style.backgroundColor = "#f5f5f5";
+            break;
+          }
+        }
+      }
+
+      if (guestCountInput && bookingData.adults) {
+        guestCountInput.value = bookingData.adults;
+      }
+
+      if (childCountInput) {
+        childCountInput.value = bookingData.children || 0;
+      }
+
+      if (checkinInput && bookingData.checkin) {
+        checkinInput.value = bookingData.checkin + "T14:00";
+      }
+
+      if (checkoutInput && bookingData.checkout) {
+        checkoutInput.value = bookingData.checkout + "T12:00";
+      }
+
+      if (roomPriceInput && bookingData.roomPrice) {
+        roomPriceInput.value = bookingData.roomPrice;
+        roomPriceInput.readOnly = true;
+        roomPriceInput.style.backgroundColor = "#f5f5f5";
+      }
+
+      // Lưu roomId để sử dụng khi submit
+      const form = document.getElementById("roomBookingForm");
+      if (form && bookingData.roomId) {
+        form.dataset.roomId = bookingData.roomId;
+      }
+
+      // Xóa dữ liệu khỏi sessionStorage sau khi đã sử dụng
+      sessionStorage.removeItem("bookingData");
+
+      // Trigger update summary sau khi điền xong
+      setTimeout(() => {
+        updateSummary();
+      }, 100);
+    } catch (error) {
+      console.error("❌ Lỗi khi parse booking data:", error);
+    }
+  }
+})();
+
+>>>>>>> main
 // Lưu hóa đơn thành file PDF (dạng đơn giản: lưu HTML thành file)
 function saveInvoice() {
   const invoice = document.getElementById("invoiceContainer");
@@ -16,6 +102,10 @@ function saveInvoice() {
     );
   }
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
 // Dữ liệu mã khuyến mãi
 const promoCodes = {
   SUMMER2025: {
@@ -112,6 +202,7 @@ function calculateServiceTotal() {
 
 // Hàm cập nhật tổng kết
 function updateSummary() {
+<<<<<<< HEAD
   const roomPrice = parseInt(document.getElementById("roomPrice").value) || 0;
   const serviceTotal = calculateServiceTotal();
   const subtotal = roomPrice + serviceTotal;
@@ -121,6 +212,44 @@ function updateSummary() {
 
   document.getElementById("summaryRoomPrice").textContent =
     formatCurrency(roomPrice);
+=======
+  const roomPriceInput = document.getElementById("roomPrice");
+  const checkinInput = document.getElementById("checkinTime");
+  const checkoutInput = document.getElementById("checkoutTime");
+
+  if (!roomPriceInput || !checkinInput || !checkoutInput) return;
+
+  const roomPricePerNight =
+    parseInt(roomPriceInput.value.replace(/[^\d]/g, "")) || 0;
+
+  const checkin = checkinInput.value;
+  const checkout = checkoutInput.value;
+
+  // Tính số đêm
+  let nights = 1;
+  let totalRoomPrice = roomPricePerNight;
+
+  if (checkin && checkout) {
+    nights = calculateNights(checkin, checkout);
+    totalRoomPrice = roomPricePerNight * nights;
+
+    // Hiển thị số đêm nếu có element
+    const nightCountDisplay = document.getElementById("nightCountDisplay");
+    if (nightCountDisplay) {
+      nightCountDisplay.textContent = nights;
+    }
+  }
+
+  const serviceTotal = calculateServiceTotal();
+  const discount = currentDiscount || 0;
+  const subtotal = totalRoomPrice + serviceTotal;
+  const total = Math.max(0, subtotal - discount);
+  const deposit = Math.round(total * 0.3);
+
+  // Cập nhật giao diện
+  document.getElementById("summaryRoomPrice").textContent =
+    formatCurrency(totalRoomPrice);
+>>>>>>> main
   document.getElementById("summaryServicePrice").textContent =
     formatCurrency(serviceTotal);
   document.getElementById("summaryDiscount").textContent =
@@ -144,9 +273,24 @@ function applyPromoCode() {
 
   if (promoCodes[code]) {
     const promo = promoCodes[code];
+<<<<<<< HEAD
     const roomPrice = parseInt(document.getElementById("roomPrice").value) || 0;
     const serviceTotal = calculateServiceTotal();
     const subtotal = roomPrice + serviceTotal;
+=======
+    const roomPriceInput = document.getElementById("roomPrice");
+    const checkinInput = document.getElementById("checkinTime");
+    const checkoutInput = document.getElementById("checkoutTime");
+
+    const roomPricePerNight = parseInt(roomPriceInput.value) || 0;
+    const nights =
+      checkinInput.value && checkoutInput.value
+        ? calculateNights(checkinInput.value, checkoutInput.value)
+        : 1;
+    const totalRoomPrice = roomPricePerNight * nights;
+    const serviceTotal = calculateServiceTotal();
+    const subtotal = totalRoomPrice + serviceTotal;
+>>>>>>> main
 
     if (promo.isPercent) {
       currentDiscount = Math.round((subtotal * promo.discount) / 100);
@@ -169,6 +313,7 @@ function applyPromoCode() {
 }
 
 // Lắng nghe sự kiện thay đổi
+<<<<<<< HEAD
 document.getElementById("roomPrice").addEventListener("input", updateSummary);
 document.querySelectorAll('input[name="services"]').forEach((cb) => {
   cb.addEventListener("change", () => {
@@ -256,6 +401,127 @@ document
     // Hiển thị hóa đơn
     showInvoice(formData);
   });
+=======
+document.addEventListener("DOMContentLoaded", function () {
+  const roomPriceInput = document.getElementById("roomPrice");
+  const checkinInput = document.getElementById("checkinTime");
+  const checkoutInput = document.getElementById("checkoutTime");
+  const serviceCheckboxes = document.querySelectorAll('input[name="services"]');
+
+  if (roomPriceInput) {
+    roomPriceInput.addEventListener("input", updateSummary);
+  }
+
+  if (checkinInput) {
+    checkinInput.addEventListener("change", updateSummary);
+  }
+
+  if (checkoutInput) {
+    checkoutInput.addEventListener("change", updateSummary);
+  }
+
+  serviceCheckboxes.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      updateSummary();
+      // Tính lại discount nếu đã áp dụng mã %
+      if (appliedPromoCode && promoCodes[appliedPromoCode].isPercent) {
+        applyPromoCode();
+      }
+    });
+  });
+});
+
+// Xử lý submit form
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("roomBookingForm");
+
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      // ========  Lấy dữ liệu cơ bản ========
+      const roomPriceInput = document.getElementById("roomPrice");
+      const checkinInput = document.getElementById("checkinTime");
+      const checkoutInput = document.getElementById("checkoutTime");
+
+      // Ép kiểu từ chuỗi → số (bỏ ký tự ₫, dấu phẩy,...)
+      const roomPricePerNight =
+        parseInt(String(roomPriceInput.value).replace(/[^\d]/g, "")) || 0;
+
+      const checkin = checkinInput.value;
+      const checkout = checkoutInput.value;
+
+      // ========  Tính toán thời gian và giá ========
+      const nights = calculateNights(checkin, checkout);
+      const totalRoomPrice = roomPricePerNight * nights;
+
+      const serviceTotal = calculateServiceTotal();
+      const discount = currentDiscount || 0;
+      const subtotal = totalRoomPrice + serviceTotal;
+      const total = Math.max(0, subtotal - discount);
+      const deposit = Math.round(total * 0.3);
+
+      // ========  Lấy danh sách dịch vụ đã chọn ========
+      const selectedServices = [];
+      document
+        .querySelectorAll('input[name="services"]:checked')
+        .forEach((cb) => {
+          const label = document.querySelector(`label[for="${cb.id}"]`);
+          const serviceName = label
+            .querySelector(".service-name")
+            .textContent.trim();
+          const servicePrice =
+            parseInt(String(cb.dataset.price).replace(/[^\d]/g, "")) || 0;
+          const serviceValue = cb.value;
+
+          let finalPrice = servicePrice;
+          if (serviceValue === "breakfast" || serviceValue === "minibar") {
+            finalPrice = servicePrice * nights;
+          }
+
+          selectedServices.push({
+            name: serviceName,
+            price: finalPrice,
+          });
+        });
+
+      // ========  Gom dữ liệu để hiển thị hoá đơn ========
+      const formData = {
+        roomId: form.dataset.roomId || null,
+        roomName: document.getElementById("roomName").value,
+        roomType: document.getElementById("roomType").value,
+        guestCount: parseInt(document.getElementById("guestCount").value) || 0,
+        childCount: parseInt(document.getElementById("childCount").value) || 0,
+        checkinTime: checkin,
+        checkoutTime: checkout,
+        roomPrice: totalRoomPrice, // Tổng giá phòng (đã nhân số đêm)
+        roomPricePerNight: roomPricePerNight, // Giá/đêm
+        serviceTotal: serviceTotal,
+        services: selectedServices,
+        discount: discount,
+        promoCode: appliedPromoCode,
+        promoDescription: appliedPromoCode
+          ? promoCodes[appliedPromoCode].description
+          : "",
+        deposit: deposit,
+        total: total,
+        paymentMethod: document.getElementById("paymentMethod").value,
+        notes: document.getElementById("notes").value,
+        bookingCode: generateBookingCode(),
+      };
+
+      // ========  Kiểm tra ngày hợp lệ ========
+      if (new Date(formData.checkoutTime) <= new Date(formData.checkinTime)) {
+        alert("Ngày check-out phải sau ngày check-in!");
+        return;
+      }
+
+      // ========  Hiển thị hóa đơn ========
+      showInvoice(formData);
+    });
+  }
+});
+>>>>>>> main
 
 // Hiển thị hóa đơn
 function showInvoice(data) {
@@ -290,7 +556,11 @@ function showInvoice(data) {
       item.className = "service-list-item";
       item.innerHTML = `
                         <span>${service.name}</span>
+<<<<<<< HEAD
                         <span style="color: #deb666; font-weight: 600;">${formatCurrency(
+=======
+                        <span style="font-weight: 600;">${formatCurrency(
+>>>>>>> main
                           service.price
                         )}</span>
                     `;
@@ -377,6 +647,7 @@ function confirmPayment() {
   editBooking();
 }
 
+<<<<<<< HEAD
 // Set giá trị mặc định cho datetime
 window.addEventListener("DOMContentLoaded", function () {
   const now = new Date();
@@ -397,6 +668,36 @@ window.addEventListener("DOMContentLoaded", function () {
   document.getElementById("checkoutTime").value = checkoutDate
     .toISOString()
     .slice(0, 16);
+=======
+// Set giá trị mặc định cho datetime (chỉ khi KHÔNG có dữ liệu từ trang chi tiết)
+window.addEventListener("DOMContentLoaded", function () {
+  // Kiểm tra xem có dữ liệu booking từ trang chi tiết không
+  const hasBookingData = sessionStorage.getItem("bookingData");
+
+  if (!hasBookingData) {
+    // Chỉ set giá trị mặc định khi không có dữ liệu từ trang chi tiết
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    // Set checkin là ngày mai lúc 14:00
+    const checkinDate = new Date(tomorrow);
+    checkinDate.setHours(14, 0, 0);
+    const checkinInput = document.getElementById("checkinTime");
+    if (checkinInput && !checkinInput.value) {
+      checkinInput.value = checkinDate.toISOString().slice(0, 16);
+    }
+
+    // Set checkout là ngày kia lúc 12:00
+    const checkoutDate = new Date(tomorrow);
+    checkoutDate.setDate(checkoutDate.getDate() + 1);
+    checkoutDate.setHours(12, 0, 0);
+    const checkoutInput = document.getElementById("checkoutTime");
+    if (checkoutInput && !checkoutInput.value) {
+      checkoutInput.value = checkoutDate.toISOString().slice(0, 16);
+    }
+  }
+>>>>>>> main
 
   // Cập nhật tổng kết ban đầu
   updateSummary();

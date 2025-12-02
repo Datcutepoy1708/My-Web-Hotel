@@ -42,7 +42,7 @@ class ProfileController extends BaseController {
         
         // Xử lý upload ảnh nếu có
         if (isset($_FILES['anh_dai_dien']) && $_FILES['anh_dai_dien']['error'] == UPLOAD_ERR_OK) {
-            $uploadDir = __DIR__ . '/../assets/images/staff/';
+            $uploadDir = __DIR__ . '/../../client/assets/images/staff/';
             if (!file_exists($uploadDir)) {
                 mkdir($uploadDir, 0777, true);
             }
@@ -59,12 +59,8 @@ class ProfileController extends BaseController {
                     // Xóa ảnh cũ nếu có
                     if (!empty($anh_dai_dien)) {
                         $oldImagePath = '';
-                        if (strpos($anh_dai_dien, 'client/') !== false) {
-                            // Nếu là đường dẫn cũ từ client
-                            $oldImagePath = __DIR__ . '/../../client/' . str_replace('client/', '', $anh_dai_dien);
-                        } else if (strpos($anh_dai_dien, 'assets/images/staff/') !== false) {
-                            // Nếu là relative path mới
-                            $oldImagePath = __DIR__ . '/../' . $anh_dai_dien;
+                        if (strpos($anh_dai_dien, 'assets/images/staff/') !== false) {
+                            $oldImagePath = __DIR__ . '/../../client/' . $anh_dai_dien;
                         } else if (strpos($anh_dai_dien, '/') === 0) {
                             $oldImagePath = __DIR__ . '/../../client' . $anh_dai_dien;
                         } else {

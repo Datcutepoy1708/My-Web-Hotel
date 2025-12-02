@@ -26,7 +26,11 @@
 .sidebar .header {
   display: flex;
   align-items: center;
+<<<<<<< HEAD
   padding: 20px;
+=======
+  padding: 10px 20px;
+>>>>>>> main
   gap: 12px;
 }
 
@@ -51,7 +55,11 @@
 .menu {
   display: flex;
   flex-direction: column;
+<<<<<<< HEAD
   gap: 8px;
+=======
+  gap: 3px;
+>>>>>>> main
   padding: 10px 15px;
 }
 
@@ -85,25 +93,45 @@
 }
 
 .bottom {
+<<<<<<< HEAD
   padding: 15px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+=======
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toggle-logout,
+>>>>>>> main
 .toggle-theme,
 .toggle-sidebar {
   display: flex;
   align-items: center;
+<<<<<<< HEAD
   gap: 12px;
   cursor: pointer;
   padding: 12px 15px;
+=======
+  gap: 15px;
+  cursor: pointer;
+  padding: 10px 18px;
+>>>>>>> main
   border-radius: 10px;
   transition: var(--transition);
   white-space: nowrap;
   overflow: hidden;
 }
 
+<<<<<<< HEAD
+=======
+.toggle-logout:hover,
+>>>>>>> main
 .toggle-theme:hover,
 .toggle-sidebar:hover {
   background: rgba(0, 0, 0, 0.05);

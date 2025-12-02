@@ -66,11 +66,3 @@ class ReviewModel extends BaseModel {
     }
 }
 
-
-
-
-
-
-
-
-

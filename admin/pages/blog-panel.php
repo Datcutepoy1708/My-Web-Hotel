@@ -97,9 +97,9 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
     <div class="content-item">
         <div class="image">
             <?php if (!empty($blog['thumbnail'])): ?>
-                <img src="../<?php echo h($blog['thumbnail']); ?>" alt="Blog" class="content-thumbnail" />
+                <img src="../../client/<?php echo h($blog['thumbnail']); ?>" alt="Blog" class="content-thumbnail" />
             <?php else: ?>
-                <img src="../assets/images/placeholder.jpg" alt="Blog" class="content-thumbnail" />
+                <img src="../../client/assets/images/placeholder.jpg" alt="Blog" class="content-thumbnail" />
             <?php endif; ?>
         </div>
         <div class="content-details">
@@ -169,9 +169,9 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                         </div>
 
                         <?php if (!empty($blog['thumbnail'])): ?>
-                            <img src="../<?php echo h($blog['thumbnail']); ?>" alt="Blog" class="blog-preview-image" id="previewImage" />
+                            <img src="../../client/<?php echo h($blog['thumbnail']); ?>" alt="Blog" class="blog-preview-image" id="previewImage" />
                         <?php else: ?>
-                            <img src="../assets/images/placeholder.jpg" alt="Blog" class="blog-preview-image" id="previewImage" />
+                            <img src="../../client/assets/images/placeholder.jpg" alt="Blog" class="blog-preview-image" id="previewImage" />
                         <?php endif; ?>
 
                         <div class="blog-preview-body" id="previewBody">
@@ -245,7 +245,7 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
 
                             <div class="mb-3">
                                 <label class="form-label">Nội Dung *</label>
-                                <textarea class="form-control" id="blogEditor" name="content" rows="10" required
+                                <textarea class="form-control" name="content" rows="10" required
                                     placeholder="Nhập nội dung bài viết..."><?php echo h($editBlog['content'] ?? ''); ?></textarea>
                             </div>
                         </div>
@@ -299,7 +299,7 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
                                     style="display: none" onchange="previewImage(this, 'blogPreview')" />
                                 <?php if ($editBlog && !empty($editBlog['thumbnail'])): ?>
                                 <img id="blogPreview" class="image-preview mt-3"
-                                    src="../<?php echo h($editBlog['thumbnail']); ?>"
+                                    src="../../client/<?php echo h($editBlog['thumbnail']); ?>"
                                     style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
                                 <?php else: ?>
                                 <img id="blogPreview" class="image-preview mt-3"

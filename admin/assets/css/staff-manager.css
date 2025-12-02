@@ -22,7 +22,68 @@
   font-size: 24px;
   font-weight: 700;
 }
+<<<<<<< HEAD
 
+=======
+/* Tabs (nav-pills) */
+.nav-pills {
+  margin-top: 16px;
+}
+
+.nav-pills .nav-link {
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  color: #000;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 1rem;
+}
+
+.nav-pills .nav-link:hover {
+  box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+  transform: translateY(-4px);
+}
+
+.nav-pills .nav-link.active {
+  background: #deb666;
+  border-color: #deb666;
+  color: #fff;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+/* Content Card */
+.content-card {
+  background: #fff;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.card-header-custom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.card-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.btn {
+  height: 44px;
+}
+>>>>>>> main
 .filter-section {
   background: #fff;
   border-radius: 12px;
@@ -255,6 +316,18 @@
 .btn-primary:hover {
   background-color: #c5a878;
 }
+<<<<<<< HEAD
+=======
+.btn-primary-outline {
+  color: #000;
+  background-color: #fff;
+  border: 1.5px solid #deb666;
+}
+
+.btn-primary-outline:hover {
+  background-color: #c5a878;
+}
+>>>>>>> main
 body.dark .main-content {
   background: #121212;
   color: #fff;

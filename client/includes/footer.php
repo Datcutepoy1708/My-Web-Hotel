@@ -75,7 +75,11 @@
      </div>
  </footer>
  <!-- embed js Bootstrap -->
+<<<<<<< HEAD
  <script src="/My-Web-Hotel/client/assets/Bootstrap/js/bootstrap.bundle.min.js"></script>
+=======
+ <script src="/My-Web-Hotel/lib/Bootstrap/js/bootstrap.bundle.min.js"></script>
+>>>>>>> main
  <!-- embed aos js -->
  <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
  <script>
@@ -83,9 +87,18 @@ AOS.init();
  </script>
  <!-- js -->
  <script src="/My-Web-Hotel/client/database/data.js?v=<?php echo time(); ?>"></script>
+<<<<<<< HEAD
  <?php
         if ($page == 'home') echo '<script src="/My-Web-Hotel/client/assets/js/home.js"></script>';
         if ($page == 'room') echo '<script src="/My-Web-Hotel/client/assets/js/room.js"></script>';
+=======
+ <!-- js loading -->
+ <script src="/My-Web-Hotel/client/assets/js/loading.js?v=<?php echo time(); ?>"></script>
+ <?php
+        if ($page == 'home') echo '<script src="/My-Web-Hotel/client/assets/js/home.js"></script>';
+        if ($page == 'room') echo '<script src="/My-Web-Hotel/client/assets/js/room.js"></script>';
+        if ($page == 'dichVu') echo '<script src="/My-Web-Hotel/client/assets/js/dichVu.js"></script>';
+>>>>>>> main
         if ($page == 'blog') echo '<script src="/My-Web-Hotel/client/assets/js/blog.js"></script>';
         if ($page == 'danhGia') echo '<script src="/My-Web-Hotel/client/assets/js/danhGia.js"></script>';
         if ($page == 'booking') echo '<script src="/My-Web-Hotel/client/assets/js/booking.js"></script>';
@@ -93,6 +106,10 @@ AOS.init();
         if ($page == 'places') echo '<script src="/My-Web-Hotel/client/assets/js/places.js"></script>';
         if ($page == 'gallery') echo '<script src="/My-Web-Hotel/client/assets/js/gallery.js"></script>';
         if ($page == 'room-detail') echo '<script src="/My-Web-Hotel/client/assets/js/room-detail.js"></script>';
+<<<<<<< HEAD
+=======
+        if ($page == 'service-booking') echo '<script src="/My-Web-Hotel/client/assets/js/service-booking.js"></script>';
+>>>>>>> main
     ?>
  </body>
 

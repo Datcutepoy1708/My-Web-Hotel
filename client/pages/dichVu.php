@@ -39,6 +39,7 @@
 
         <!-- Danh sách dịch vụ -->
         <div class="services-list-container">
+<<<<<<< HEAD
          <div class="filter-div">
              <div class="filter-panel">
                  <h3>Tìm kiếm dịch vụ</h3>
@@ -226,6 +227,47 @@
              </div>
          </div>
      </div>
+=======
+            <div class="filter-div">
+                <div class="filter-panel">
+                    <h3>Tìm kiếm dịch vụ</h3>
+                    <input type="text" id="searchInput" placeholder="Nhập tên dịch vụ để tìm…" class="search-box" />
+
+                    <div class="sort-dropdown">
+                        <label for="sort">Sắp xếp:</label>
+                        <select id="sort" name="sort">
+                            <option value="popular">Phổ biến nhất</option>
+                            <option value="price-low">Giá thấp đến cao</option>
+                            <option value="price-high">Giá cao đến thấp</option>
+                        </select>
+                    </div>
+                    <div class="catalog">
+                        <span>Danh Mục:</span>
+                        <fieldset>
+                            <?php 
+                            $sql = "SELECT DISTINCT service_type FROM service";
+                            $result = $mysqli->query($sql);
+                            while ($row = $result->fetch_assoc()):
+                                $type = htmlspecialchars($row['service_type']); // tránh lỗi XSS
+                            ?>
+                            <input type="checkbox" id="<?= $type ?>" name="service_type[]" value="<?= $type ?>">
+                            <label for="<?= $type ?>"><?= $type ?></label><br>
+                            <?php endwhile; ?>
+                        </fieldset>
+                    </div>
+                </div>
+            </div>
+            <div class="services-list-div" id="service">
+                <div class="services-list-header">
+                    <h2>Danh sách dịch vụ</h2>
+                </div>
+
+                <div class="services-main">
+
+                </div>
+            </div>
+        </div>
+>>>>>>> main
 
         <!-- Ưu điểm -->
         <section class="features">

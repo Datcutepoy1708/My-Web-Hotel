@@ -3,7 +3,11 @@
 $dbHost = 'localhost';
 $dbUser = 'root';
 $dbPass = '';
+<<<<<<< HEAD
 $dbName = 'hotel_test';
+=======
+$dbName = 'hotel_management';
+>>>>>>> main
 
 $error = '';
 

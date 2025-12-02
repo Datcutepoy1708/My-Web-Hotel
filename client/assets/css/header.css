@@ -1,7 +1,11 @@
 header {
   font-family: "Roboto Slab", sans-serif;
   background-color: #fffcf0;
+<<<<<<< HEAD
   z-index: 10;
+=======
+  z-index: 100;
+>>>>>>> main
   position: sticky; /*Tạo hiệu ứng bám đỉnh khi cuộn xuống*/
   top: -2px;
   box-shadow: 0 8px 10px rgba(0, 0, 0, 0.15);

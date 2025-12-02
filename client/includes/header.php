@@ -17,9 +17,17 @@
     <!-- embed icon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css?" />
     <!-- embed css bootstrap -->
+<<<<<<< HEAD
     <link href="/My-Web-Hotel/client/assets/Bootstrap/css/bootstrap.css" rel="stylesheet" />
     <!-- style -->
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/common.css?v=<?php echo time(); ?>">
+=======
+    <link href="/My-Web-Hotel/lib/Bootstrap/css/bootstrap.css" rel="stylesheet" />
+    <!-- style -->
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/common.css?v=<?php echo time(); ?>">
+    <!-- loading style -->
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/loading.css?v=<?php echo time(); ?>">
+>>>>>>> main
     <?php
   $current_page = isset($page) ? $page : (isset($_GET['page']) ? $_GET['page'] : 'home');
     if ($current_page == 'home') echo '
@@ -28,8 +36,11 @@
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/room.css?v=<?php echo time(); ?>">';
     if ($current_page == 'dichVu') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/dichVu.css?v=<?php echo time(); ?>">';
+<<<<<<< HEAD
     if ($current_page == 'servicesList') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/servicesList.css?v=<?php echo time(); ?>">';
+=======
+>>>>>>> main
     if ($current_page == 'spa') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/spa.css?v=<?php echo time(); ?>">';
     if ($current_page == 'giaiTri') echo '
@@ -44,6 +55,11 @@
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/danhGia.css?v=<?php echo time(); ?>">';
     if ($current_page == 'booking') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/booking.css?v=<?php echo time(); ?>">';
+<<<<<<< HEAD
+=======
+    if ($current_page == 'service-booking') echo '
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/service-booking.css?v=<?php echo time(); ?>">';
+>>>>>>> main
     if ($current_page == 'about') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/about.css?v=<?php echo time(); ?>">';
     if ($current_page == 'places') echo '
@@ -97,6 +113,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
+<<<<<<< HEAD
                             <a class="<?php echo ($current_page=='room') ? 'nav-link active' : 'nav-link'; ?>"
                                 href="/My-Web-Hotel/client/index.php?page=room">
                                 <span>Phòng</span>
@@ -106,6 +123,17 @@
                             <?php $servicesActive = in_array($current_page, ['dichVu','spa','giaiTri','nhaHang','suKien']) ? 'nav-link active' : 'nav-link'; ?>
                             <a class="<?php echo $servicesActive; ?>" href="/My-Web-Hotel/client/index.php?page=dichVu">
                                 <span>Dịch vụ</span>
+=======
+                            <?php $roomsActive = in_array($current_page, ['room','room-detail']) ? 'nav-link active' : 'nav-link'; ?>
+                            <a class="<?php echo $roomsActive; ?>" href="/My-Web-Hotel/client/index.php?page=room">
+                                <span>Đặt Phòng</span>
+                            </a>
+                        </li>
+                        <li class="nav-item drop">
+                            <?php $servicesActive = in_array($current_page, ['dichVu','spa','giaiTri','nhaHang','suKien',]) ? 'nav-link active' : 'nav-link'; ?>
+                            <a class="<?php echo $servicesActive; ?>" href="/My-Web-Hotel/client/index.php?page=dichVu">
+                                <span>Đặt Dịch vụ</span>
+>>>>>>> main
                             </a>
                             <div class="services-dropdown">
                                 <a href="/My-Web-Hotel/client/index.php?page=spa">Sức khoẻ & Spa</a>

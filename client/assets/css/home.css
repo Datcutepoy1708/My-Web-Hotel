@@ -3,7 +3,11 @@
 .hero {
   position: relative;
   width: 100%;
+<<<<<<< HEAD
   height: 100vh;
+=======
+  height: 70vh;
+>>>>>>> main
   overflow: hidden;
   color: #fff;
   display: flex;
@@ -126,6 +130,10 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .slide:hover {
+<<<<<<< HEAD
+=======
+  cursor: pointer;
+>>>>>>> main
   color: #deb666;
   transform: scale(1.05);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
@@ -192,6 +200,7 @@
   border-radius: 10px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   padding: 20px;
+<<<<<<< HEAD
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -199,6 +208,10 @@
   transform: scale(1.05);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
+=======
+}
+
+>>>>>>> main
 .service-card:hover h3 {
   color: #deb666;
 }
@@ -276,7 +289,11 @@
   display: block;
   transition: transform 0.3s ease, filter 0.3s ease;
 }
+<<<<<<< HEAD
 .experience-card img:hover {
+=======
+.experience-card:hover img {
+>>>>>>> main
   transform: scale(1.2);
   filter: brightness(70%);
 }
@@ -341,11 +358,22 @@
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
+<<<<<<< HEAD
   transition: transform 0.3s ease;
 }
 
 .place-card:hover {
   transform: scale(1.05);
+=======
+}
+.place-card img {
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.place-card:hover img {
+  transform: scale(1.25);
+  filter: brightness(70%);
+>>>>>>> main
 }
 
 .place-card img {

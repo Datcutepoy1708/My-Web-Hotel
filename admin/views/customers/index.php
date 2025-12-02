@@ -186,11 +186,3 @@ unset($_SESSION['message'], $_SESSION['messageType']);
     </script>
 <?php endif; ?>
 
-
-
-
-
-
-
-
-

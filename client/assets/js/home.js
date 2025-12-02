@@ -82,3 +82,19 @@ window.addEventListener("DOMContentLoaded", () => {
   autoScrollSlider("slider", 250, 20); // Phòng tốt nhất
   autoScrollSlider("testimonial-slider", 350, 20);
 });
+<<<<<<< HEAD
+=======
+document.addEventListener("DOMContentLoaded", function () {
+  const slides = document.querySelectorAll(".slide");
+
+  slides.forEach((slide) => {
+    slide.addEventListener("click", function () {
+      const roomId = this.getAttribute("data-id");
+      if (roomId) {
+        window.location.href =
+          "/My-Web-Hotel/client/index.php?page=room-detail&id=" + roomId;
+      }
+    });
+  });
+});
+>>>>>>> main

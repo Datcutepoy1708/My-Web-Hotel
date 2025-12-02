@@ -23,7 +23,10 @@ function updateSlider() {
   const galleryWidth = thumbnailGallery.offsetWidth;
   const scrollPosition =
     currentSlide * thumbnailWidth - galleryWidth / 2 + thumbnailWidth / 2;
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
   thumbnailGallery.scrollTo({
     left: scrollPosition,
     behavior: "smooth",
@@ -60,7 +63,10 @@ document.addEventListener("keydown", function (e) {
 // Touch swipe support
 let touchStartX = 0;
 let touchEndX = 0;
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 const slider = document.querySelector(".main-image-slider");
 
 slider.addEventListener("touchstart", (e) => {
@@ -81,6 +87,7 @@ function handleSwipe() {
   }
 }
 
+<<<<<<< HEAD
 // Suggestion cards
 document.querySelectorAll(".view-btn").forEach((btn) => {
   btn.addEventListener("click", function (e) {
@@ -88,6 +95,26 @@ document.querySelectorAll(".view-btn").forEach((btn) => {
     alert("Chuyển đến trang chi tiết phòng khác");
   });
 });
+=======
+// Xử lý nút "Xem Chi Tiết" trong suggestion cards
+document.querySelectorAll(".view-btn").forEach((btn) => {
+  btn.addEventListener("click", function (e) {
+    e.preventDefault();
+
+    // Lấy href từ thẻ <a>
+    const href = this.getAttribute("href");
+
+    // Kiểm tra href có tồn tại không
+    if (href && href !== "#") {
+      // Chuyển hướng đến trang chi tiết phòng
+      window.location.href = href;
+    } else {
+      console.error("Không tìm thấy link chi tiết phòng");
+    }
+  });
+});
+
+>>>>>>> main
 // Lấy ngày hôm nay
 const today = new Date().toISOString().split("T")[0];
 const checkin = document.getElementById("checkin");
@@ -109,6 +136,7 @@ checkin.addEventListener("change", function () {
     checkout.value = checkinDate;
   }
 });
+<<<<<<< HEAD
 //Kiem Tra tinh trang danh nhap
 document.addEventListener("DOMContentLoaded", () => {
   const checkBtn = document.getElementById("check-room-btn");
@@ -138,3 +166,5 @@ document.addEventListener("DOMContentLoaded", () => {
     popup.style.display = "none";
   });
 });
+=======
+>>>>>>> main

@@ -199,29 +199,10 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                                     <div class="modal-body">
                                         <div class="row g-3">
                                             <div class="col-md-6">
-                                                <?php 
-                                                $roomImages = [];
-                                                if (!empty($room['image'])) {
-                                                    // Parse images (có thể là JSON hoặc single image)
-                                                    if (is_string($room['image']) && (strpos($room['image'], '[') === 0 || strpos($room['image'], '{') === 0)) {
-                                                        $decoded = json_decode($room['image'], true);
-                                                        $roomImages = is_array($decoded) ? $decoded : [$room['image']];
-                                                    } else {
-                                                        $roomImages = [$room['image']];
-                                                    }
-                                                }
-                                                
-                                                if (!empty($roomImages)): 
-                                                    foreach ($roomImages as $img):
-                                                        if (!empty($img)):
-                                                ?>
-                                                    <img src="../<?php echo h($img); ?>" class="img-fluid rounded mb-2"
-                                                        alt="Room Image" style="max-width: 100%; max-height: 200px; object-fit: cover;">
-                                                <?php 
-                                                        endif;
-                                                    endforeach;
-                                                else: 
-                                                ?>
+                                                <?php if ($room['image']): ?>
+                                                    <img src="<?php echo h($room['image']); ?>" class="img-fluid rounded"
+                                                        alt="Room Image">
+                                                <?php else: ?>
                                                     <img src="https://via.placeholder.com/400x300" class="img-fluid rounded"
                                                         alt="Room Image">
                                                 <?php endif; ?>
@@ -344,47 +325,25 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ảnh Phòng (có thể chọn nhiều ảnh, tối đa 5 ảnh)</label>
+                        <label class="form-label">Ảnh Phòng</label>
                         <div class="image-upload-area" onclick="document.getElementById('roomImage').click()"
                             style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 5px; cursor: pointer;">
                             <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
-                            <p class="text-muted mb-0">Click để chọn ảnh (có thể chọn nhiều)</p>
-                            <small class="text-muted">hoặc kéo thả ảnh vào đây (Ctrl/Cmd để chọn nhiều)</small>
+                            <p class="text-muted mb-0">Click để chọn ảnh</p>
+                            <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
                         </div>
-                        <input type="file" id="roomImage" name="image[]" accept="image/*" multiple
-                            style="display: none" onchange="previewMultipleImages(this, 'roomPreviewContainer')" />
-                        <div id="roomPreviewContainer" class="mt-3">
-                            <?php 
-                            if ($editRoom && !empty($editRoom['image'])) {
-                                $images = [];
-                                // Parse images (có thể là JSON hoặc single image)
-                                if (is_string($editRoom['image']) && (strpos($editRoom['image'], '[') === 0 || strpos($editRoom['image'], '{') === 0)) {
-                                    $decoded = json_decode($editRoom['image'], true);
-                                    $images = is_array($decoded) ? $decoded : [$editRoom['image']];
-                                } else {
-                                    $images = [$editRoom['image']];
-                                }
-                                
-                                foreach ($images as $img): 
-                                    if (!empty($img)):
-                            ?>
-                            <div class="image-preview-item d-inline-block me-2 mb-2" style="position: relative;">
-                                <img src="../<?php echo h($img); ?>" 
-                                    style="max-width: 150px; max-height: 150px; border-radius: 5px; border: 2px solid #ddd;" />
-                                <button type="button" class="btn btn-sm btn-danger" style="position: absolute; top: 0; right: 0;"
-                                    onclick="removeImagePreview(this)">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                                <input type="hidden" name="existing_images[]" value="<?php echo h($img); ?>">
-                            </div>
-                            <?php 
-                                    endif;
-                                endforeach;
-                            }
-                            ?>
-                        </div>
+                        <input type="file" id="roomImage" name="image" accept="image/*"
+                            style="display: none" onchange="previewImage(this, 'roomPreview')" />
+                        <?php if ($editRoom && !empty($editRoom['image'])): ?>
+                        <img id="roomPreview" class="image-preview mt-3"
+                            src="../../client/<?php echo h($editRoom['image']); ?>"
+                            style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
+                        <?php else: ?>
+                        <img id="roomPreview" class="image-preview mt-3"
+                            style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
+                        <?php endif; ?>
                         <div class="mt-2">
-                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB mỗi ảnh. Tối đa 5 ảnh.</small>
+                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
                         </div>
                     </div>
                 </div>
@@ -401,7 +360,7 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
 </div>
 
 <script>
-    // Preview image function (single)
+    // Preview image function
     function previewImage(input, previewId) {
         const preview = document.getElementById(previewId);
         if (!preview) return;
@@ -413,57 +372,6 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 preview.style.display = "block";
             };
             reader.readAsDataURL(input.files[0]);
-        }
-    }
-    
-    // Preview multiple images function
-    function previewMultipleImages(input, containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        
-        const files = input.files;
-        const maxImages = 5;
-        let currentCount = container.querySelectorAll('.image-preview-item').length;
-        
-        if (files.length + currentCount > maxImages) {
-            alert('Chỉ có thể chọn tối đa ' + maxImages + ' ảnh. Bạn đã chọn ' + (files.length + currentCount) + ' ảnh.');
-            input.value = '';
-            return;
-        }
-        
-        for (let i = 0; i < files.length; i++) {
-            const file = files[i];
-            if (file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const div = document.createElement('div');
-                    div.className = 'image-preview-item d-inline-block me-2 mb-2';
-                    div.style.position = 'relative';
-                    div.innerHTML = `
-                        <img src="${e.target.result}" 
-                            style="max-width: 150px; max-height: 150px; border-radius: 5px; border: 2px solid #ddd;" />
-                        <button type="button" class="btn btn-sm btn-danger" style="position: absolute; top: 0; right: 0;"
-                            onclick="removeImagePreview(this)">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    `;
-                    container.appendChild(div);
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-    }
-    
-    function removeImagePreview(button) {
-        const item = button.closest('.image-preview-item');
-        if (item) {
-            item.remove();
-            // Update file input
-            const fileInput = document.getElementById('roomImage');
-            if (fileInput) {
-                // Reset file input (không thể xóa file đã chọn, nhưng có thể clear)
-                fileInput.value = '';
-            }
         }
     }
     

@@ -100,11 +100,3 @@ class BookingServiceModel extends BaseModel {
     }
 }
 
-
-
-
-
-
-
-
-

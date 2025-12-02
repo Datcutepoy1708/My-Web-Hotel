@@ -78,94 +78,74 @@ if ($selectedRole !== '') {
 }
 ?>
 
-<div class="main-content">
-    <div class="content-header d-flex justify-content-between align-items-center">
-        <h1>Phân Quyền Nhân Viên</h1>
-        <div>
-            <a href="index.php?page=staff-manager" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Quay lại Nhân Viên
-            </a>
+<div class="content-card">
+    <div class="card-header-custom">
+        <h3 class="card-title">Phân Quyền Nhân Viên</h3>
+        <div style="width: 250px;">
+            <label class="form-label fw-bold">Chọn chức vụ</label>
+            <select class="form-select " name="chuc_vu"
+                onchange="window.location.href='index.php?page=permission-manager&chuc_vu=' + encodeURIComponent(this.value)">
+                <?php foreach ($roles as $role): ?>
+                <option value="<?php echo h($role['chuc_vu']); ?>"
+                    <?php echo $selectedRole === $role['chuc_vu'] ? 'selected' : ''; ?>>
+                    <?php echo h($role['chuc_vu']); ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
         </div>
     </div>
 
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo $message; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <div class="content-card">
-        <form method="POST" id="permissionForm">
-            <div class="row">
-                <div class="col-lg-3 mb-4">
-                    <label class="form-label fw-bold">Chọn chức vụ</label>
-                    <select class="form-select" name="chuc_vu" onchange="window.location.href='index.php?page=permission-manager&chuc_vu=' + encodeURIComponent(this.value)">
-                        <?php foreach ($roles as $role): ?>
-                            <option value="<?php echo h($role['chuc_vu']); ?>"
-                                <?php echo $selectedRole === $role['chuc_vu'] ? 'selected' : ''; ?>>
-                                <?php echo h($role['chuc_vu']); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <div class="mt-3">
-                        <p class="text-muted small mb-1">
-                            <i class="fas fa-info-circle"></i> Chức vụ đang chọn sẽ áp dụng quyền dưới đây.
-                        </p>
-                        <p class="text-muted small">
-                            Mỗi nhân viên thuộc chức vụ này sẽ tự động có quyền tương ứng.
-                        </p>
-                    </div>
-                </div>
-
-                <div class="col-lg-9">
-                    <?php if (empty($permissions)): ?>
-                        <div class="alert alert-warning">Chưa có dữ liệu quyền trong hệ thống.</div>
-                    <?php else: ?>
-                        <div class="permission-groups">
-                            <?php foreach ($groupedPermissions as $group => $perms): ?>
-                                <div class="permission-group mb-4 border rounded p-3">
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <h5 class="mb-0 text-uppercase"><?php echo h($group); ?></h5>
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                                onclick="toggleGroup(this, '<?php echo h($group); ?>')">
-                                            Chọn/Bỏ tất cả
-                                        </button>
-                                    </div>
-                                    <div class="row">
-                                        <?php foreach ($perms as $perm): ?>
-                                            <?php $checked = in_array((int)$perm['id_quyen'], $assignedIds); ?>
-                                            <div class="col-md-6 mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input perm-checkbox"
-                                                        type="checkbox"
-                                                        data-group="<?php echo h($group); ?>"
-                                                        name="permissions[]"
-                                                        value="<?php echo (int)$perm['id_quyen']; ?>"
-                                                        id="perm<?php echo (int)$perm['id_quyen']; ?>"
-                                                        <?php echo $checked ? 'checked' : ''; ?>>
-                                                    <label class="form-check-label" for="perm<?php echo (int)$perm['id_quyen']; ?>">
-                                                        <strong><?php echo h($perm['ten_quyen']); ?></strong><br>
-                                                        <small class="text-muted"><?php echo h($perm['mo_ta'] ?? ''); ?></small>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="text-end">
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-save"></i> Lưu phân quyền
-                </button>
-            </div>
-        </form>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo $message; ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
+    <?php endif; ?>
+    <form method="POST" id="permissionForm">
+        <?php if (empty($permissions)): ?>
+        <div class="alert alert-warning">Chưa có dữ liệu quyền trong hệ thống.</div>
+        <?php else: ?>
+        <div class="permission-groups">
+            <?php foreach ($groupedPermissions as $group => $perms): ?>
+            <div class="permission-group mb-4 border rounded p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0 text-uppercase"><?php echo h($group); ?></h5>
+                    <button type="button" class="btn btn-primary-outline"
+                        onclick="toggleGroup(this, '<?php echo h($group); ?>')">
+                        Chọn/Bỏ tất cả
+                    </button>
+                </div>
+                <div class="row">
+                    <?php foreach ($perms as $perm): ?>
+                    <?php $checked = in_array((int)$perm['id_quyen'], $assignedIds); ?>
+                    <div class="col-md-6 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input perm-checkbox" type="checkbox"
+                                data-group="<?php echo h($group); ?>" name="permissions[]"
+                                value="<?php echo (int)$perm['id_quyen']; ?>"
+                                id="perm<?php echo (int)$perm['id_quyen']; ?>" <?php echo $checked ? 'checked' : ''; ?>>
+                            <label class="form-check-label" for="perm<?php echo (int)$perm['id_quyen']; ?>">
+                                <strong><?php echo h($perm['ten_quyen']); ?></strong><br>
+                                <small class="text-muted"><?php echo h($perm['mo_ta'] ?? ''); ?></small>
+                            </label>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Lưu phân quyền
+            </button>
+        </div>
+    </form>
+
 </div>
 
 <script>
@@ -176,4 +156,3 @@ function toggleGroup(button, groupName) {
     checkboxes.forEach(cb => cb.checked = !allChecked);
 }
 </script>
-

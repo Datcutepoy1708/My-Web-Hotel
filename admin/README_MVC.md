@@ -182,11 +182,3 @@ Có thể migrate từng phần:
 - Controllers có thể sử dụng `$this->mysqli` để truy cập database
 - Permission checking được tích hợp sẵn trong BaseController
 
-
-
-
-
-
-
-
-

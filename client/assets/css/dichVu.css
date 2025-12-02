@@ -1,7 +1,11 @@
 /* =====main===== */
 /* Hero */
 .hero {
+<<<<<<< HEAD
   height: 90vh;
+=======
+  height: 60vh;
+>>>>>>> main
   background: url(/my-web-hotel/client/assets/images/pexels-nextvoyage-3051551.jpg)
     center/cover no-repeat;
   display: flex;
@@ -148,6 +152,7 @@
   border-radius: 4px;
 }
 
+<<<<<<< HEAD
 .price-range {
   width: 100%;
   margin-bottom: 5px;
@@ -158,6 +163,8 @@
   color: #555;
   margin-bottom: 15px;
 }
+=======
+>>>>>>> main
 .sort-dropdown {
   display: flex;
   align-items: center;
@@ -180,6 +187,7 @@
   background: white;
 }
 
+<<<<<<< HEAD
 .apply-btn {
   background-color: #deb666;
   color: white;
@@ -192,6 +200,18 @@
 
 .apply-btn:hover {
   background-color: #b69854;
+=======
+.catalog span {
+  font-style: 16px;
+  font-weight: bold; /* chữ đậm cho tiêu đề */
+  color: #666;
+}
+.catalog fieldset {
+  border-radius: 8px;
+  border: 1px solid #deb666;
+  padding: 10px;
+  margin: 10px 0;
+>>>>>>> main
 }
 
 /* room list */
@@ -252,14 +272,25 @@
   align-items: center;
 }
 .card {
+<<<<<<< HEAD
   margin: 18px 0;
   /* border: 0.1px solid rgba(0, 0, 0, 0.1); */
+=======
+  width: 90%;
+  margin: 18px 0;
+>>>>>>> main
   border: 1px solid #deb666;
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
+<<<<<<< HEAD
 
+=======
+.picture {
+  overflow: hidden;
+}
+>>>>>>> main
 .card .row .picture img {
   transition: transform 0.4s ease;
 }
@@ -275,6 +306,10 @@
 .card-title {
   margin-bottom: 20px;
   font-size: 1.2em;
+<<<<<<< HEAD
+=======
+  color: #b69854;
+>>>>>>> main
 }
 .money {
   display: flex;

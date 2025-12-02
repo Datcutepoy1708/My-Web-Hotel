@@ -5,12 +5,25 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Forgot Password</title>
+<<<<<<< HEAD
     <link rel="stylesheet" href="/my-web-hotel/client/assets/css/forgotPass.css?v=<?php echo time(); ?>" />
+=======
+    <!-- favicon -->
+    <link rel="icon" href="/My-Web-Hotel/client/assets/images/favicon.png" type="image/x-icon" />
+    <link rel="stylesheet" href="/my-web-hotel/client/assets/css/forgotPass.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/loading.css?v=<?php echo time(); ?>" />
+>>>>>>> main
     <!-- Font Awesome CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 
 <body>
+<<<<<<< HEAD
+=======
+    <?php
+    include '../includes/loading.php';
+    ?>
+>>>>>>> main
     <div class="login-box">
         <h2>Quên Mật Khẩu</h2>
         <form>
@@ -19,8 +32,13 @@
             </div>
             <button type="submit" class="btn">Khôi Phục Mật Khẩu</button>
             <div class="options">
+<<<<<<< HEAD
                 <a href="/my-web-hotel/pages/login.php">Quay lại đăng nhập</a>
                 <a href="/my-web-hotel/pages/signup.php">Đăng ký</a>
+=======
+                <a href="/my-web-hotel/client/pages/login.php">Quay lại đăng nhập</a>
+                <a href="/my-web-hotel/client/pages/signup.php">Đăng ký</a>
+>>>>>>> main
             </div>
             <div class="social-login">
                 <p>HOẶC KHÔI PHỤC BẰNG</p>
@@ -32,6 +50,10 @@
             </div>
         </form>
     </div>
+<<<<<<< HEAD
+=======
+    <script src="/My-Web-Hotel/client/assets/js/loading.js?v=<?php echo time(); ?>"></script>
+>>>>>>> main
 </body>
 
 </html>

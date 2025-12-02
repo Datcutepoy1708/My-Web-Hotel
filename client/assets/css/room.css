@@ -1,4 +1,5 @@
 /*======== main ==========*/
+<<<<<<< HEAD
 /* hero */
 .hero-booking {
   background-image: url("../images/roomHeroBg.jpg");
@@ -100,6 +101,77 @@
 
 .book-btn:hover {
   background-color: #b69854;
+=======
+.hero-section {
+  position: relative;
+  height: 70vh;
+  background: url("../images/roomHeroBg.jpg") center/cover no-repeat;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  padding: 20px;
+  animation: fadeInUp 1.2s ease;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: 1px;
+}
+
+.hero-subtitle {
+  font-size: 2rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+  color: #f0f0f0;
+}
+
+.hero-btn {
+  background-color: #deb666;
+  border: none;
+  color: #fff;
+  padding: 14px 40px;
+  font-size: 2rem;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.hero-btn:hover {
+  background-color: #b69854;
+  transform: translateY(-2px);
+}
+
+/* Animation */
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+>>>>>>> main
 }
 /* room */
 .rooms-header {
@@ -149,6 +221,7 @@
   border-radius: 4px;
 }
 
+<<<<<<< HEAD
 .price-range {
   width: 100%;
   margin-bottom: 5px;
@@ -159,6 +232,8 @@
   color: #555;
   margin-bottom: 15px;
 }
+=======
+>>>>>>> main
 .sort-dropdown {
   display: flex;
   align-items: center;
@@ -180,6 +255,7 @@
   cursor: pointer;
   background: white;
 }
+<<<<<<< HEAD
 
 .apply-btn {
   background-color: #deb666;
@@ -195,6 +271,19 @@
   background-color: #b69854;
 }
 
+=======
+.catalog span {
+  font-style: 16px;
+  font-weight: bold; /* chữ đậm cho tiêu đề */
+  color: #666;
+}
+.catalog fieldset {
+  border-radius: 8px;
+  border: 1px solid #deb666;
+  padding: 10px;
+  margin: 10px 0;
+}
+>>>>>>> main
 /* room list */
 .rooms-list-div {
   display: flex;
@@ -253,6 +342,10 @@
   align-items: center;
 }
 .card {
+<<<<<<< HEAD
+=======
+  width: 90%;
+>>>>>>> main
   margin: 18px 0;
   /* border: 0.1px solid rgba(0, 0, 0, 0.1); */
   border: 1px solid #deb666;
@@ -278,6 +371,10 @@
 .card-title {
   margin-bottom: 20px;
   font-size: 1.2em;
+<<<<<<< HEAD
+=======
+  color: #b69854;
+>>>>>>> main
 }
 .money {
   display: flex;
@@ -289,3 +386,58 @@
 .money h2 {
   color: #deb666;
 }
+<<<<<<< HEAD
+=======
+
+.features {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 80px 60px;
+  background: #fffcf0;
+  flex-wrap: wrap;
+}
+.features-text {
+  flex: 1;
+  min-width: 280px;
+}
+.features-text h2 {
+  font-size: 30px;
+  margin-bottom: 20px;
+}
+.features-text ul {
+  list-style: none;
+}
+.features-text li {
+  margin-bottom: 12px;
+  position: relative;
+  padding-left: 20px;
+}
+.features-text li::before {
+  content: "✔";
+  position: absolute;
+  left: 0;
+  color: #deb666;
+}
+
+.features-img {
+  flex: 1;
+  text-align: right;
+  min-height: 300px;
+  background: url(/my-web-hotel/client/assets/images/bghome-home.jpg)
+    center/cover no-repeat;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.8);
+}
+@media (max-width: 768px) {
+  .features {
+    flex-direction: column;
+    text-align: center;
+  }
+  .features-img {
+    margin-top: 30px;
+    text-align: center;
+    height: 200px;
+  }
+}
+>>>>>>> main

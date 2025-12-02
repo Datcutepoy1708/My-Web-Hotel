@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+=======
+:root {
+  --primary-gold: #deb666;
+  --primary-gold-dark: #b69854;
+  --bg-cream: #fffcf0;
+  --text-dark: #333;
+  --border-color: #ddd;
+}
+>>>>>>> main
 .header-title {
   background-color: #eee;
   text-align: center;
@@ -414,6 +424,7 @@
   background: #d4a84e;
 }
 /* Giao diện popup */
+<<<<<<< HEAD
 .popup {
   display: none;
   position: fixed;
@@ -457,6 +468,29 @@
     opacity: 1;
     transform: scale(1);
   }
+=======
+.modal-content {
+  border-radius: 12px;
+}
+
+.modal-header {
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border-color);
+}
+.modal-header .modal-title {
+  font-size: 2rem;
+}
+.modal-footer .btn {
+  height: 38px;
+  margin: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.btn {
+  border: none;
+>>>>>>> main
 }
 @media (max-width: 1024px) {
   .hero-gallery {

@@ -17,13 +17,12 @@ $message = '';
 $messageType = '';
 
 // Hàm upload ảnh cho voucher
-if (!function_exists('uploadVoucherImage')) {
 function uploadVoucherImage($file, $oldImage = '') {
     if (!isset($file['name']) || empty($file['name'])) {
         return $oldImage;
     }
     
-    $uploadDir = __DIR__ . '/../assets/images/voucher/';
+    $uploadDir = '../../client/assets/images/voucher/';
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
@@ -45,21 +44,15 @@ function uploadVoucherImage($file, $oldImage = '') {
     
     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         if ($oldImage && !empty($oldImage)) {
-            $oldPath = '';
-            if (strpos($oldImage, 'client/') !== false) {
-                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldImage);
-            } else {
-                $oldPath = __DIR__ . '/../' . $oldImage;
-            }
+            $oldPath = '../../client/' . $oldImage;
             if (file_exists($oldPath)) {
-                @unlink($oldPath);
+                unlink($oldPath);
             }
         }
         return 'assets/images/voucher/' . $newFileName;
     }
     return false;
 }
-} // End function_exists check
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['add_voucher'])) {
@@ -149,12 +142,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $message = 'Thêm voucher thành công!';
                         $messageType = 'success';
                         $action = '';
-                        if (function_exists('safe_redirect')) {
-                            safe_redirect("index.php?page=voucher-manager");
-                        } else {
-                            echo "<script>window.location.href = 'index.php?page=voucher-manager';</script>";
-                            exit;
-                        }
+                        header("Location: index.php?page=voucher-manager");
+                        exit;
                     } else {
                         $message = 'Lỗi: ' . $stmt->error;
                         $messageType = 'danger';
@@ -250,12 +239,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($stmt->execute()) {
                     $message = 'Cập nhật voucher thành công!';
                     $messageType = 'success';
-                    if (function_exists('safe_redirect')) {
-                        safe_redirect("index.php?page=voucher-manager");
-                    } else {
-                        echo "<script>window.location.href = 'index.php?page=voucher-manager';</script>";
-                        exit;
-                    }
+                    header("Location: index.php?page=voucher-manager");
+                    exit;
                 } else {
                     $message = 'Lỗi: ' . $stmt->error;
                     $messageType = 'danger';
@@ -277,12 +262,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if ($stmt->execute()) {
                 $message = 'Xóa voucher thành công!';
                 $messageType = 'success';
-                if (function_exists('safe_redirect')) {
-                    safe_redirect("index.php?page=voucher-manager");
-                } else {
-                    echo "<script>window.location.href = 'index.php?page=voucher-manager';</script>";
-                    exit;
-                }
+                header("Location: index.php?page=voucher-manager");
+                exit;
             } else {
                 $message = 'Lỗi: ' . $stmt->error;
                 $messageType = 'danger';
@@ -424,18 +405,22 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
 <div class="main-content">
     <div class="content-header">
         <h1>Quản Lý Voucher</h1>
-        <?php if ($canCreateVoucher): ?>
-        <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addVoucherModal">
-            <i class="fas fa-plus"></i> Thêm Voucher
-        </button>
-        <?php endif; ?>
+        <div class="row m-3">
+            <div class="col-md-12">
+                <?php if ($canCreateVoucher): ?>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addVoucherModal">
+                    <i class="fas fa-plus"></i> Thêm Voucher
+                </button>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo h($message); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <?php endif; ?>
 
     <!-- Filter Section -->
@@ -453,8 +438,12 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                 <div class="col-md-3">
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang hoạt động</option>
-                        <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>Tạm dừng</option>
+                        <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang
+                            hoạt
+                            động</option>
+                        <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>
+                            Tạm dừng
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -465,7 +454,7 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
     </div>
 
     <!-- Table -->
-    <div class="table-responsive">
+    <div class="table-container">
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -482,87 +471,85 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
             </thead>
             <tbody>
                 <?php if (empty($vouchers)): ?>
-                    <tr>
-                        <td colspan="9" class="text-center">Không có dữ liệu</td>
-                    </tr>
+                <tr>
+                    <td colspan="9" class="text-center">Không có dữ liệu</td>
+                </tr>
                 <?php else: ?>
-                    <?php foreach ($vouchers as $voucher): ?>
-                        <tr>
-                            <td><strong><?php echo h($voucher['code']); ?></strong></td>
-                            <td><?php echo h($voucher['name']); ?></td>
-                            <td>
-                                <span class="badge bg-info">
-                                    <?php echo $voucher['discount_type'] == 'percent' ? '%' : 'VNĐ'; ?>
-                                </span>
-                            </td>
-                            <td>
-                                <?php if ($voucher['discount_type'] == 'percent'): ?>
-                                    <?php echo number_format($voucher['discount_value'], 0); ?>%
-                                    <?php if ($voucher['max_discount']): ?>
-                                        <br><small>(Tối đa: <?php echo formatCurrency($voucher['max_discount']); ?>)</small>
-                                    <?php endif; ?>
-                                <?php else: ?>
-                                    <?php echo formatCurrency($voucher['discount_value']); ?>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <small>
-                                    <?php if ($voucher['min_order'] > 0): ?>
-                                        Đơn tối thiểu: <?php echo formatCurrency($voucher['min_order']); ?><br>
-                                    <?php endif; ?>
-                                    <?php if ($voucher['apply_to'] != 'all'): ?>
-                                        Áp dụng: <?php echo $voucher['apply_to'] == 'room' ? 'Phòng' : 'Dịch vụ'; ?><br>
-                                    <?php endif; ?>
-                                </small>
-                            </td>
-                            <td>
-                                <small>
-                                    <?php echo formatDate($voucher['start_date']); ?><br>
-                                    → <?php echo formatDate($voucher['end_date']); ?>
-                                </small>
-                            </td>
-                            <td>
-                                <?php echo $voucher['usage_count'] ?? 0; ?> / <?php echo $voucher['total_uses']; ?>
-                            </td>
-                            <td>
-                                <span class="badge <?php echo $voucher['status'] == 'active' ? 'bg-success' : 'bg-secondary'; ?>">
-                                    <?php echo $voucher['status'] == 'active' ? 'Hoạt động' : 'Tạm dừng'; ?>
-                                </span>
-                                <?php if ($voucher['is_featured']): ?>
-                                    <span class="badge bg-warning">Nổi bật</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info" 
-                                    onclick="viewVoucherDetails(<?php echo $voucher['voucher_id']; ?>)" 
-                                    title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <?php if ($canEditVoucher): ?>
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editVoucher(<?php echo $voucher['voucher_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <?php endif; ?>
-                                <?php if ($canDeleteVoucher): ?>
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deleteVoucher(<?php echo $voucher['voucher_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                <?php endif; ?>
-                                <button class="btn btn-sm btn-outline-primary" 
-                                    onclick="assignVoucher(<?php echo $voucher['voucher_id']; ?>)" 
-                                    title="Gán cho khách hàng">
-                                    <i class="fas fa-user-plus"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-secondary" 
-                                    onclick="viewVoucherUsage(<?php echo $voucher['voucher_id']; ?>)" 
-                                    title="Lịch sử sử dụng">
-                                    <i class="fas fa-history"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                <?php foreach ($vouchers as $voucher): ?>
+                <tr>
+                    <td><strong><?php echo h($voucher['code']); ?></strong></td>
+                    <td><?php echo h($voucher['name']); ?></td>
+                    <td>
+                        <span class="badge bg-info">
+                            <?php echo $voucher['discount_type'] == 'percent' ? '%' : 'VNĐ'; ?>
+                        </span>
+                    </td>
+                    <td>
+                        <?php if ($voucher['discount_type'] == 'percent'): ?>
+                        <?php echo number_format($voucher['discount_value'], 0); ?>%
+                        <?php if ($voucher['max_discount']): ?>
+                        <br><small>(Tối đa: <?php echo formatCurrency($voucher['max_discount']); ?>)</small>
+                        <?php endif; ?>
+                        <?php else: ?>
+                        <?php echo formatCurrency($voucher['discount_value']); ?>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <small>
+                            <?php if ($voucher['min_order'] > 0): ?>
+                            Đơn tối thiểu: <?php echo formatCurrency($voucher['min_order']); ?><br>
+                            <?php endif; ?>
+                            <?php if ($voucher['apply_to'] != 'all'): ?>
+                            Áp dụng: <?php echo $voucher['apply_to'] == 'room' ? 'Phòng' : 'Dịch vụ'; ?><br>
+                            <?php endif; ?>
+                        </small>
+                    </td>
+                    <td>
+                        <small>
+                            <?php echo formatDate($voucher['start_date']); ?><br>
+                            → <?php echo formatDate($voucher['end_date']); ?>
+                        </small>
+                    </td>
+                    <td>
+                        <?php echo $voucher['usage_count'] ?? 0; ?> / <?php echo $voucher['total_uses']; ?>
+                    </td>
+                    <td>
+                        <span
+                            class="badge <?php echo $voucher['status'] == 'active' ? 'bg-success' : 'bg-secondary'; ?>">
+                            <?php echo $voucher['status'] == 'active' ? 'Hoạt động' : 'Tạm dừng'; ?>
+                        </span>
+                        <?php if ($voucher['is_featured']): ?>
+                        <span class="badge bg-warning">Nổi bật</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info"
+                            onclick="viewVoucherDetails(<?php echo $voucher['voucher_id']; ?>)" title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <?php if ($canEditVoucher): ?>
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editVoucher(<?php echo $voucher['voucher_id']; ?>)" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <?php endif; ?>
+                        <?php if ($canDeleteVoucher): ?>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteVoucher(<?php echo $voucher['voucher_id']; ?>)" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <?php endif; ?>
+                        <button class="btn btn-sm btn-outline-primary"
+                            onclick="assignVoucher(<?php echo $voucher['voucher_id']; ?>)" title="Gán cho khách hàng">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="viewVoucherUsage(<?php echo $voucher['voucher_id']; ?>)" title="Lịch sử sử dụng">
+                            <i class="fas fa-history"></i>
+                        </button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -586,50 +573,55 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
             </div>
             <form method="POST" id="voucherForm" enctype="multipart/form-data">
                 <?php if ($editVoucher): ?>
-                    <input type="hidden" name="voucher_id" value="<?php echo $editVoucher['voucher_id']; ?>">
+                <input type="hidden" name="voucher_id" value="<?php echo $editVoucher['voucher_id']; ?>">
                 <?php endif; ?>
-                
+
                 <div class="modal-body">
                     <!-- Tab Navigation -->
                     <ul class="nav nav-tabs mb-3" id="voucherTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button">Thông Tin Cơ Bản</button>
+                            <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic"
+                                type="button">Thông Tin Cơ Bản</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="discount-tab" data-bs-toggle="tab" data-bs-target="#discount" type="button">Giảm Giá</button>
+                            <button class="nav-link" id="discount-tab" data-bs-toggle="tab" data-bs-target="#discount"
+                                type="button">Giảm Giá</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="condition-tab" data-bs-toggle="tab" data-bs-target="#condition" type="button">Điều Kiện</button>
+                            <button class="nav-link" id="condition-tab" data-bs-toggle="tab" data-bs-target="#condition"
+                                type="button">Điều Kiện</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="time-tab" data-bs-toggle="tab" data-bs-target="#time" type="button">Thời Hạn</button>
+                            <button class="nav-link" id="time-tab" data-bs-toggle="tab" data-bs-target="#time"
+                                type="button">Thời Hạn</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings" type="button">Cài Đặt</button>
+                            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings"
+                                type="button">Cài Đặt</button>
                         </li>
                     </ul>
-                    
+
                     <div class="tab-content" id="voucherTabContent">
                         <!-- Tab 1: Thông Tin Cơ Bản -->
                         <div class="tab-pane fade show active" id="basic" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Mã Voucher *</label>
-                                    <input type="text" class="form-control" name="code" 
-                                        value="<?php echo h($editVoucher['code'] ?? ''); ?>" 
-                                        required maxlength="20" placeholder="VD: SUMMER2024">
+                                    <input type="text" class="form-control" name="code"
+                                        value="<?php echo h($editVoucher['code'] ?? ''); ?>" required maxlength="20"
+                                        placeholder="VD: SUMMER2024">
                                     <small class="text-muted">Mã phải duy nhất, tối đa 20 ký tự</small>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Tên Voucher *</label>
-                                    <input type="text" class="form-control" name="name" 
-                                        value="<?php echo h($editVoucher['name'] ?? ''); ?>" 
-                                        required maxlength="100">
+                                    <input type="text" class="form-control" name="name"
+                                        value="<?php echo h($editVoucher['name'] ?? ''); ?>" required maxlength="100">
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Mô Tả</label>
-                                <textarea class="form-control" name="description" rows="3" maxlength="300"><?php echo h($editVoucher['description'] ?? ''); ?></textarea>
+                                <textarea class="form-control" name="description" rows="3"
+                                    maxlength="300"><?php echo h($editVoucher['description'] ?? ''); ?></textarea>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Hình Ảnh</label>
@@ -639,65 +631,77 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                                     <p class="text-muted mb-0">Click để chọn ảnh</p>
                                     <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
                                 </div>
-                                <input type="file" id="voucherImage" name="image" accept="image/*"
-                                    style="display: none" onchange="previewImage(this, 'voucherPreview')" />
-                                <input type="hidden" name="image" value="<?php echo h($editVoucher['image'] ?? ''); ?>" id="voucherImageHidden">
+                                <input type="file" id="voucherImage" name="image" accept="image/*" style="display: none"
+                                    onchange="previewImage(this, 'voucherPreview')" />
+                                <input type="hidden" name="image" value="<?php echo h($editVoucher['image'] ?? ''); ?>"
+                                    id="voucherImageHidden">
                                 <?php if ($editVoucher && !empty($editVoucher['image'])): ?>
                                 <img id="voucherPreview" class="image-preview mt-3"
-                                    src="../<?php echo h($editVoucher['image']); ?>"
+                                    src="../../client/<?php echo h($editVoucher['image']); ?>"
                                     style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
                                 <?php else: ?>
                                 <img id="voucherPreview" class="image-preview mt-3"
                                     style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
                                 <?php endif; ?>
                                 <div class="mt-2">
-                                    <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
+                                    <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa:
+                                        5MB</small>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Tab 2: Giảm Giá -->
                         <div class="tab-pane fade" id="discount" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Loại Giảm *</label>
                                     <select class="form-select" name="discount_type" id="discount_type" required>
-                                        <option value="percent" <?php echo ($editVoucher['discount_type'] ?? 'percent') == 'percent' ? 'selected' : ''; ?>>Phần trăm (%)</option>
-                                        <option value="fixed" <?php echo ($editVoucher['discount_type'] ?? '') == 'fixed' ? 'selected' : ''; ?>>Số tiền cố định (VNĐ)</option>
+                                        <option value="percent"
+                                            <?php echo ($editVoucher['discount_type'] ?? 'percent') == 'percent' ? 'selected' : ''; ?>>
+                                            Phần trăm (%)</option>
+                                        <option value="fixed"
+                                            <?php echo ($editVoucher['discount_type'] ?? '') == 'fixed' ? 'selected' : ''; ?>>
+                                            Số tiền cố định (VNĐ)</option>
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label">Giá Trị Giảm *</label>
-                                    <input type="number" class="form-control" name="discount_value" 
-                                        value="<?php echo $editVoucher['discount_value'] ?? ''; ?>" 
-                                        required step="0.01" min="0">
-                                    <small class="text-muted" id="discount_hint">Nhập số phần trăm (0-100)</small>
+                                    <input type="number" class="form-control" name="discount_value"
+                                        value="<?php echo $editVoucher['discount_value'] ?? ''; ?>" required step="0.01"
+                                        min="0">
+                                    <small class="text-muted" id="discount_hint">Nhập số phần trăm
+                                        (0-100)</small>
                                 </div>
-                                <div class="col-md-4 mb-3" id="max_discount_container" style="<?php echo ($editVoucher['discount_type'] ?? 'percent') == 'fixed' ? 'display: none;' : ''; ?>">
+                                <div class="col-md-4 mb-3" id="max_discount_container"
+                                    style="<?php echo ($editVoucher['discount_type'] ?? 'percent') == 'fixed' ? 'display: none;' : ''; ?>">
                                     <label class="form-label">Giảm Tối Đa (VNĐ)</label>
-                                    <input type="number" class="form-control" name="max_discount" 
-                                        value="<?php echo $editVoucher['max_discount'] ?? ''; ?>" 
-                                        step="0.01" min="0" placeholder="Chỉ áp dụng cho %">
+                                    <input type="number" class="form-control" name="max_discount"
+                                        value="<?php echo $editVoucher['max_discount'] ?? ''; ?>" step="0.01" min="0"
+                                        placeholder="Chỉ áp dụng cho %">
                                     <small class="text-muted">Chỉ áp dụng khi giảm theo %</small>
                                 </div>
                             </div>
                         </div>
-                        
                         <!-- Tab 3: Điều Kiện -->
                         <div class="tab-pane fade" id="condition" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Đơn Hàng Tối Thiểu (VNĐ)</label>
-                                    <input type="number" class="form-control" name="min_order" 
-                                        value="<?php echo $editVoucher['min_order'] ?? '0'; ?>" 
-                                        step="0.01" min="0">
+                                    <input type="number" class="form-control" name="min_order"
+                                        value="<?php echo $editVoucher['min_order'] ?? '0'; ?>" step="0.01" min="0">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Áp Dụng Cho</label>
                                     <select class="form-select" name="apply_to">
-                                        <option value="all" <?php echo ($editVoucher['apply_to'] ?? 'all') == 'all' ? 'selected' : ''; ?>>Tất cả</option>
-                                        <option value="room" <?php echo ($editVoucher['apply_to'] ?? '') == 'room' ? 'selected' : ''; ?>>Chỉ phòng</option>
-                                        <option value="service" <?php echo ($editVoucher['apply_to'] ?? '') == 'service' ? 'selected' : ''; ?>>Chỉ dịch vụ</option>
+                                        <option value="all"
+                                            <?php echo ($editVoucher['apply_to'] ?? 'all') == 'all' ? 'selected' : ''; ?>>
+                                            Tất cả</option>
+                                        <option value="room"
+                                            <?php echo ($editVoucher['apply_to'] ?? '') == 'room' ? 'selected' : ''; ?>>
+                                            Chỉ phòng</option>
+                                        <option value="service"
+                                            <?php echo ($editVoucher['apply_to'] ?? '') == 'service' ? 'selected' : ''; ?>>
+                                            Chỉ dịch vụ</option>
                                     </select>
                                 </div>
                             </div>
@@ -706,17 +710,20 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                                     <label class="form-label">Loại Khách Hàng</label>
                                     <div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="customer_types[]" value="VIP" 
+                                            <input class="form-check-input" type="checkbox" name="customer_types[]"
+                                                value="VIP"
                                                 <?php echo (isset($editVoucher['customer_types_array']) && in_array('VIP', $editVoucher['customer_types_array'])) ? 'checked' : ''; ?>>
                                             <label class="form-check-label">VIP</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="customer_types[]" value="Corporate" 
+                                            <input class="form-check-input" type="checkbox" name="customer_types[]"
+                                                value="Corporate"
                                                 <?php echo (isset($editVoucher['customer_types_array']) && in_array('Corporate', $editVoucher['customer_types_array'])) ? 'checked' : ''; ?>>
                                             <label class="form-check-label">Corporate</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="customer_types[]" value="Regular" 
+                                            <input class="form-check-input" type="checkbox" name="customer_types[]"
+                                                value="Regular"
                                                 <?php echo (isset($editVoucher['customer_types_array']) && in_array('Regular', $editVoucher['customer_types_array'])) ? 'checked' : ''; ?>>
                                             <label class="form-check-label">Regular</label>
                                         </div>
@@ -725,56 +732,58 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Số Đêm Tối Thiểu</label>
-                                    <input type="number" class="form-control" name="min_nights" 
-                                        value="<?php echo $editVoucher['min_nights'] ?? ''; ?>" 
-                                        min="1" placeholder="Để trống = không giới hạn">
+                                    <input type="number" class="form-control" name="min_nights"
+                                        value="<?php echo $editVoucher['min_nights'] ?? ''; ?>" min="1"
+                                        placeholder="Để trống = không giới hạn">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Số Phòng Tối Thiểu</label>
-                                    <input type="number" class="form-control" name="min_rooms" 
-                                        value="<?php echo $editVoucher['min_rooms'] ?? ''; ?>" 
-                                        min="1" placeholder="Để trống = không giới hạn">
+                                    <input type="number" class="form-control" name="min_rooms"
+                                        value="<?php echo $editVoucher['min_rooms'] ?? ''; ?>" min="1"
+                                        placeholder="Để trống = không giới hạn">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Loại Phòng</label>
                                     <select class="form-select" name="room_types[]" multiple size="5">
                                         <?php foreach ($roomTypes as $rt): ?>
-                                            <option value="<?php echo $rt['room_type_id']; ?>"
-                                                <?php echo (isset($editVoucher['room_types_array']) && in_array($rt['room_type_id'], $editVoucher['room_types_array'])) ? 'selected' : ''; ?>>
-                                                <?php echo h($rt['room_type_name']); ?>
-                                            </option>
+                                        <option value="<?php echo $rt['room_type_id']; ?>"
+                                            <?php echo (isset($editVoucher['room_types_array']) && in_array($rt['room_type_id'], $editVoucher['room_types_array'])) ? 'selected' : ''; ?>>
+                                            <?php echo h($rt['room_type_name']); ?>
+                                        </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <small class="text-muted">Giữ Ctrl để chọn nhiều. Để trống = tất cả loại phòng</small>
+                                    <small class="text-muted">Giữ Ctrl để chọn nhiều. Để trống = tất cả loại
+                                        phòng</small>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Dịch Vụ</label>
                                 <select class="form-select" name="service_ids[]" multiple size="5">
                                     <?php foreach ($services as $sv): ?>
-                                        <option value="<?php echo $sv['service_id']; ?>"
-                                            <?php echo (isset($editVoucher['service_ids_array']) && in_array($sv['service_id'], $editVoucher['service_ids_array'])) ? 'selected' : ''; ?>>
-                                            <?php echo h($sv['service_name']); ?>
-                                        </option>
+                                    <option value="<?php echo $sv['service_id']; ?>"
+                                        <?php echo (isset($editVoucher['service_ids_array']) && in_array($sv['service_id'], $editVoucher['service_ids_array'])) ? 'selected' : ''; ?>>
+                                        <?php echo h($sv['service_name']); ?>
+                                    </option>
                                     <?php endforeach; ?>
                                 </select>
-                                <small class="text-muted">Giữ Ctrl để chọn nhiều. Để trống = tất cả dịch vụ</small>
+                                <small class="text-muted">Giữ Ctrl để chọn nhiều. Để trống = tất cả dịch
+                                    vụ</small>
                             </div>
                         </div>
-                        
+
                         <!-- Tab 4: Thời Hạn -->
                         <div class="tab-pane fade" id="time" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Ngày Bắt Đầu *</label>
-                                    <input type="date" class="form-control" name="start_date" 
+                                    <input type="date" class="form-control" name="start_date"
                                         value="<?php echo $editVoucher['start_date'] ?? ''; ?>" required>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Ngày Kết Thúc *</label>
-                                    <input type="date" class="form-control" name="end_date" 
+                                    <input type="date" class="form-control" name="end_date"
                                         value="<?php echo $editVoucher['end_date'] ?? ''; ?>" required>
                                 </div>
                             </div>
@@ -786,54 +795,57 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                                         $days = ['Mon' => 'Thứ 2', 'Tue' => 'Thứ 3', 'Wed' => 'Thứ 4', 'Thu' => 'Thứ 5', 'Fri' => 'Thứ 6', 'Sat' => 'Thứ 7', 'Sun' => 'Chủ nhật'];
                                         foreach ($days as $dayCode => $dayName): 
                                         ?>
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="checkbox" name="valid_days[]" value="<?php echo $dayCode; ?>"
-                                                    <?php echo (isset($editVoucher['valid_days_array']) && in_array($dayCode, $editVoucher['valid_days_array'])) ? 'checked' : ''; ?>>
-                                                <label class="form-check-label"><?php echo $dayName; ?></label>
-                                            </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="valid_days[]"
+                                                value="<?php echo $dayCode; ?>"
+                                                <?php echo (isset($editVoucher['valid_days_array']) && in_array($dayCode, $editVoucher['valid_days_array'])) ? 'checked' : ''; ?>>
+                                            <label class="form-check-label"><?php echo $dayName; ?></label>
+                                        </div>
                                         <?php endforeach; ?>
                                     </div>
                                     <small class="text-muted">Để trống = tất cả các ngày</small>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Giờ Hợp Lệ</label>
-                                    <input type="text" class="form-control" name="valid_hours" 
-                                        value="<?php echo h($editVoucher['valid_hours'] ?? ''); ?>" 
+                                    <input type="text" class="form-control" name="valid_hours"
+                                        value="<?php echo h($editVoucher['valid_hours'] ?? ''); ?>"
                                         placeholder="VD: 14:00-18:00">
-                                    <small class="text-muted">Định dạng: HH:MM-HH:MM. Để trống = tất cả giờ</small>
+                                    <small class="text-muted">Định dạng: HH:MM-HH:MM. Để trống = tất cả
+                                        giờ</small>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Tab 5: Cài Đặt -->
                         <div class="tab-pane fade" id="settings" role="tabpanel">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Tổng Số Lần Sử Dụng *</label>
-                                    <input type="number" class="form-control" name="total_uses" 
-                                        value="<?php echo $editVoucher['total_uses'] ?? '100'; ?>" 
-                                        required min="1">
+                                    <input type="number" class="form-control" name="total_uses"
+                                        value="<?php echo $editVoucher['total_uses'] ?? '100'; ?>" required min="1">
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Mỗi Khách Dùng Tối Đa</label>
-                                    <input type="number" class="form-control" name="per_customer" 
-                                        value="<?php echo $editVoucher['per_customer'] ?? '1'; ?>" 
-                                        min="1">
+                                    <input type="number" class="form-control" name="per_customer"
+                                        value="<?php echo $editVoucher['per_customer'] ?? '1'; ?>" min="1">
                                 </div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Trạng Thái *</label>
                                     <select class="form-select" name="status" required>
-                                        <option value="active" <?php echo ($editVoucher['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>Hoạt động</option>
-                                        <option value="inactive" <?php echo ($editVoucher['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>Tạm dừng</option>
+                                        <option value="active"
+                                            <?php echo ($editVoucher['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>
+                                            Hoạt động</option>
+                                        <option value="inactive"
+                                            <?php echo ($editVoucher['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>
+                                            Tạm dừng</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Độ Ưu Tiên</label>
-                                    <input type="number" class="form-control" name="priority" 
-                                        value="<?php echo $editVoucher['priority'] ?? '0'; ?>" 
-                                        min="0">
+                                    <input type="number" class="form-control" name="priority"
+                                        value="<?php echo $editVoucher['priority'] ?? '0'; ?>" min="0">
                                     <small class="text-muted">Số càng cao càng ưu tiên</small>
                                 </div>
                             </div>
@@ -842,17 +854,20 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                                     <label class="form-label">Phương Thức Thanh Toán</label>
                                     <div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="payment_methods[]" value="Cash"
+                                            <input class="form-check-input" type="checkbox" name="payment_methods[]"
+                                                value="Cash"
                                                 <?php echo (isset($editVoucher['payment_methods_array']) && in_array('Cash', $editVoucher['payment_methods_array'])) ? 'checked' : ''; ?>>
                                             <label class="form-check-label">Tiền mặt</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="payment_methods[]" value="Bank Transfer"
+                                            <input class="form-check-input" type="checkbox" name="payment_methods[]"
+                                                value="Bank Transfer"
                                                 <?php echo (isset($editVoucher['payment_methods_array']) && in_array('Bank Transfer', $editVoucher['payment_methods_array'])) ? 'checked' : ''; ?>>
                                             <label class="form-check-label">Chuyển khoản</label>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="payment_methods[]" value="Credit Card"
+                                            <input class="form-check-input" type="checkbox" name="payment_methods[]"
+                                                value="Credit Card"
                                                 <?php echo (isset($editVoucher['payment_methods_array']) && in_array('Credit Card', $editVoucher['payment_methods_array'])) ? 'checked' : ''; ?>>
                                             <label class="form-check-label">Thẻ tín dụng</label>
                                         </div>
@@ -862,24 +877,29 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                             </div>
                             <div class="mb-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="is_featured" value="1" id="is_featured"
+                                    <input class="form-check-input" type="checkbox" name="is_featured" value="1"
+                                        id="is_featured"
                                         <?php echo ($editVoucher['is_featured'] ?? 0) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="is_featured">Nổi bật</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="is_public" value="1" id="is_public"
-                                        <?php echo ($editVoucher['is_public'] ?? 1) ? 'checked' : ''; ?>>
+                                    <input class="form-check-input" type="checkbox" name="is_public" value="1"
+                                        id="is_public" <?php echo ($editVoucher['is_public'] ?? 1) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="is_public">Công khai</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="auto_apply" value="1" id="auto_apply"
+                                    <input class="form-check-input" type="checkbox" name="auto_apply" value="1"
+                                        id="auto_apply"
                                         <?php echo ($editVoucher['auto_apply'] ?? 0) ? 'checked' : ''; ?>>
                                     <label class="form-check-label" for="auto_apply">Tự động áp dụng</label>
                                 </div>
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="is_stackable" value="1" id="is_stackable"
+                                    <input class="form-check-input" type="checkbox" name="is_stackable" value="1"
+                                        id="is_stackable"
                                         <?php echo ($editVoucher['is_stackable'] ?? 0) ? 'checked' : ''; ?>>
-                                    <label class="form-check-label" for="is_stackable">Có thể dùng chung với voucher khác</label>
+                                    <label class="form-check-label" for="is_stackable">Có thể dùng chung với
+                                        voucher
+                                        khác</label>
                                 </div>
                             </div>
                         </div>
@@ -913,9 +933,9 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                         <select class="form-select" name="customer_id" required>
                             <option value="">-- Chọn khách hàng --</option>
                             <?php foreach ($customers as $customer): ?>
-                                <option value="<?php echo $customer['customer_id']; ?>">
-                                    <?php echo h($customer['full_name']); ?> - <?php echo h($customer['phone']); ?>
-                                </option>
+                            <option value="<?php echo $customer['customer_id']; ?>">
+                                <?php echo h($customer['full_name']); ?> - <?php echo h($customer['phone']); ?>
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -931,7 +951,8 @@ if ($status_filter) $baseUrl .= "&status=" . urlencode($status_filter);
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" name="assign_voucher_customer" class="btn-primary-custom">Gán Voucher</button>
+                    <button type="submit" name="assign_voucher_customer" class="btn-primary-custom">Gán
+                        Voucher</button>
                 </div>
             </form>
         </div>
@@ -980,7 +1001,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const discountType = document.getElementById('discount_type');
     const maxDiscountContainer = document.getElementById('max_discount_container');
     const discountHint = document.getElementById('discount_hint');
-    
     if (discountType && maxDiscountContainer) {
         discountType.addEventListener('change', function() {
             if (this.value === 'percent') {
@@ -992,11 +1012,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Auto-open edit modal
     <?php if ($editVoucher): ?>
-        const editModal = new bootstrap.Modal(document.getElementById('addVoucherModal'));
-        editModal.show();
+    const editModal = new bootstrap.Modal(document.getElementById('addVoucherModal'));
+    editModal.show();
     <?php endif; ?>
 });
 
@@ -1066,135 +1086,19 @@ document.addEventListener('DOMContentLoaded', function() {
             url.searchParams.delete('action');
             url.searchParams.delete('id');
             window.history.replaceState({}, '', url);
-            
+
             const form = document.getElementById('voucherForm');
             if (form) {
                 form.reset();
-                
-                // Reset all input values
-                form.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(input => {
-                    if (input.name !== 'page' && input.name !== 'panel') {
-                        if (input.type === 'date') {
-                            input.value = '';
-                        } else if (input.type === 'number') {
-                            if (input.name === 'total_uses') input.value = '100';
-                            else if (input.name === 'per_customer') input.value = '1';
-                            else if (input.name === 'priority') input.value = '0';
-                            else input.value = '';
-                        } else {
-                            input.value = '';
-                        }
-                    }
-                });
-                
-                // Reset all selects
-                form.querySelectorAll('select').forEach(select => {
-                    if (select.name === 'discount_type') select.value = 'percent';
-                    else if (select.name === 'status') select.value = 'active';
-                    else if (select.name === 'apply_to') select.value = 'all';
-                    else select.selectedIndex = 0;
-                });
-                
-                // Reset all checkboxes
-                form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = false;
-                });
-                
-                // Reset image preview
-                const imagePreview = document.getElementById('voucherPreview');
-                if (imagePreview) {
-                    imagePreview.style.display = 'none';
-                    imagePreview.src = '';
-                }
-                const imageInput = document.getElementById('voucherImage');
-                if (imageInput) imageInput.value = '';
-                
                 // Reset tabs to first
                 const firstTab = document.getElementById('basic-tab');
                 if (firstTab) {
                     firstTab.click();
                 }
-                
-                // Reset modal title
-                const modalTitle = modal.querySelector('.modal-title');
-                if (modalTitle) modalTitle.textContent = 'Thêm Voucher';
-                
-                // Reset submit button
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.name = 'add_voucher';
-                    submitBtn.textContent = 'Thêm Voucher';
-                }
-            }
-        });
-        
-        // Reset form when modal opens if not in edit mode
-        modal.addEventListener('show.bs.modal', function() {
-            const isEditMode = window.location.search.includes('action=edit');
-            if (!isEditMode) {
-                const form = document.getElementById('voucherForm');
-                if (form) {
-                    form.reset();
-                    
-                    // Reset all input values
-                    form.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(input => {
-                        if (input.name !== 'page' && input.name !== 'panel') {
-                            if (input.type === 'date') {
-                                input.value = '';
-                            } else if (input.type === 'number') {
-                                if (input.name === 'total_uses') input.value = '100';
-                                else if (input.name === 'per_customer') input.value = '1';
-                                else if (input.name === 'priority') input.value = '0';
-                                else input.value = '';
-                            } else {
-                                input.value = '';
-                            }
-                        }
-                    });
-                    
-                    // Reset all selects
-                    form.querySelectorAll('select').forEach(select => {
-                        if (select.name === 'discount_type') select.value = 'percent';
-                        else if (select.name === 'status') select.value = 'active';
-                        else if (select.name === 'apply_to') select.value = 'all';
-                        else select.selectedIndex = 0;
-                    });
-                    
-                    // Reset all checkboxes
-                    form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                        checkbox.checked = false;
-                    });
-                    
-                    // Reset image preview
-                    const imagePreview = document.getElementById('voucherPreview');
-                    if (imagePreview) {
-                        imagePreview.style.display = 'none';
-                        imagePreview.src = '';
-                    }
-                    const imageInput = document.getElementById('voucherImage');
-                    if (imageInput) imageInput.value = '';
-                    
-                    // Reset tabs to first
-                    const firstTab = document.getElementById('basic-tab');
-                    if (firstTab) {
-                        firstTab.click();
-                    }
-                    
-                    // Reset modal title
-                    const modalTitle = modal.querySelector('.modal-title');
-                    if (modalTitle) modalTitle.textContent = 'Thêm Voucher';
-                    
-                    // Reset submit button
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) {
-                        submitBtn.name = 'add_voucher';
-                        submitBtn.textContent = 'Thêm Voucher';
-                    }
-                }
             }
         });
     }
-    
+
     // Reset form when "Add" button is clicked
     document.querySelectorAll('[data-bs-target="#addVoucherModal"]').forEach(button => {
         button.addEventListener('click', function() {
@@ -1202,74 +1106,7 @@ document.addEventListener('DOMContentLoaded', function() {
             url.searchParams.delete('action');
             url.searchParams.delete('id');
             window.history.replaceState({}, '', url);
-            
-            // Reset form after a short delay to ensure modal is ready
-            setTimeout(function() {
-                const form = document.getElementById('voucherForm');
-                if (form) {
-                    form.reset();
-                    
-                    // Reset all input values
-                    form.querySelectorAll('input[type="text"], input[type="number"], input[type="date"], textarea').forEach(input => {
-                        if (input.name !== 'page' && input.name !== 'panel') {
-                            if (input.type === 'date') {
-                                input.value = '';
-                            } else if (input.type === 'number') {
-                                if (input.name === 'total_uses') input.value = '100';
-                                else if (input.name === 'per_customer') input.value = '1';
-                                else if (input.name === 'priority') input.value = '0';
-                                else input.value = '';
-                            } else {
-                                input.value = '';
-                            }
-                        }
-                    });
-                    
-                    // Reset all selects
-                    form.querySelectorAll('select').forEach(select => {
-                        if (select.name === 'discount_type') select.value = 'percent';
-                        else if (select.name === 'status') select.value = 'active';
-                        else if (select.name === 'apply_to') select.value = 'all';
-                        else select.selectedIndex = 0;
-                    });
-                    
-                    // Reset all checkboxes
-                    form.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                        checkbox.checked = false;
-                    });
-                    
-                    // Reset image preview
-                    const imagePreview = document.getElementById('voucherPreview');
-                    if (imagePreview) {
-                        imagePreview.style.display = 'none';
-                        imagePreview.src = '';
-                    }
-                    const imageInput = document.getElementById('voucherImage');
-                    if (imageInput) imageInput.value = '';
-                    
-                    // Reset tabs to first
-                    const firstTab = document.getElementById('basic-tab');
-                    if (firstTab) {
-                        firstTab.click();
-                    }
-                    
-                    // Reset modal title
-                    const modal = document.getElementById('addVoucherModal');
-                    if (modal) {
-                        const modalTitle = modal.querySelector('.modal-title');
-                        if (modalTitle) modalTitle.textContent = 'Thêm Voucher';
-                    }
-                    
-                    // Reset submit button
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) {
-                        submitBtn.name = 'add_voucher';
-                        submitBtn.textContent = 'Thêm Voucher';
-                    }
-                }
-            }, 200);
         });
     });
 });
 </script>
-

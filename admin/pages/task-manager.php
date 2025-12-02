@@ -93,9 +93,9 @@ if ($trang_thai_filter) $baseUrl .= "&trang_thai=" . urlencode($trang_thai_filte
 if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
 ?>
 
-<div class="main-content">
-    <div class="content-header d-flex justify-content-between align-items-center">
-        <h1>Quản Lý Nhiệm Vụ</h1>
+<div class="content-card">
+    <div class="card-header-custom">
+        <h3 class="card-title">Quản Lý Nhiệm Vụ</h3>
         <?php if ($canCreateTask): ?>
         <button class="btn btn-primary" onclick="openGlobalTaskModal()">
             <i class="fas fa-plus"></i> Giao Nhiệm Vụ Mới
@@ -113,10 +113,10 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
                     <select class="form-select" name="nhan_vien_id">
                         <option value="0">Tất cả nhân viên</option>
                         <?php foreach ($nhanVienList as $nv): ?>
-                            <option value="<?php echo (int)$nv['id_nhan_vien']; ?>"
-                                <?php echo $nhan_vien_id == $nv['id_nhan_vien'] ? 'selected' : ''; ?>>
-                                <?php echo h($nv['ho_ten']); ?> (<?php echo h($nv['ma_nhan_vien']); ?>)
-                            </option>
+                        <option value="<?php echo (int)$nv['id_nhan_vien']; ?>"
+                            <?php echo $nhan_vien_id == $nv['id_nhan_vien'] ? 'selected' : ''; ?>>
+                            <?php echo h($nv['ho_ten']); ?> (<?php echo h($nv['ma_nhan_vien']); ?>)
+                        </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -124,9 +124,13 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
                     <label class="form-label">Trạng Thái</label>
                     <select class="form-select" name="trang_thai">
                         <option value="">Tất cả</option>
-                        <option value="Chưa bắt đầu" <?php echo $trang_thai_filter == 'Chưa bắt đầu' ? 'selected' : ''; ?>>Chưa bắt đầu</option>
-                        <option value="Đang thực hiện" <?php echo $trang_thai_filter == 'Đang thực hiện' ? 'selected' : ''; ?>>Đang thực hiện</option>
-                        <option value="Hoàn thành" <?php echo $trang_thai_filter == 'Hoàn thành' ? 'selected' : ''; ?>>Hoàn thành</option>
+                        <option value="Chưa bắt đầu"
+                            <?php echo $trang_thai_filter == 'Chưa bắt đầu' ? 'selected' : ''; ?>>Chưa bắt đầu</option>
+                        <option value="Đang thực hiện"
+                            <?php echo $trang_thai_filter == 'Đang thực hiện' ? 'selected' : ''; ?>>Đang thực hiện
+                        </option>
+                        <option value="Hoàn thành" <?php echo $trang_thai_filter == 'Hoàn thành' ? 'selected' : ''; ?>>
+                            Hoàn thành</option>
                         <option value="Hủy" <?php echo $trang_thai_filter == 'Hủy' ? 'selected' : ''; ?>>Hủy</option>
                     </select>
                 </div>
@@ -135,9 +139,11 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
                     <select class="form-select" name="muc_do">
                         <option value="">Tất cả</option>
                         <option value="Thấp" <?php echo $muc_do_filter == 'Thấp' ? 'selected' : ''; ?>>Thấp</option>
-                        <option value="Trung bình" <?php echo $muc_do_filter == 'Trung bình' ? 'selected' : ''; ?>>Trung bình</option>
+                        <option value="Trung bình" <?php echo $muc_do_filter == 'Trung bình' ? 'selected' : ''; ?>>Trung
+                            bình</option>
                         <option value="Cao" <?php echo $muc_do_filter == 'Cao' ? 'selected' : ''; ?>>Cao</option>
-                        <option value="Khẩn cấp" <?php echo $muc_do_filter == 'Khẩn cấp' ? 'selected' : ''; ?>>Khẩn cấp</option>
+                        <option value="Khẩn cấp" <?php echo $muc_do_filter == 'Khẩn cấp' ? 'selected' : ''; ?>>Khẩn cấp
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex align-items-end">
@@ -150,25 +156,25 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
     <!-- Danh sách nhiệm vụ -->
     <div class="table-container">
         <?php if (empty($tasks)): ?>
-            <div class="alert alert-info text-center">
-                <i class="fas fa-info-circle"></i> Không có nhiệm vụ nào.
-            </div>
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle"></i> Không có nhiệm vụ nào.
+        </div>
         <?php else: ?>
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Nhiệm Vụ</th>
-                        <th>Nhân Viên</th>
-                        <th>Mức Độ</th>
-                        <th>Tiến Độ</th>
-                        <th>Thời Gian</th>
-                        <th>Trạng Thái</th>
-                        <th>Thao Tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($tasks as $task): ?>
-                        <?php
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Nhiệm Vụ</th>
+                    <th>Nhân Viên</th>
+                    <th>Mức Độ</th>
+                    <th>Tiến Độ</th>
+                    <th>Thời Gian</th>
+                    <th>Trạng Thái</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($tasks as $task): ?>
+                <?php
                             $priorityClass = 'bg-secondary';
                             switch ($task['muc_do_uu_tien']) {
                                 case 'Khẩn cấp': $priorityClass = 'bg-danger'; break;
@@ -184,53 +190,59 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
                                 case 'Hủy': $statusClass = 'bg-danger'; break;
                             }
                         ?>
-                        <tr>
-                            <td>
-                                <strong><?php echo h($task['ten_nhiem_vu']); ?></strong><br>
-                                <small class="text-muted">
-                                    Người giao: <?php echo h($task['nguoi_gan_ten'] ?: 'N/A'); ?>
-                                </small>
-                            </td>
-                            <td>
-                                <?php echo h($task['ten_nhan_vien']); ?><br>
-                                <small class="text-muted"><?php echo h($task['ma_nhan_vien']); ?></small>
-                            </td>
-                            <td><span class="badge <?php echo $priorityClass; ?>"><?php echo h($task['muc_do_uu_tien']); ?></span></td>
-                            <td>
-                                <small><?php echo (int)$task['tien_do_hoan_thanh']; ?>%</small>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar" role="progressbar"
-                                         style="width: <?php echo (int)$task['tien_do_hoan_thanh']; ?>%"></div>
-                                </div>
-                            </td>
-                            <td>
-                                <small class="text-muted">
-                                    Bắt đầu: <?php echo formatDate($task['ngay_bat_dau']); ?><br>
-                                    Hạn: <?php echo formatDate($task['han_hoan_thanh']); ?>
-                                </small>
-                            </td>
-                            <td><span class="badge <?php echo $statusClass; ?>"><?php echo h($task['trang_thai']); ?></span></td>
-                            <td>
-                                <?php if ($canViewDetailTask): ?>
-                                <button class="btn btn-sm btn-outline-info" onclick="viewTaskDetail(<?php echo $task['id_nhiem_vu']; ?>)" title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <?php endif; ?>
-                                <?php if ($canEditTask): ?>
-                                <button class="btn btn-sm btn-outline-warning" onclick="editTask(<?php echo $task['id_nhiem_vu']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <?php endif; ?>
-                                <?php if ($canDeleteTask): ?>
-                                <button class="btn btn-sm btn-outline-danger" onclick="deleteTask(<?php echo $task['id_nhiem_vu']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                <?php endif; ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                <tr>
+                    <td>
+                        <strong><?php echo h($task['ten_nhiem_vu']); ?></strong><br>
+                        <small class="text-muted">
+                            Người giao: <?php echo h($task['nguoi_gan_ten'] ?: 'N/A'); ?>
+                        </small>
+                    </td>
+                    <td>
+                        <?php echo h($task['ten_nhan_vien']); ?><br>
+                        <small class="text-muted"><?php echo h($task['ma_nhan_vien']); ?></small>
+                    </td>
+                    <td><span
+                            class="badge <?php echo $priorityClass; ?>"><?php echo h($task['muc_do_uu_tien']); ?></span>
+                    </td>
+                    <td>
+                        <small><?php echo (int)$task['tien_do_hoan_thanh']; ?>%</small>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar" role="progressbar"
+                                style="width: <?php echo (int)$task['tien_do_hoan_thanh']; ?>%"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            Bắt đầu: <?php echo formatDate($task['ngay_bat_dau']); ?><br>
+                            Hạn: <?php echo formatDate($task['han_hoan_thanh']); ?>
+                        </small>
+                    </td>
+                    <td><span class="badge <?php echo $statusClass; ?>"><?php echo h($task['trang_thai']); ?></span>
+                    </td>
+                    <td>
+                        <?php if ($canViewDetailTask): ?>
+                        <button class="btn btn-sm btn-outline-info"
+                            onclick="viewTaskDetail(<?php echo $task['id_nhiem_vu']; ?>)" title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <?php endif; ?>
+                        <?php if ($canEditTask): ?>
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editTask(<?php echo $task['id_nhiem_vu']; ?>)" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <?php endif; ?>
+                        <?php if ($canDeleteTask): ?>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteTask(<?php echo $task['id_nhiem_vu']; ?>)" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
         <?php endif; ?>
     </div>
 
@@ -252,9 +264,9 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
                         <select class="form-select" name="id_nhan_vien_duoc_gan" required>
                             <option value="">-- Chọn nhân viên --</option>
                             <?php foreach ($nhanVienList as $nv): ?>
-                                <option value="<?php echo (int)$nv['id_nhan_vien']; ?>">
-                                    <?php echo h($nv['ho_ten']); ?> (<?php echo h($nv['ma_nhan_vien']); ?>)
-                                </option>
+                            <option value="<?php echo (int)$nv['id_nhan_vien']; ?>">
+                                <?php echo h($nv['ho_ten']); ?> (<?php echo h($nv['ma_nhan_vien']); ?>)
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -299,433 +311,6 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
     </div>
 </div>
 
-<script>
-function openGlobalTaskModal() {
-    const today = new Date().toISOString().split('T')[0];
-    const form = document.getElementById('globalTaskForm');
-    if (!form) return;
-
-    const ngayBatDau = form.querySelector('input[name="ngay_bat_dau"]');
-    const hanHoanThanh = form.querySelector('input[name="han_hoan_thanh"]');
-    if (ngayBatDau) {
-        ngayBatDau.value = today;
-        ngayBatDau.setAttribute('min', today);
-    }
-    if (hanHoanThanh) {
-        hanHoanThanh.value = today;
-        hanHoanThanh.setAttribute('min', today);
-        ngayBatDau?.addEventListener('change', function () {
-            hanHoanThanh.setAttribute('min', this.value);
-        });
-    }
-
-    const modal = new bootstrap.Modal(document.getElementById('globalTaskModal'));
-    modal.show();
-}
-
-function submitGlobalTask() {
-    const form = document.getElementById('globalTaskForm');
-    if (!form) return;
-
-    const formData = new FormData(form);
-    formData.append('action', 'assign_task');
-
-    fetch('/My-Web-Hotel/admin/api/staff-api.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Giao nhiệm vụ thành công!');
-            bootstrap.Modal.getInstance(document.getElementById('globalTaskModal')).hide();
-            window.location.reload();
-        } else {
-            alert('Lỗi: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi giao nhiệm vụ');
-    });
-}
-
-function viewTaskDetail(id) {
-    fetch(`/My-Web-Hotel/admin/api/staff-api.php?action=view_task&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                const task = data.task;
-                let content = `
-                    <div class="mb-3">
-                        <h5><strong>${task.ten_nhiem_vu}</strong></h5>
-                        <p class="text-muted">Người giao: ${task.nguoi_gan_ten || 'N/A'}</p>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Mô tả chi tiết:</strong>
-                        <p>${task.mo_ta_chi_tiet || 'Không có mô tả'}</p>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong>Nhân viên được giao:</strong> ${task.ten_nhan_vien} (${task.ma_nhan_vien})
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Mức độ ưu tiên:</strong> <span class="badge">${task.muc_do_uu_tien}</span>
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong>Ngày bắt đầu:</strong> ${task.ngay_bat_dau}
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Hạn hoàn thành:</strong> ${task.han_hoan_thanh}
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <strong>Tiến độ:</strong> ${task.tien_do_hoan_thanh}%
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Trạng thái:</strong> <span class="badge">${task.trang_thai}</span>
-                        </div>
-                    </div>
-                    ${task.ghi_chu ? `<div class="mb-3"><strong>Ghi chú:</strong><p>${task.ghi_chu}</p></div>` : ''}
-                `;
-                document.getElementById('viewTaskContent').innerHTML = content;
-                const modal = new bootstrap.Modal(document.getElementById('viewTaskModal'));
-                modal.show();
-            } else {
-                alert('Không thể tải thông tin nhiệm vụ: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Có lỗi xảy ra khi tải thông tin nhiệm vụ');
-        });
-}
-
-function editTask(id) {
-    console.log('editTask called with id:', id); // Debug log
-    fetch(`/My-Web-Hotel/admin/api/staff-api.php?action=view_task&id=${id}`)
-        .then(response => {
-            console.log('Response status:', response.status); // Debug log
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('API Response:', data); // Debug log
-            if (data.success && data.task) {
-                const task = data.task;
-                console.log('Task data:', task); // Debug log
-                const form = document.getElementById('editTaskForm');
-                if (!form) {
-                    alert('Không tìm thấy form chỉnh sửa (editTaskForm)');
-                    console.error('Form editTaskForm not found'); // Debug log
-                    return;
-                }
-                
-                // Populate form với dữ liệu từ server
-                const idNhiemVu = form.querySelector('input[name="id_nhiem_vu"]');
-                const idNhanVien = form.querySelector('select[name="id_nhan_vien_duoc_gan"]');
-                const tenNhiemVu = form.querySelector('input[name="ten_nhiem_vu"]');
-                const moTaChiTiet = form.querySelector('textarea[name="mo_ta_chi_tiet"]');
-                const mucDoUuTien = form.querySelector('select[name="muc_do_uu_tien"]');
-                const ngayBatDau = form.querySelector('input[name="ngay_bat_dau"]');
-                const hanHoanThanh = form.querySelector('input[name="han_hoan_thanh"]');
-                const ghiChu = form.querySelector('textarea[name="ghi_chu"]');
-                const trangThai = form.querySelector('select[name="trang_thai"]');
-                const tienDoHoanThanh = form.querySelector('input[name="tien_do_hoan_thanh"]');
-                
-                console.log('Form fields found:', {
-                    idNhiemVu: !!idNhiemVu,
-                    idNhanVien: !!idNhanVien,
-                    tenNhiemVu: !!tenNhiemVu,
-                    moTaChiTiet: !!moTaChiTiet,
-                    mucDoUuTien: !!mucDoUuTien,
-                    ngayBatDau: !!ngayBatDau,
-                    hanHoanThanh: !!hanHoanThanh,
-                    ghiChu: !!ghiChu,
-                    trangThai: !!trangThai,
-                    tienDoHoanThanh: !!tienDoHoanThanh
-                }); // Debug log
-                
-                // Set values - đảm bảo tất cả fields được populate
-                // API trả về nv.* nên tất cả fields từ nhiem_vu sẽ có trong task object
-                if (idNhiemVu && task.id_nhiem_vu) {
-                    idNhiemVu.value = String(task.id_nhiem_vu);
-                    console.log('Set id_nhiem_vu:', idNhiemVu.value);
-                }
-                if (idNhanVien && task.id_nhan_vien_duoc_gan) {
-                    idNhanVien.value = String(task.id_nhan_vien_duoc_gan);
-                    console.log('Set id_nhan_vien_duoc_gan:', idNhanVien.value);
-                }
-                if (tenNhiemVu && task.ten_nhiem_vu) {
-                    tenNhiemVu.value = String(task.ten_nhiem_vu);
-                    console.log('Set ten_nhiem_vu:', tenNhiemVu.value);
-                }
-                if (moTaChiTiet) {
-                    moTaChiTiet.value = task.mo_ta_chi_tiet ? String(task.mo_ta_chi_tiet) : '';
-                    console.log('Set mo_ta_chi_tiet:', moTaChiTiet.value);
-                }
-                if (mucDoUuTien) {
-                    mucDoUuTien.value = task.muc_do_uu_tien ? String(task.muc_do_uu_tien) : 'Trung bình';
-                    console.log('Set muc_do_uu_tien:', mucDoUuTien.value);
-                }
-                if (ngayBatDau && task.ngay_bat_dau) {
-                    // Format date (YYYY-MM-DD) - lấy phần date nếu có datetime
-                    let dateValue = String(task.ngay_bat_dau);
-                    if (dateValue.includes(' ')) {
-                        dateValue = dateValue.split(' ')[0];
-                    }
-                    // Convert từ format khác nếu cần (DD/MM/YYYY -> YYYY-MM-DD)
-                    if (dateValue.includes('/')) {
-                        const parts = dateValue.split('/');
-                        if (parts.length === 3) {
-                            dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
-                        }
-                    }
-                    ngayBatDau.value = dateValue;
-                    console.log('Set ngay_bat_dau:', ngayBatDau.value);
-                }
-                if (hanHoanThanh && task.han_hoan_thanh) {
-                    // Format date (YYYY-MM-DD) - lấy phần date nếu có datetime
-                    let dateValue = String(task.han_hoan_thanh);
-                    if (dateValue.includes(' ')) {
-                        dateValue = dateValue.split(' ')[0];
-                    }
-                    // Convert từ format khác nếu cần (DD/MM/YYYY -> YYYY-MM-DD)
-                    if (dateValue.includes('/')) {
-                        const parts = dateValue.split('/');
-                        if (parts.length === 3) {
-                            dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
-                        }
-                    }
-                    hanHoanThanh.value = dateValue;
-                    console.log('Set han_hoan_thanh:', hanHoanThanh.value);
-                }
-                if (ghiChu) {
-                    ghiChu.value = task.ghi_chu ? String(task.ghi_chu) : '';
-                    console.log('Set ghi_chu:', ghiChu.value);
-                }
-                if (trangThai) {
-                    trangThai.value = task.trang_thai ? String(task.trang_thai) : 'Chưa bắt đầu';
-                    console.log('Set trang_thai:', trangThai.value);
-                }
-                if (tienDoHoanThanh) {
-                    tienDoHoanThanh.value = task.tien_do_hoan_thanh !== undefined && task.tien_do_hoan_thanh !== null ? String(task.tien_do_hoan_thanh) : '0';
-                    console.log('Set tien_do_hoan_thanh:', tienDoHoanThanh.value);
-                }
-                
-                // Trigger change event để đảm bảo Select2 và các event listeners được cập nhật
-                if (idNhanVien) {
-                    const event = new Event('change', { bubbles: true });
-                    idNhanVien.dispatchEvent(event);
-                }
-                
-                // Delay để đảm bảo values đã được set trước khi mở modal
-                // Mở modal trước, sau đó populate data
-                setTimeout(function() {
-                    const modalEl = document.getElementById('editTaskModal');
-                    if (modalEl) {
-                        const modal = new bootstrap.Modal(modalEl);
-                        modal.show();
-                        console.log('Modal opened');
-                        
-                        // Sau khi modal đã mở, đảm bảo values được set lại (đôi khi modal.show() reset form)
-                        setTimeout(function() {
-                            // Set lại values sau khi modal đã render
-                            if (idNhiemVu && task.id_nhiem_vu) {
-                                idNhiemVu.value = String(task.id_nhiem_vu);
-                            }
-                            if (idNhanVien && task.id_nhan_vien_duoc_gan) {
-                                idNhanVien.value = String(task.id_nhan_vien_duoc_gan);
-                                // Trigger change event lại
-                                const event = new Event('change', { bubbles: true });
-                                idNhanVien.dispatchEvent(event);
-                            }
-                            if (tenNhiemVu && task.ten_nhiem_vu) {
-                                tenNhiemVu.value = String(task.ten_nhiem_vu);
-                            }
-                            if (moTaChiTiet) {
-                                moTaChiTiet.value = task.mo_ta_chi_tiet ? String(task.mo_ta_chi_tiet) : '';
-                            }
-                            if (mucDoUuTien) {
-                                mucDoUuTien.value = task.muc_do_uu_tien ? String(task.muc_do_uu_tien) : 'Trung bình';
-                            }
-                            if (ngayBatDau && task.ngay_bat_dau) {
-                                let dateValue = String(task.ngay_bat_dau);
-                                if (dateValue.includes(' ')) {
-                                    dateValue = dateValue.split(' ')[0];
-                                }
-                                if (dateValue.includes('/')) {
-                                    const parts = dateValue.split('/');
-                                    if (parts.length === 3) {
-                                        dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
-                                    }
-                                }
-                                ngayBatDau.value = dateValue;
-                            }
-                            if (hanHoanThanh && task.han_hoan_thanh) {
-                                let dateValue = String(task.han_hoan_thanh);
-                                if (dateValue.includes(' ')) {
-                                    dateValue = dateValue.split(' ')[0];
-                                }
-                                if (dateValue.includes('/')) {
-                                    const parts = dateValue.split('/');
-                                    if (parts.length === 3) {
-                                        dateValue = parts[2] + '-' + parts[1] + '-' + parts[0];
-                                    }
-                                }
-                                hanHoanThanh.value = dateValue;
-                            }
-                            if (ghiChu) {
-                                ghiChu.value = task.ghi_chu ? String(task.ghi_chu) : '';
-                            }
-                            if (trangThai) {
-                                trangThai.value = task.trang_thai ? String(task.trang_thai) : 'Chưa bắt đầu';
-                            }
-                            if (tienDoHoanThanh) {
-                                tienDoHoanThanh.value = task.tien_do_hoan_thanh !== undefined && task.tien_do_hoan_thanh !== null ? String(task.tien_do_hoan_thanh) : '0';
-                            }
-                            console.log('Values re-set after modal opened');
-                        }, 300);
-                    } else {
-                        console.error('Modal editTaskModal not found');
-                    }
-                }, 100);
-            } else {
-                alert('Không thể tải thông tin nhiệm vụ: ' + (data.message || 'Lỗi không xác định'));
-                console.error('API returned error:', data);
-            }
-        })
-        .catch(error => {
-            alert('Có lỗi xảy ra khi tải thông tin nhiệm vụ: ' + error.message);
-            console.error('Fetch error:', error);
-        });
-}
-
-    // Hàm reset form tổng quát
-    function resetFormFields(form) {
-        if (!form) return;
-
-        form.reset();
-
-        // Xóa input hidden (trừ các field cần thiết)
-        form.querySelectorAll('input[type="hidden"]').forEach(input => {
-            if (input.name === 'id_nhiem_vu') {
-                input.value = '';
-            }
-        });
-
-        // Reset text/number/tel/email/date inputs
-        form.querySelectorAll('input[type="text"], input[type="number"], input[type="tel"], input[type="email"], input[type="date"]').forEach(input => {
-            input.value = '';
-        });
-
-        // Reset select
-        form.querySelectorAll('select').forEach(select => {
-            select.selectedIndex = 0;
-        });
-
-        // Reset textarea
-        form.querySelectorAll('textarea').forEach(textarea => {
-            textarea.value = '';
-        });
-    }
-
-    // Hàm reset modal về trạng thái ban đầu
-    function resetModalToAddMode(modalElement, form) {
-        if (!modalElement || !form) return;
-
-        const modalTitle = modalElement.querySelector('.modal-title');
-        if (modalTitle) {
-            modalTitle.innerHTML = '<i class="fas fa-edit"></i> Sửa Nhiệm Vụ';
-        }
-    }
-
-// Reset edit task form when modal is closed
-document.addEventListener('DOMContentLoaded', function() {
-    const editModal = document.getElementById('editTaskModal');
-    if (editModal) {
-        editModal.addEventListener('hidden.bs.modal', function() {
-            const form = document.getElementById('editTaskForm');
-            if (form) {
-                resetFormFields(form);
-                resetModalToAddMode(editModal, form);
-            }
-        });
-    }
-    
-    // Reset global task form when modal is closed
-    const globalModal = document.getElementById('globalTaskModal');
-    if (globalModal) {
-        globalModal.addEventListener('hidden.bs.modal', function() {
-            const form = document.getElementById('globalTaskForm');
-            if (form) {
-                form.reset();
-            }
-        });
-    }
-});
-
-function submitEditTask() {
-    const form = document.getElementById('editTaskForm');
-    if (!form) return;
-
-    const formData = new FormData(form);
-    formData.append('action', 'update_task');
-
-    fetch('/My-Web-Hotel/admin/api/staff-api.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Cập nhật nhiệm vụ thành công!');
-            bootstrap.Modal.getInstance(document.getElementById('editTaskModal')).hide();
-            window.location.reload();
-        } else {
-            alert('Lỗi: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi cập nhật nhiệm vụ');
-    });
-}
-
-function deleteTask(id) {
-    if (!confirm('Bạn có chắc chắn muốn xóa nhiệm vụ này?')) {
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('action', 'delete_task');
-    formData.append('id_nhiem_vu', id);
-
-    fetch('/My-Web-Hotel/admin/api/staff-api.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Xóa nhiệm vụ thành công!');
-            window.location.reload();
-        } else {
-            alert('Lỗi: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi xóa nhiệm vụ');
-    });
-}
-</script>
-
 <!-- Modal: Xem chi tiết nhiệm vụ -->
 <div class="modal fade" id="viewTaskModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -761,9 +346,9 @@ function deleteTask(id) {
                         <select class="form-select" name="id_nhan_vien_duoc_gan" required>
                             <option value="">-- Chọn nhân viên --</option>
                             <?php foreach ($nhanVienList as $nv): ?>
-                                <option value="<?php echo (int)$nv['id_nhan_vien']; ?>">
-                                    <?php echo h($nv['ho_ten']); ?> (<?php echo h($nv['ma_nhan_vien']); ?>)
-                                </option>
+                            <option value="<?php echo (int)$nv['id_nhan_vien']; ?>">
+                                <?php echo h($nv['ho_ten']); ?> (<?php echo h($nv['ma_nhan_vien']); ?>)
+                            </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -806,7 +391,8 @@ function deleteTask(id) {
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Tiến Độ Hoàn Thành (%)</label>
-                            <input type="number" class="form-control" name="tien_do_hoan_thanh" min="0" max="100" value="0">
+                            <input type="number" class="form-control" name="tien_do_hoan_thanh" min="0" max="100"
+                                value="0">
                         </div>
                     </div>
                     <div class="mb-3">
@@ -823,5 +409,3 @@ function deleteTask(id) {
     </div>
 </div>
 <?php endif; ?>
-
-

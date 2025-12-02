@@ -16,117 +16,81 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 $message = '';
 $messageType = '';
 
-// Hàm upload ảnh cho phòng (hỗ trợ nhiều ảnh)
-function uploadRoomImages($files, $oldImages = '') {
-    $uploadDir = __DIR__ . '/../assets/images/room/';
+// Hàm upload ảnh cho phòng
+function uploadRoomImage($file, $oldImage = '') {
+    if (!isset($file['name']) || empty($file['name'])) {
+        return $oldImage;
+    }
+    
+    $uploadDir = '../../client/assets/images/room/';
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
     
     $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
     $maxSize = 5 * 1024 * 1024; // 5MB
-    $maxImages = 5; // Tối đa 5 ảnh
     
-    $uploadedImages = [];
-    
-    // Parse old images (có thể là JSON string hoặc single image path)
-    $oldImagesArray = [];
-    if (!empty($oldImages)) {
-        if (is_string($oldImages) && (strpos($oldImages, '[') === 0 || strpos($oldImages, '{') === 0)) {
-            $decoded = json_decode($oldImages, true);
-            $oldImagesArray = is_array($decoded) ? $decoded : [];
-        } else {
-            $oldImagesArray = [$oldImages];
-        }
+    if (!in_array($file['type'], $allowedTypes)) {
+        return false;
     }
     
-    // Xử lý nhiều file upload
-    $fileCount = 0;
-    if (isset($files['name'])) {
-        if (is_array($files['name'])) {
-            // Multiple files
-            $fileCount = count($files['name']);
-            for ($i = 0; $i < $fileCount && count($uploadedImages) < $maxImages; $i++) {
-                if ($files['error'][$i] == UPLOAD_ERR_OK && !empty($files['name'][$i])) {
-                    $file = [
-                        'name' => $files['name'][$i],
-                        'type' => $files['type'][$i],
-                        'tmp_name' => $files['tmp_name'][$i],
-                        'error' => $files['error'][$i],
-                        'size' => $files['size'][$i]
-                    ];
-                    
-                    if (in_array($file['type'], $allowedTypes) && $file['size'] <= $maxSize) {
-                        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
-                        $newFileName = 'room_' . time() . '_' . uniqid() . '_' . $i . '.' . $extension;
-                        $targetPath = $uploadDir . $newFileName;
-                        
-                        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-                            $uploadedImages[] = 'assets/images/room/' . $newFileName;
-                        }
-                    }
-                }
-            }
-        } else {
-            // Single file
-            if ($files['error'] == UPLOAD_ERR_OK && !empty($files['name'])) {
-                if (in_array($files['type'], $allowedTypes) && $files['size'] <= $maxSize) {
-                    $extension = pathinfo($files['name'], PATHINFO_EXTENSION);
-                    $newFileName = 'room_' . time() . '_' . uniqid() . '.' . $extension;
-                    $targetPath = $uploadDir . $newFileName;
-                    
-                    if (move_uploaded_file($files['tmp_name'], $targetPath)) {
-                        $uploadedImages[] = 'assets/images/room/' . $newFileName;
-                    }
-                }
+    if ($file['size'] > $maxSize) {
+        return false;
+    }
+    
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $newFileName = 'room_' . time() . '_' . uniqid() . '.' . $extension;
+    $targetPath = $uploadDir . $newFileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        if ($oldImage && !empty($oldImage)) {
+            $oldPath = '../../client/' . $oldImage;
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
             }
         }
+        return 'assets/images/room/' . $newFileName;
     }
-    
-    // Nếu có ảnh cũ và không upload ảnh mới, giữ lại ảnh cũ
-    if (empty($uploadedImages) && !empty($oldImagesArray)) {
-        return json_encode($oldImagesArray);
-    }
-    
-    // Merge với ảnh cũ nếu cần (giữ lại ảnh cũ nếu không upload đủ)
-    if (!empty($oldImagesArray) && count($uploadedImages) < $maxImages) {
-        $remainingSlots = $maxImages - count($uploadedImages);
-        $oldImagesToKeep = array_slice($oldImagesArray, 0, $remainingSlots);
-        $uploadedImages = array_merge($oldImagesToKeep, $uploadedImages);
-    }
-    
-    // Xóa ảnh cũ không còn dùng
-    if (!empty($oldImagesArray)) {
-        foreach ($oldImagesArray as $oldImg) {
-            if (!in_array($oldImg, $uploadedImages)) {
-                $oldPath = '';
-                if (strpos($oldImg, 'client/') !== false) {
-                    $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldImg);
-                } else {
-                    $oldPath = __DIR__ . '/../' . $oldImg;
-                }
-                if (file_exists($oldPath)) {
-                    @unlink($oldPath);
-                }
-            }
-        }
-    }
-    
-    // Trả về JSON string nếu nhiều ảnh, hoặc string đơn nếu 1 ảnh
-    if (count($uploadedImages) > 1) {
-        return json_encode($uploadedImages);
-    } elseif (count($uploadedImages) == 1) {
-        return $uploadedImages[0];
-    }
-    
-    return $oldImages; // Trả về ảnh cũ nếu không upload được
+    return false;
 }
 
-// Hàm upload ảnh cho phòng (backward compatibility - single image)
-function uploadRoomImage($file, $oldImage = '') {
-    return uploadRoomImages($file, $oldImage);
+// Hàm upload ảnh cho loại phòng
+function uploadRoomTypeImage($file, $oldImage = '') {
+    if (!isset($file['name']) || empty($file['name'])) {
+        return $oldImage;
+    }
+    
+    $uploadDir = '../../client/assets/images/room-type/';
+    if (!file_exists($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+    
+    $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (!in_array($file['type'], $allowedTypes)) {
+        return false;
+    }
+    
+    if ($file['size'] > $maxSize) {
+        return false;
+    }
+    
+    $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+    $newFileName = 'roomtype_' . time() . '_' . uniqid() . '.' . $extension;
+    $targetPath = $uploadDir . $newFileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+        if ($oldImage && !empty($oldImage)) {
+            $oldPath = '../../client/' . $oldImage;
+            if (file_exists($oldPath)) {
+                unlink($oldPath);
+            }
+        }
+        return 'assets/images/room-type/' . $newFileName;
+    }
+    return false;
 }
-
 
 // Xử lý Room Type
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_room_type'])) {
@@ -168,8 +132,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $status = $_POST['status'] ?? 'Available';
         
         $image = '';
-        if (isset($_FILES['image'])) {
-            $uploadResult = uploadRoomImages($_FILES['image']);
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $uploadResult = uploadRoomImage($_FILES['image']);
             if ($uploadResult !== false) {
                 $image = $uploadResult;
             }
@@ -204,27 +168,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $oldImageStmt->close();
         
         $image = $oldImage;
-        
-        // Xử lý ảnh cũ được giữ lại (từ existing_images[])
-        $existingImages = [];
-        if (isset($_POST['existing_images']) && is_array($_POST['existing_images'])) {
-            $existingImages = array_filter($_POST['existing_images'], function($img) {
-                return !empty($img);
-            });
-        }
-        
-        // Nếu có upload ảnh mới
-        if (isset($_FILES['image']) && !empty($_FILES['image']['name'])) {
-            $uploadResult = uploadRoomImages($_FILES['image'], !empty($existingImages) ? json_encode($existingImages) : $oldImage);
+        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
+            $uploadResult = uploadRoomImage($_FILES['image'], $oldImage);
             if ($uploadResult !== false) {
                 $image = $uploadResult;
-            } elseif (!empty($existingImages)) {
-                // Nếu upload thất bại nhưng có ảnh cũ, giữ lại ảnh cũ
-                $image = count($existingImages) > 1 ? json_encode($existingImages) : $existingImages[0];
             }
-        } elseif (!empty($existingImages)) {
-            // Không upload ảnh mới, chỉ giữ lại ảnh cũ
-            $image = count($existingImages) > 1 ? json_encode($existingImages) : $existingImages[0];
         }
 
         $stmt = $mysqli->prepare("UPDATE room SET room_number=?, floor=?, room_type_id=?, status=?, image=? WHERE room_id=? AND deleted IS NULL");

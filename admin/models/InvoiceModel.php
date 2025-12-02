@@ -90,11 +90,3 @@ class InvoiceModel extends BaseModel {
     }
 }
 
-
-
-
-
-
-
-
-

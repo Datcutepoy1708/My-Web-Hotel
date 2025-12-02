@@ -1,4 +1,5 @@
 <main>
+<<<<<<< HEAD
     <div class="hero-booking">
         <div class="overlay">
             <div class="booking-container">
@@ -53,12 +54,30 @@
             </div>
         </div>
     </div>
+=======
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-overlay"></div>
+        <div class="hero-content text-center text-white">
+            <h1 class="hero-title">Trải Nghiệm Kỳ Nghỉ Sang Trọng</h1>
+            <p class="hero-subtitle">
+                OceanPearl Hotel – Nơi tinh tế và thư giãn hòa quyện cùng vẻ đẹp biển trời Phú Quốc.
+            </p>
+            <button class="hero-btn" id="exploreBtn">Khám Phá Ngay</button>
+        </div>
+    </section>
+
+>>>>>>> main
     <div class="rooms-header">
         <h1>OceanPearl Rooms & Suites</h1>
         <p>
             OceanPearl Hotel là sự kết hợp giữa kiến ​​trúc cổ điển và thiết kế
             hiện đại, với 280 phòng và suite sang trọng có nội thất phong cách và
+<<<<<<< HEAD
             cao cấp. Màu sắc nhẹ nhàng trong mỗi phòng tạo ra bầu không khí thư
+=======
+            cao cấr. Màu sắc nhẹ nhàng trong mỗi phòng tạo ra bầu không khí thư
+>>>>>>> main
             giãn mang đến cho khách doanh nhân và khách du lịch một nơi ẩn náu thư
             thái sau một ngày khám phá Phú Quốc.
         </p>
@@ -68,7 +87,11 @@
         <div class="filter-div">
             <div class="filter-panel">
                 <h3>Tìm kiếm phòng</h3>
+<<<<<<< HEAD
                 <input type="text" placeholder="Nhập loại phòng để tìm…" class="search-box" />
+=======
+                <input type="text" id="searchInput" placeholder="Nhập loại phòng để tìm…" class="search-box" />
+>>>>>>> main
 
                 <div class="sort-dropdown">
                     <label for="sort">Sắp xếp:</label>
@@ -78,8 +101,25 @@
                         <option value="price-high">Giá cao đến thấp</option>
                     </select>
                 </div>
+<<<<<<< HEAD
 
                 <button class="apply-btn">Áp dụng</button>
+=======
+                <div class="catalog">
+                    <span>Danh Mục:</span>
+                    <fieldset>
+                        <?php 
+                            $sql = "SELECT room_type_name FROM room_type";
+                            $result = $mysqli->query($sql);
+                            while ($row = $result->fetch_assoc()):
+                                $type = htmlspecialchars($row['room_type_name']); // tránh lỗi XSS
+                            ?>
+                        <input type="checkbox" id="<?= $type ?>" name="room_type[]" value="<?= $type ?>">
+                        <label for="<?= $type ?>"><?= $type ?></label><br>
+                        <?php endwhile; ?>
+                    </fieldset>
+                </div>
+>>>>>>> main
             </div>
         </div>
         <!-- danh sach phong -->
@@ -89,6 +129,7 @@
             </div>
 
             <div class="rooms-main">
+<<<<<<< HEAD
                 <?php
 $sql = "SELECT p.MaPhong, p.LoaiPhong, p.GiaPhong, p.TrangThai, p.MoTa, p.SoNguoi, 
 (SELECT DuongDanAnh FROM AnhPhong a WHERE a.MaPhong = p.MaPhong LIMIT 1) AS DuongDanAnh FROM phong p";
@@ -141,4 +182,23 @@ if ($result && $result->num_rows > 0) {
             </div>
         </div>
     </div>
+=======
+                <!-- nd danh sách phòng -->
+            </div>
+        </div>
+    </div>
+
+    <section class="features">
+        <div class="features-text">
+            <h2>LÝ DO CHỌN CHÚNG TÔI</h2>
+            <ul>
+                <li>Thiết kế hiện đại, view biển tuyệt đẹp</li>
+                <li>Tiện nghi cao cấp, đầy đủ sang trọng</li>
+                <li>Không gian rộng rãi, thoáng mát</li>
+                <li>Dịch vụ phòng 24/7 chu đáo</li>
+            </ul>
+        </div>
+        <div class="features-img"></div>
+    </section>
+>>>>>>> main
 </main>

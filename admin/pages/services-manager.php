@@ -22,7 +22,7 @@ function uploadServiceImage($file, $oldImage = '') {
         return $oldImage;
     }
     
-    $uploadDir = __DIR__ . '/../assets/images/service/';
+    $uploadDir = '../../client/assets/images/service/';
     if (!file_exists($uploadDir)) {
         mkdir($uploadDir, 0777, true);
     }
@@ -44,14 +44,9 @@ function uploadServiceImage($file, $oldImage = '') {
     
     if (move_uploaded_file($file['tmp_name'], $targetPath)) {
         if ($oldImage && !empty($oldImage)) {
-            $oldPath = '';
-            if (strpos($oldImage, 'client/') !== false) {
-                $oldPath = __DIR__ . '/../../client/' . str_replace('client/', '', $oldImage);
-            } else {
-                $oldPath = __DIR__ . '/../' . $oldImage;
-            }
+            $oldPath = '../../client/' . $oldImage;
             if (file_exists($oldPath)) {
-                @unlink($oldPath);
+                unlink($oldPath);
             }
         }
         return 'assets/images/service/' . $newFileName;
@@ -411,28 +406,6 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                             rows="3"><?php echo h($editService['description'] ?? ''); ?></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ảnh Dịch Vụ</label>
-                        <div class="image-upload-area" onclick="document.getElementById('serviceImage').click()"
-                            style="border: 2px dashed #ccc; padding: 20px; text-align: center; border-radius: 5px; cursor: pointer;">
-                            <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-2"></i>
-                            <p class="text-muted mb-0">Click để chọn ảnh</p>
-                            <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
-                        </div>
-                        <input type="file" id="serviceImage" name="image" accept="image/*"
-                            style="display: none" onchange="previewImage(this, 'servicePreview')" />
-                        <?php if ($editService && !empty($editService['image'])): ?>
-                        <img id="servicePreview" class="image-preview mt-3"
-                            src="../<?php echo h($editService['image']); ?>"
-                            style="max-width: 100%; max-height: 200px; border-radius: 5px; display: block;" />
-                        <?php else: ?>
-                        <img id="servicePreview" class="image-preview mt-3"
-                            style="display: none; max-width: 100%; max-height: 200px; border-radius: 5px;" />
-                        <?php endif; ?>
-                        <div class="mt-2">
-                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB</small>
-                        </div>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Trạng Thái *</label>
                         <select class="form-select" name="status" required>
                             <option value="Active"
@@ -457,21 +430,6 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
 </div>
 
 <script>
-    // Preview image function
-    function previewImage(input, previewId) {
-        const preview = document.getElementById(previewId);
-        if (!preview) return;
-        
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                preview.src = e.target.result;
-                preview.style.display = "block";
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
-    
     // ==================== HELPER FUNCTIONS ====================
 
     // Hàm xóa query string edit - PHẢI ở ngoài

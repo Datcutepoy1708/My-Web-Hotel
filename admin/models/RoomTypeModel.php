@@ -40,11 +40,3 @@ class RoomTypeModel extends BaseModel {
     }
 }
 
-
-
-
-
-
-
-
-

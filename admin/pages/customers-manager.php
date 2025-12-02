@@ -448,7 +448,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Mật khẩu <span id="passwordRequired">*</span></label>
                                 <input type="password" class="form-control" id="password" name="password"
-                                    placeholder="Nhập mật khẩu" required>
+                                    placeholder="Để trống nếu không đổi">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Ngày Sinh</label>

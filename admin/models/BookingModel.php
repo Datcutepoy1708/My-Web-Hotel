@@ -109,11 +109,3 @@ class BookingModel extends BaseModel {
     }
 }
 
-
-
-
-
-
-
-
-

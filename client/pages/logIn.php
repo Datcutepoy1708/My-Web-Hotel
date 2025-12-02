@@ -4,6 +4,11 @@ session_start();
 // Cấu hình DB
 require_once '../includes/connect.php';
 
+<<<<<<< HEAD
+=======
+define('GOOGLE_CLIENT_ID', '868208581571-lih6bdqrvbj0b4a7oqbtq9bnnf4lhiep.apps.googleusercontent.com');
+
+>>>>>>> main
 // Khởi tạo biến error
 $error = '';
 
@@ -17,7 +22,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Email không hợp lệ.';
     } else {
+<<<<<<< HEAD
         $sql = 'SELECT id, username, email, password, full_name FROM users WHERE email = ? LIMIT 1';
+=======
+        $sql = 'SELECT customer_id, full_name, email, password, username FROM customer WHERE email = ? LIMIT 1';
+>>>>>>> main
         $stmt = $mysqli->prepare($sql);
         if ($stmt) {
             $stmt->bind_param('s', $email);
@@ -62,12 +71,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if ($loginOk) {
                         // set session
+<<<<<<< HEAD
                         $_SESSION['user_id'] = $user['id'];
                         if(isset($user['full_name']) && trim($user['full_name']) !== '') {
                             $_SESSION['full_name'] = $user['full_name'];
                             $_SESSION['username'] = $user['full_name'];
                         } else {
                             $_SESSION['username'] = $user['username'];
+=======
+                        $_SESSION['user_id'] = $user['customer_id'];
+                        if(isset($user['full_name']) && trim($user['full_name']) !== '') {
+                            $_SESSION['username'] = $user['full_name'];
+                        } else {
+                            $_SESSION['username'] = $user['full_name'];
+>>>>>>> main
                         }
                         $_SESSION['logged_in_at'] = time();
 
@@ -98,7 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $mysqli->close();
                     exit;
                 }else {
+<<<<<<< HEAD
                     // THÊM DÒNG NÀY - xử lý khi mật khẩu sai
+=======
+>>>>>>> main
                     $error = 'Email hoặc mật khẩu không đúng.';
                 }
                 } else {
@@ -129,6 +149,7 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<<<<<<< HEAD
     <title>Login Page</title>
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/login.css?v=<?php echo time(); ?>" />
     <!-- Font Awesome CDN -->
@@ -136,6 +157,25 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
 </head>
 
 <body>
+=======
+    <meta http-equiv="origin-trial" content="">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <title>Login Page</title>
+    <!-- favicon -->
+    <link rel="icon" href="/My-Web-Hotel/client/assets/images/favicon.png" type="image/x-icon" />
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/login.css?v=<?php echo time(); ?>" />
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/loading.css?v=<?php echo time(); ?>">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- Google Sign-In Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <?php
+    include '../includes/loading.php';
+    ?>
+>>>>>>> main
     <div class="login-box">
         <h2>Chào Mừng</h2>
         <?php if ($error !== ''): ?>
@@ -153,12 +193,19 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
                     <i class="fa-solid fa-eye" id="eyeIcon"></i>
                 </span>
             </div>
+<<<<<<< HEAD
             <button type="submit" class="btn">Đăng Nhập</button>
+=======
+>>>>>>> main
             <label class="remember-login">
                 Lưu thông tin đăng nhập
                 <input type="checkbox" name="remember">
                 <span class="checkmark"></span>
             </label>
+<<<<<<< HEAD
+=======
+            <button type="submit" class="btn">Đăng Nhập</button>
+>>>>>>> main
             <div class="options">
                 <a href="/my-web-hotel/client/pages/forgotPass.php">Quên mật khẩu ?</a>
                 <a href="/my-web-hotel/client/pages/signup.php">Đăng ký</a>
@@ -166,13 +213,27 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
             <div class="social-login">
                 <p>ĐĂNG NHẬP VỚI</p>
                 <div class="social-icons">
+<<<<<<< HEAD
                     <a href="#"><i class="fab fa-google"></i></a>
+=======
+                    <!-- Nút Google Sign-In -->
+                    <div id="g_id_onload" data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
+                        data-callback="handleCredentialResponse" data-auto_prompt="false">
+                    </div>
+                    <a href="#" id="googleLoginBtn" onclick="googleLogin(event)">
+                        <i class="fab fa-google"></i>
+                    </a>
+>>>>>>> main
                     <a href="#"><i class="fab fa-facebook"></i></a>
                     <a href="#"><i class="fab fa-twitter"></i></a>
                 </div>
             </div>
         </form>
     </div>
+<<<<<<< HEAD
+=======
+    <script src="/My-Web-Hotel/client/assets/js/loading.js?v=<?php echo time(); ?>"></script>
+>>>>>>> main
     <script>
     function togglePassword() {
         const passwordInput = document.getElementById("password");
@@ -188,6 +249,83 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
             eyeIcon.classList.add("fa-eye");
         }
     }
+<<<<<<< HEAD
+=======
+
+    // Xử lý callback từ Google
+    function handleCredentialResponse(response) {
+        if (!response.credential) {
+            alert('Không nhận được thông tin đăng nhập từ Google');
+            return;
+        }
+
+        // Hiển thị loading
+        const googleBtn = document.getElementById('googleLoginBtn');
+        const originalHTML = googleBtn.innerHTML;
+        googleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        googleBtn.style.pointerEvents = 'none';
+
+        // Gửi ID token đến server
+        const formData = new FormData();
+        formData.append('credential', response.credential);
+
+        fetch('/My-Web-Hotel/client/pages/google-login-handler.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error('Server response not OK');
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    window.location.href = data.redirect || '/My-Web-Hotel/client/index.php?page=home';
+                } else {
+                    googleBtn.innerHTML = originalHTML;
+                    googleBtn.style.pointerEvents = 'auto';
+                    alert('Đăng nhập thất bại: ' + (data.message || 'Lỗi không xác định'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                googleBtn.innerHTML = originalHTML;
+                googleBtn.style.pointerEvents = 'auto';
+                alert('Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại.');
+            });
+    }
+
+    // Kích hoạt Google Sign-In khi click vào icon
+    function googleLogin(e) {
+        e.preventDefault();
+
+        // Kiểm tra xem google.accounts có tồn tại không
+        if (typeof google === 'undefined' || !google.accounts) {
+            alert('Google Sign-In chưa sẵn sàng. Vui lòng tải lại trang.');
+            return;
+        }
+
+        try {
+            google.accounts.id.initialize({
+                client_id: '<?php echo GOOGLE_CLIENT_ID; ?>',
+                callback: handleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true
+            });
+            google.accounts.id.prompt((notification) => {
+                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                    console.log('Popup không hiển thị:', notification.getNotDisplayedReason());
+                    // Thử dùng cách khác
+                    document.getElementById('g_id_onload').click();
+                }
+            });
+        } catch (error) {
+            console.error('Lỗi khởi tạo Google Sign-In:', error);
+            alert('Không thể khởi tạo Google Sign-In. Vui lòng kiểm tra kết nối internet.');
+        }
+    }
+>>>>>>> main
     </script>
 </body>
 

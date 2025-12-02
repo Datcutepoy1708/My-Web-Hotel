@@ -2,14 +2,26 @@
 session_start();
 require_once 'includes/connect.php'; 
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'home';
+<<<<<<< HEAD
 include 'includes/auth.php';
 include 'includes/header.php';
 
+=======
+include 'controller/auth.php';
+include 'includes/header.php';
+include 'includes/loading.php';
+>>>>>>> main
 $allowed = [
     'home' => 'pages/home.php',
     'room' => 'pages/room.php',
     'dichVu' => 'pages/dichVu.php',
+<<<<<<< HEAD
     'booking' => 'pages/booking.php',
+=======
+    'service-detail' => 'pages/service-detail.php',
+    'booking' => 'pages/booking.php',
+    'service-booking' => 'pages/service-booking.php',
+>>>>>>> main
     'blog' => 'pages/blog.php',
     'danhGia' => 'pages/danhGia.php',
     'spa' => 'pages/spa.php',
@@ -23,7 +35,10 @@ $allowed = [
     'gallery' => 'pages/gallery.php',
     'room-detail' => 'pages/room-detail.php',
 ];
+<<<<<<< HEAD
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'home';
+=======
+>>>>>>> main
 if (isset($allowed[$page])) {
     include $allowed[$page];
 } else {
