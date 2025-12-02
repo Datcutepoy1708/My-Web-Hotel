@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dịch vụ - OceanPearl Hotel</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #d4a574;
+        --dark-bg: #2c2c2c;
+        --light-cream: #fef9f3;
+        --border-gold: #d4a574;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+        background: #f5f5f5;
+      }
+
+      /* Header */
+      .navbar {
+        background: white;
+        padding: 1rem 0;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .navbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--dark-bg);
+        font-weight: 600;
+      }
+
+      .navbar-brand img {
+        height: 50px;
+      }
+
+      .nav-link {
+        color: #666;
+        font-weight: 500;
+        margin: 0 15px;
+        transition: color 0.3s;
+      }
+
+      .nav-link:hover,
+      .nav-link.active {
+        color: var(--primary-color);
+      }
+
+      .btn-login {
+        border: 2px solid var(--primary-color);
+        color: var(--primary-color);
+        border-radius: 25px;
+        padding: 8px 25px;
+        font-weight: 500;
+        transition: all 0.3s;
+      }
+
+      .btn-login:hover {
+        background: var(--primary-color);
+        color: white;
+      }
+
+      /* Hero Section */
+      .hero-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)),
+          url("https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600")
+            center/cover;
+        height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+      }
+
+      .hero-section h1 {
+        font-size: 3rem;
+        font-weight: 300;
+        letter-spacing: 2px;
+      }
+
+      /* Services Intro */
+      .services-intro {
+        background: #f8f9fa;
+        padding: 60px 0;
+      }
+
+      .services-intro p {
+        color: #666;
+        line-height: 1.8;
+        text-align: center;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      /* Section Title */
+      .section-title-wrapper {
+        background: linear-gradient(to bottom, #fff9f0 0%, #fef5e8 100%);
+        border: 2px solid var(--border-gold);
+        border-radius: 8px;
+        padding: 25px;
+        margin-bottom: 40px;
+        box-shadow: 0 2px 8px rgba(212, 165, 116, 0.15);
+      }
+
+      .section-title {
+        text-align: center;
+        margin: 0;
+        color: var(--primary-color);
+        font-size: 2rem;
+        font-weight: 400;
+        letter-spacing: 1px;
+      }
+
+      /* Sidebar Search Box */
+      .sidebar {
+        background: linear-gradient(to bottom, #fff9f0 0%, #fef5e8 100%);
+        padding: 30px;
+        border-radius: 12px;
+        border: 2px solid var(--border-gold);
+        box-shadow: 0 4px 15px rgba(212, 165, 116, 0.15);
+        position: sticky;
+        top: 100px;
+      }
+
+      .sidebar h5 {
+        color: var(--dark-bg);
+        margin-bottom: 25px;
+        font-weight: 500;
+        font-size: 1.5rem;
+      }
+
+      .search-box {
+        margin-bottom: 25px;
+      }
+
+      .search-box input {
+        border-radius: 8px;
+        border: 2px solid var(--border-gold);
+        padding: 15px;
+        background: white;
+        font-size: 1rem;
+        color: #999;
+      }
+
+      .search-box input::placeholder {
+        color: #999;
+      }
+
+      .filter-section {
+        margin-bottom: 25px;
+      }
+
+      .filter-section label {
+        color: var(--dark-bg);
+        font-size: 1.1rem;
+        margin-bottom: 12px;
+        font-weight: 500;
+      }
+
+      .filter-section select {
+        border-radius: 8px;
+        border: 2px solid var(--border-gold);
+        padding: 12px 15px;
+        background: white;
+        font-size: 1rem;
+        color: #333;
+      }
+
+      .btn-apply {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 8px;
+        width: 100%;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s;
+      }
+
+      .btn-apply:hover {
+        background: #c89563;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(212, 165, 116, 0.3);
+      }
+
+      /* Service Cards */
+      .service-card {
+        background: linear-gradient(to bottom, #fff9f0 0%, #fef5e8 100%);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(212, 165, 116, 0.2);
+        border: 2px solid var(--border-gold);
+        margin-bottom: 30px;
+        display: flex;
+        flex-direction: row;
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+
+      .service-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 30px rgba(212, 165, 116, 0.3);
+      }
+
+      .service-image-wrapper {
+        width: 420px;
+        height: 280px;
+        flex-shrink: 0;
+        padding: 12px;
+      }
+
+      .service-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+      }
+
+      .service-content {
+        padding: 30px 35px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+
+      .service-title {
+        font-size: 1.5rem;
+        color: var(--dark-bg);
+        margin-bottom: 20px;
+        font-weight: 500;
+      }
+
+      .service-info {
+        margin-bottom: 15px;
+      }
+
+      .service-info p {
+        margin: 8px 0;
+        color: #555;
+        font-size: 1rem;
+      }
+
+      .service-status {
+        color: #e74c3c;
+        font-weight: 500;
+      }
+
+      .service-status.available {
+        color: #27ae60;
+      }
+
+      .service-footer {
+        position: absolute;
+        bottom: 30px;
+        right: 35px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      .service-price {
+        font-size: 1.8rem;
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 15px;
+      }
+
+      .service-price small {
+        font-size: 1rem;
+        color: #666;
+        display: block;
+        margin-top: 5px;
+      }
+
+      .btn-detail {
+        background: white;
+        color: #666;
+        border: 2px solid #ddd;
+        padding: 10px 30px;
+        border-radius: 6px;
+        font-weight: 500;
+        transition: all 0.3s;
+        cursor: pointer;
+      }
+
+      .btn-detail:hover {
+        background: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+      }
+
+      /* Footer */
+      footer {
+        background: var(--dark-bg);
+        color: #ccc;
+        padding: 50px 0 20px;
+        margin-top: 80px;
+      }
+
+      footer h5 {
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        font-size: 1.1rem;
+      }
+
+      footer ul {
+        list-style: none;
+        padding: 0;
+      }
+
+      footer ul li {
+        margin-bottom: 10px;
+      }
+
+      footer a {
+        color: #ccc;
+        text-decoration: none;
+        transition: color 0.3s;
+      }
+
+      footer a:hover {
+        color: var(--primary-color);
+      }
+
+      .footer-bottom {
+        border-top: 1px solid #444;
+        margin-top: 30px;
+        padding-top: 20px;
+        text-align: center;
+        color: #999;
+      }
+
+      .social-icons a {
+        color: #ccc;
+        font-size: 1.2rem;
+        margin-right: 15px;
+        transition: color 0.3s;
+      }
+
+      .social-icons a:hover {
+        color: var(--primary-color);
+      }
+
+      @media (max-width: 768px) {
+        .service-card {
+          flex-direction: column;
+        }
+
+        .service-image-wrapper {
+          width: 100%;
+          height: 220px;
+        }
+
+        .service-footer {
+          position: static;
+          margin-top: 20px;
+          align-items: flex-start;
+        }
+
+        .hero-section h1 {
+          font-size: 2rem;
+        }
+
+        .sidebar {
+          margin-top: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+      <div class="container">
+        <a class="navbar-brand" href="#">
+          <img src="https://via.placeholder.com/50" alt="Logo" />
+          <span>OceanPearl</span>
+        </a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div
+          class="collapse navbar-collapse justify-content-end"
+          id="navbarNav"
+        >
+          <ul class="navbar-nav align-items-center">
+            <li class="nav-item">
+              <a class="nav-link" href="#">Trang chủ</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Phòng</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="#">Dịch vụ</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Blog</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#">Đánh giá</a>
+            </li>
+            <li class="nav-item ms-3">
+              <a class="btn btn-login" href="#">
+                <i class="fas fa-user"></i> Đăng nhập
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div>
+          <h1>Dịch vụ & Tiện ích</h1>
+        </div>
+      </section>
+
+      <!-- Services Intro -->
+      <section class="services-intro">
+        <div class="container">
+          <p>
+            OceanPearl Hotel cung cấp đa dạng các dịch vụ cao cấp nhằm mang đến
+            trải nghiệm hoàn hảo cho du khách. Từ spa thư giãn, nhà hàng sang
+            trọng, đến các dịch vụ giải trí và chăm sóc sức khỏe, chúng tôi cam
+            kết đáp ứng mọi nhu cầu của quý khách trong suốt kỳ nghỉ tại Phú
+            Quốc.
+          </p>
+        </div>
+      </section>
+
+      <!-- Services List -->
+      <section class="py-5">
+        <div class="container">
+          <div class="section-title-wrapper">
+            <h2 class="section-title">Danh sách dịch vụ</h2>
+          </div>
+
+          <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3">
+              <div class="sidebar">
+                <h5>Tìm kiếm dịch vụ</h5>
+                <div class="search-box">
+                  <input
+                    type="text"
+                    class="form-control"
+                    placeholder="Nhập loại dịch vụ để tìm..."
+                  />
+                </div>
+
+                <div class="filter-section">
+                  <label class="form-label">Sắp xếp:</label>
+                  <select class="form-select">
+                    <option>Phổ biến nhất</option>
+                    <option>Giá thấp đến cao</option>
+                    <option>Giá cao đến thấp</option>
+                  </select>
+                </div>
+
+                <button class="btn-apply">Áp dụng</button>
+              </div>
+            </div>
+
+            <!-- Services List -->
+            <div class="col-lg-9">
+              <!-- Service 1: Spa -->
+              <div class="service-card">
+                <div class="service-image-wrapper">
+                  <img
+                    src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400"
+                    alt="Spa Service"
+                    class="service-image"
+                  />
+                </div>
+                <div class="service-content">
+                  <h3 class="service-title">Spa & Massage</h3>
+                  <div class="service-info">
+                    <p><strong>Thời gian:</strong> 60-90 phút</p>
+                    <p>
+                      <strong>Loại hình:</strong> Massage, Chăm sóc da, Trị liệu
+                    </p>
+                    <p>
+                      <strong>Trạng thái:</strong>
+                      <span class="service-status available"
+                        >Đang hoạt động</span
+                      >
+                    </p>
+                  </div>
+                  <div class="service-footer">
+                    <div class="service-price">
+                      500.000₫
+                      <small>mỗi buổi</small>
+                    </div>
+                    <button class="btn-detail">Chi tiết</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service 2: Restaurant -->
+              <div class="service-card">
+                <div class="service-image-wrapper">
+                  <img
+                    src="https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400"
+                    alt="Restaurant"
+                    class="service-image"
+                  />
+                </div>
+                <div class="service-content">
+                  <h3 class="service-title">Nhà hàng & Bar</h3>
+                  <div class="service-info">
+                    <p><strong>Giờ phục vụ:</strong> 6:00 - 23:00</p>
+                    <p><strong>Ẩm thực:</strong> Á - Âu - Địa phương</p>
+                    <p>
+                      <strong>Trạng thái:</strong>
+                      <span class="service-status available"
+                        >Đang hoạt động</span
+                      >
+                    </p>
+                  </div>
+                  <div class="service-footer">
+                    <div class="service-price">
+                      350.000₫
+                      <small>mỗi người</small>
+                    </div>
+                    <button class="btn-detail">Chi tiết</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service 3: Swimming Pool -->
+              <div class="service-card">
+                <div class="service-image-wrapper">
+                  <img
+                    src="https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=400"
+                    alt="Swimming Pool"
+                    class="service-image"
+                  />
+                </div>
+                <div class="service-content">
+                  <h3 class="service-title">Hồ bơi vô cực</h3>
+                  <div class="service-info">
+                    <p><strong>Diện tích:</strong> 450m²</p>
+                    <p><strong>Giờ mở cửa:</strong> 6:00 - 22:00</p>
+                    <p>
+                      <strong>Trạng thái:</strong>
+                      <span class="service-status available"
+                        >Miễn phí cho khách</span
+                      >
+                    </p>
+                  </div>
+                  <div class="service-footer">
+                    <div class="service-price">
+                      Miễn phí
+                      <small>cho khách ở</small>
+                    </div>
+                    <button class="btn-detail">Chi tiết</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service 4: Gym -->
+              <div class="service-card">
+                <div class="service-image-wrapper">
+                  <img
+                    src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400"
+                    alt="Gym"
+                    class="service-image"
+                  />
+                </div>
+                <div class="service-content">
+                  <h3 class="service-title">Phòng gym & Yoga</h3>
+                  <div class="service-info">
+                    <p><strong>Thiết bị:</strong> Hiện đại, đầy đủ</p>
+                    <p><strong>Lớp học:</strong> Yoga, Aerobic, Meditation</p>
+                    <p>
+                      <strong>Trạng thái:</strong>
+                      <span class="service-status available"
+                        >Đang hoạt động</span
+                      >
+                    </p>
+                  </div>
+                  <div class="service-footer">
+                    <div class="service-price">
+                      200.000₫
+                      <small>mỗi buổi</small>
+                    </div>
+                    <button class="btn-detail">Chi tiết</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service 5: Tour -->
+              <div class="service-card">
+                <div class="service-image-wrapper">
+                  <img
+                    src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=400"
+                    alt="Tour"
+                    class="service-image"
+                  />
+                </div>
+                <div class="service-content">
+                  <h3 class="service-title">Tour & Hoạt động</h3>
+                  <div class="service-info">
+                    <p><strong>Thời gian:</strong> Cả ngày / Nửa ngày</p>
+                    <p>
+                      <strong>Hoạt động:</strong> Lặn biển, Câu cá, Tham quan
+                    </p>
+                    <p>
+                      <strong>Trạng thái:</strong>
+                      <span class="service-status available"
+                        >Cần đặt trước</span
+                      >
+                    </p>
+                  </div>
+                  <div class="service-footer">
+                    <div class="service-price">
+                      800.000₫
+                      <small>mỗi người</small>
+                    </div>
+                    <button class="btn-detail">Chi tiết</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Service 6: Meeting Room -->
+              <div class="service-card">
+                <div class="service-image-wrapper">
+                  <img
+                    src="https://images.unsplash.com/photo-1511578314322-379afb476865?w=400"
+                    alt="Meeting Room"
+                    class="service-image"
+                  />
+                </div>
+                <div class="service-content">
+                  <h3 class="service-title">Phòng họp & Sự kiện</h3>
+                  <div class="service-info">
+                    <p><strong>Sức chứa:</strong> 50-200 khách</p>
+                    <p>
+                      <strong>Thiết bị:</strong> Âm thanh, Ánh sáng, Projector
+                    </p>
+                    <p>
+                      <strong>Trạng thái:</strong>
+                      <span class="service-status available"
+                        >Cần đặt trước</span
+                      >
+                    </p>
+                  </div>
+                  <div class="service-footer">
+                    <div class="service-price">
+                      Liên hệ
+                      <small>để báo giá</small>
+                    </div>
+                    <button class="btn-detail">Chi tiết</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <div class="row">
+          <div class="col-md-3">
+            <h5>Ocean Pearl</h5>
+            <p><i class="fas fa-map-marker-alt"></i> Phú Quốc</p>
+            <p><i class="fas fa-phone"></i> +84.424.243.434</p>
+            <p><i class="fas fa-envelope"></i> contact@hoteloceanpearl.com</p>
+          </div>
+          <div class="col-md-3">
+            <h5>Liên kết hữu ích</h5>
+            <ul>
+              <li><a href="#">Về chúng tôi</a></li>
+              <li><a href="#">Giải trí</a></li>
+              <li><a href="#">Spa</a></li>
+              <li><a href="#">Blog</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Hỗ trợ</h5>
+            <ul>
+              <li><a href="#">Trung tâm trợ giúp</a></li>
+              <li><a href="#">Liên hệ</a></li>
+              <li><a href="#">Điều khoản & Điều kiện</a></li>
+              <li><a href="#">Biện pháp Covid-19</a></li>
+            </ul>
+          </div>
+          <div class="col-md-3">
+            <h5>Tin tức mới nhất</h5>
+            <ul>
+              <li><a href="#">10+1 Cocktail hấp dẫn</a></li>
+              <li><a href="#">Dạo chơi bãi ngay</a></li>
+              <li><a href="#">Top 10 bãi biển tuyệt đẹp</a></li>
+              <li><a href="#">Lễ cưới tại OceanPearl</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <div class="social-icons mb-3">
+            <a href="#"><i class="fab fa-facebook"></i></a>
+            <a href="#"><i class="fab fa-instagram"></i></a>
+            <a href="#"><i class="fab fa-twitter"></i></a>
+            <a href="#"><i class="fab fa-youtube"></i></a>
+          </div>
+          <p>© 2025 OceanPearl Hotel. Crafted with ♥ by CuteTeam</p>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
