@@ -1,0 +1,379 @@
+/* =====main===== */
+/* hero */
+.hero {
+  background: url("https://sbmedia.com.vn/wp-content/uploads/2022/12/nhung-content-hay-ve-bbq-1.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  color: white;
+  padding: 120px 20px 100px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.hero h1 {
+  font-size: 3em;
+  margin-bottom: 20px;
+  position: relative;
+  z-index: 1;
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-weight: 700;
+}
+
+.hero p {
+  font-size: 1.3em;
+  position: relative;
+  z-index: 1;
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+  color: #fff;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+main .container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 20px;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 2em;
+  margin-bottom: 20px;
+  color: #deb666;
+  position: relative;
+  font-weight: 600;
+}
+
+.section-subtitle {
+  text-align: center;
+  font-size: 1.2em;
+  color: #666;
+  margin-bottom: 60px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-title::after {
+  content: "";
+  display: block;
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, #deb666, #c9a558);
+  margin: 20px auto 0;
+  border-radius: 2px;
+}
+
+.restaurants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 40px;
+  margin-bottom: 80px;
+}
+
+.restaurant-card {
+  background: white;
+  border-radius: 25px;
+  overflow: hidden;
+  box-shadow: 0 15px 40px rgba(222, 182, 102, 0.2);
+  transition: all 0.4s ease;
+  position: relative;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-15px);
+  box-shadow: 0 25px 50px rgba(222, 182, 102, 0.35);
+}
+
+.restaurant-image {
+  width: 100%;
+  height: 280px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.restaurant-content {
+  padding: 35px;
+}
+
+.restaurant-card h3 {
+  font-size: 1.5em;
+  margin-bottom: 15px;
+  color: #deb666;
+  font-weight: 600;
+}
+
+.restaurant-card p {
+  color: #666;
+  font-size: 1.05em;
+  margin-bottom: 25px;
+  line-height: 1.7;
+}
+
+.cuisine-type {
+  display: inline-block;
+  padding: 6px 15px;
+  background: #f5f0e0;
+  color: #deb666;
+  border-radius: 15px;
+  font-size: 0.9em;
+  margin-right: 8px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.restaurant-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 25px;
+  padding-top: 25px;
+  border-top: 2px solid #f5f0e0;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 0.95em;
+}
+
+.info-icon {
+  color: #deb666;
+  font-size: 1.2em;
+}
+/* features */
+.features-section {
+  background: linear-gradient(135deg, #f5f0e0 0%, #fffcf0 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.features-section::before {
+  content: "";
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(222, 182, 102, 0.15), transparent);
+  border-radius: 50%;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card {
+  background: white;
+  padding: 50px 35px;
+  border-radius: 25px;
+  text-align: center;
+  box-shadow: 0 15px 40px rgba(222, 182, 102, 0.2);
+  transition: all 0.4s ease;
+  border: 3px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(222, 182, 102, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.feature-card:hover::before {
+  left: 100%;
+}
+
+.feature-card:hover {
+  transform: translateY(-15px) scale(1.05);
+  box-shadow: 0 25px 60px rgba(222, 182, 102, 0.35);
+  border-color: #deb666;
+}
+
+.feature-icon {
+  width: 100%;
+  height: 200px;
+  margin: 0 auto 20px;
+  display: block;
+  object-fit: cover;
+  border-radius: 20px;
+  transition: transform 0.4s ease;
+  box-shadow: 0 5px 15px rgba(222, 182, 102, 0.3);
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.15);
+}
+
+.feature-card h4 {
+  font-size: 1.3em;
+  color: #deb666;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.feature-card p {
+  color: #666;
+  font-size: 1.05em;
+  line-height: 1.7;
+}
+/* menu */
+.menu-preview {
+  background: white;
+}
+
+.menu-categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 50px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.menu-category {
+  background: linear-gradient(135deg, #fffcf0 0%, #f5f0e0 100%);
+  padding: 45px 40px;
+  border-radius: 30px;
+  box-shadow: 0 15px 40px rgba(222, 182, 102, 0.2);
+  transition: all 0.4s ease;
+  border: 3px solid #f5f0e0;
+}
+
+.menu-category:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 25px 60px rgba(222, 182, 102, 0.35);
+  border-color: #deb666;
+}
+
+.menu-icon {
+  font-size: 4em;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.menu-category h3 {
+  font-size: 2em;
+  color: #deb666;
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.menu-items {
+  list-style: none;
+}
+
+.menu-items li {
+  padding: 15px 0;
+  color: #666;
+  font-size: 1.1em;
+  position: relative;
+  padding-left: 30px;
+  border-bottom: 1px solid rgba(222, 182, 102, 0.2);
+}
+
+.menu-items li:last-child {
+  border-bottom: none;
+}
+
+.menu-items li::before {
+  content: "🍴";
+  position: absolute;
+  left: 0;
+  font-size: 1.1em;
+}
+/* cta */
+.cta-section {
+  background: linear-gradient(135deg, #deb666 0%, #c9a558 100%);
+  color: white;
+  padding: 90px 20px;
+  text-align: center;
+  margin-top: 80px;
+}
+
+.cta-section h2 {
+  font-size: 2.8em;
+  margin-bottom: 20px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+}
+
+.cta-section p {
+  font-size: 1.3em;
+  margin-bottom: 40px;
+  opacity: 0.95;
+}
+
+.btn-outline {
+  background: transparent;
+  color: white;
+  border: 2px solid white;
+}
+
+.btn-outline:hover {
+  background: white;
+  color: #deb666;
+}
+
+@media (max-width: 768px) {
+  .hero h1 {
+    font-size: 2.5em;
+  }
+
+  .section-title {
+    font-size: 2em;
+  }
+
+  .restaurants-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-info {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .featured-info {
+    grid-template-columns: 1fr;
+  }
+  .menu-categories {
+    grid-template-columns: 1fr;
+  }
+}
