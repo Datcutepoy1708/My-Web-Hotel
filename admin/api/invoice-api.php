@@ -16,9 +16,12 @@ if ($action == 'get_invoice') {
     
     // Lấy thông tin hóa đơn cơ bản
     $stmt = $mysqli->prepare("
-        SELECT i.*, 
+        SELECT i.invoice_id, i.booking_id, i.customer_id, 
+               i.room_charge, i.service_charge, i.vat, i.other_fees,
+               i.total_amount, i.deposit_amount, i.remaining_amount,
+               i.payment_method, i.status, i.payment_time, i.note, i.created_at,
                c.full_name, c.phone, c.email,
-               b.booking_id, b.check_in_date, b.check_out_date,
+               b.check_in_date, b.check_out_date,
                r.room_number, rt.room_type_name
         FROM invoice i
         LEFT JOIN customer c ON i.customer_id = c.customer_id
@@ -34,6 +37,17 @@ if ($action == 'get_invoice') {
     $stmt->close();
     
     if ($invoice) {
+        // Đảm bảo các trường quan trọng được xử lý đúng
+        // Format created_at nếu có
+        if (isset($invoice['created_at']) && $invoice['created_at']) {
+            // Giữ nguyên format từ database
+        }
+        
+        // Debug log (có thể xóa sau)
+        error_log('Invoice API - created_at: ' . ($invoice['created_at'] ?? 'NULL'));
+        error_log('Invoice API - phone: ' . ($invoice['phone'] ?? 'NULL'));
+        error_log('Invoice API - payment_time: ' . ($invoice['payment_time'] ?? 'NULL'));
+        error_log('Invoice API - note: ' . ($invoice['note'] ?? 'NULL'));
         // Lấy danh sách dịch vụ chi tiết
         $services_stmt = $mysqli->prepare("
             SELECT bs.booking_service_id,

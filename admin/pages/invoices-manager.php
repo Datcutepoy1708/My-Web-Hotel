@@ -87,14 +87,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $payment_time = !empty($_POST['payment_time']) ? $_POST['payment_time'] : null;
         $note = trim($_POST['note'] ?? '');
 
-        // Nếu có booking_id, lấy customer_id từ booking
+        // Nếu không có customer_id từ POST, lấy từ invoice hiện tại (cho Service Only)
+        if (!$customer_id || $customer_id <= 0) {
+            $stmt_get_invoice = $mysqli->prepare("SELECT customer_id FROM invoice WHERE invoice_id = ? AND deleted IS NULL");
+            $stmt_get_invoice->bind_param("i", $invoice_id);
+            $stmt_get_invoice->execute();
+            $invoice_result = $stmt_get_invoice->get_result();
+            if ($invoice_data = $invoice_result->fetch_assoc()) {
+                $customer_id = $invoice_data['customer_id'] ?? 0;
+            }
+            $stmt_get_invoice->close();
+        }
+
+        // Nếu có booking_id, lấy customer_id từ booking (ưu tiên booking)
         if ($booking_id) {
-            $stmt_get_customer = $mysqli->prepare("SELECT customer_id FROM booking WHERE booking_id = ?");
+            $stmt_get_customer = $mysqli->prepare("SELECT customer_id FROM booking WHERE booking_id = ? AND deleted IS NULL");
             $stmt_get_customer->bind_param("i", $booking_id);
             $stmt_get_customer->execute();
             $result = $stmt_get_customer->get_result();
             $booking_data = $result->fetch_assoc();
-            $customer_id = $booking_data['customer_id'] ?? $customer_id;
+            if ($booking_data && !empty($booking_data['customer_id'])) {
+                $customer_id = $booking_data['customer_id'];
+            }
             $stmt_get_customer->close();
         }
 
@@ -258,28 +272,30 @@ if ($countResult) {
 // Lấy dữ liệu
 $invoices = [];
 if ($total > 0) {
-    // Lấy customer từ invoice.customer_id (vì invoice đã có customer_id)
-    // Và lấy thông tin booking_service qua invoice_service
-    $query = "SELECT i.*, 
-                i.booking_id,
-                b.booking_id as booking_exists,
-                c.full_name,
-                c.customer_id,
-                GROUP_CONCAT(DISTINCT bs.booking_service_id) as booking_service_ids,
-                COUNT(DISTINCT isv.booking_service_id) as service_count
+    // Lấy đầy đủ thông tin invoice, customer, booking, room
+    // Với Service Only: lấy tên từ invoice.customer_id
+    // Với invoice có booking: ưu tiên lấy từ invoice.customer_id, nếu không có thì lấy từ booking.customer_id
+    $query = "SELECT i.invoice_id, i.booking_id, i.customer_id, 
+               i.room_charge, i.service_charge, i.vat, i.other_fees,
+               i.total_amount, i.deposit_amount, i.remaining_amount,
+               i.payment_method, i.status, i.payment_time, i.note, i.created_at,
+               COALESCE(NULLIF(c.full_name, ''), NULLIF(bc.full_name, ''), '') as full_name,
+               COALESCE(NULLIF(c.phone, ''), NULLIF(bc.phone, ''), '') as phone,
+               COALESCE(NULLIF(c.email, ''), NULLIF(bc.email, ''), '') as email,
+               b.check_in_date, b.check_out_date,
+               r.room_number, rt.room_type_name
         FROM invoice i 
-        LEFT JOIN booking b ON i.booking_id = b.booking_id
         LEFT JOIN customer c ON i.customer_id = c.customer_id
-        LEFT JOIN invoice_service isv ON i.invoice_id = isv.invoice_id
-        LEFT JOIN booking_service bs ON isv.booking_service_id = bs.booking_service_id AND bs.deleted IS NULL
+        LEFT JOIN booking b ON i.booking_id = b.booking_id AND (b.deleted IS NULL OR b.deleted = '')
+        LEFT JOIN customer bc ON b.customer_id = bc.customer_id
+        LEFT JOIN room r ON b.room_id = r.room_id
+        LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
         $where 
-        GROUP BY i.invoice_id
         $orderBy 
         LIMIT ? OFFSET ?";
     $params[] = $perPage;
     $params[] = $offset;
     $types .= 'ii';
-
 
     $stmt = $mysqli->prepare($query);
     if (!empty($params)) {
@@ -289,6 +305,98 @@ if ($total > 0) {
     $result = $stmt->get_result();
     $invoices = $result->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
+    
+    // Đảm bảo tất cả invoice đều có tên khách hàng (fallback nếu JOIN không lấy được)
+    foreach ($invoices as &$inv) {
+        // Bước 1: Nếu không có tên nhưng có customer_id, thử lấy lại từ customer (không kiểm tra deleted)
+        if (empty($inv['full_name']) && !empty($inv['customer_id'])) {
+            $customer_stmt = $mysqli->prepare("SELECT full_name, phone, email FROM customer WHERE customer_id = ?");
+            $customer_stmt->bind_param("i", $inv['customer_id']);
+            $customer_stmt->execute();
+            $customer_result = $customer_stmt->get_result();
+            if ($customer = $customer_result->fetch_assoc()) {
+                if (!empty($customer['full_name'])) {
+                    $inv['full_name'] = $customer['full_name'];
+                    $inv['phone'] = $customer['phone'] ?? '';
+                    $inv['email'] = $customer['email'] ?? '';
+                }
+            }
+            $customer_stmt->close();
+        }
+        
+        // Bước 2: Nếu vẫn không có tên và có booking_id, thử lấy từ booking's customer
+        if (empty($inv['full_name']) && !empty($inv['booking_id'])) {
+            $booking_customer_stmt = $mysqli->prepare("
+                SELECT c.full_name, c.phone, c.email 
+                FROM booking b
+                LEFT JOIN customer c ON b.customer_id = c.customer_id
+                WHERE b.booking_id = ? AND b.deleted IS NULL
+            ");
+            $booking_customer_stmt->bind_param("i", $inv['booking_id']);
+            $booking_customer_stmt->execute();
+            $booking_customer_result = $booking_customer_stmt->get_result();
+            if ($booking_customer = $booking_customer_result->fetch_assoc()) {
+                if (!empty($booking_customer['full_name'])) {
+                    $inv['full_name'] = $booking_customer['full_name'];
+                    $inv['phone'] = $booking_customer['phone'] ?? '';
+                    $inv['email'] = $booking_customer['email'] ?? '';
+                }
+            }
+            $booking_customer_stmt->close();
+        }
+        
+        // Debug log (có thể xóa sau)
+        if (empty($inv['full_name'])) {
+            error_log("Invoice ID: " . $inv['invoice_id'] . " - No customer name found. Customer ID: " . ($inv['customer_id'] ?? 'NULL') . ", Booking ID: " . ($inv['booking_id'] ?? 'NULL'));
+        }
+    }
+    unset($inv);
+    
+    // Lấy danh sách dịch vụ cho mỗi invoice
+    foreach ($invoices as &$invoice) {
+        $invoice_id = $invoice['invoice_id'];
+        $services_stmt = $mysqli->prepare("
+            SELECT bs.booking_service_id,
+                   s.service_name,
+                   s.service_type,
+                   bs.quantity,
+                   bs.unit_price,
+                   bs.amount,
+                   bs.unit,
+                   (bs.amount * bs.unit_price) as total_price
+            FROM invoice_service isv
+            INNER JOIN booking_service bs ON isv.booking_service_id = bs.booking_service_id AND bs.deleted IS NULL
+            INNER JOIN service s ON bs.service_id = s.service_id
+            WHERE isv.invoice_id = ?
+            ORDER BY bs.booking_service_id
+        ");
+        $services_stmt->bind_param("i", $invoice_id);
+        $services_stmt->execute();
+        $services_result = $services_stmt->get_result();
+        $invoice['services'] = [];
+        while ($service = $services_result->fetch_assoc()) {
+            $invoice['services'][] = $service;
+        }
+        $services_stmt->close();
+    }
+    unset($invoice); // Unset reference
+}
+
+// Helper functions cho format
+function formatInvoiceDate($dateStr) {
+    if (!$dateStr || $dateStr === '0000-00-00 00:00:00' || $dateStr === '0000-00-00' || $dateStr === null) {
+        return '-';
+    }
+    try {
+        $date = new DateTime($dateStr);
+        return $date->format('d/m/Y H:i');
+    } catch (Exception $e) {
+        return '-';
+    }
+}
+
+function formatInvoiceMoney($amount) {
+    return number_format($amount ?? 0, 0, ',', '.') . ' VNĐ';
 }
 
 // Build base URL for pagination
@@ -389,7 +497,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                     }
                                     ?>
                                 </td>
-                                <td><?php echo h($invoice['full_name'] ?? 'N/A'); ?></td>
+                                <td><?php echo h($invoice['full_name'] ?? ''); ?></td>
                                 <td><?php echo number_format($invoice['room_charge'], 0, ',', '.'); ?> VNĐ</td>
                                 <td><?php echo number_format($invoice['service_charge'], 0, ',', '.'); ?> VNĐ</td>
                                 <td><strong><?php echo number_format($invoice['total_amount'], 0, ',', '.'); ?> VNĐ</strong>
@@ -415,7 +523,9 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                 </td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-info"
-                                        onclick="viewInvoice(<?php echo $invoice['invoice_id']; ?>)" title="Xem chi tiết">
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewInvoiceModal<?php echo $invoice['invoice_id']; ?>"
+                                        title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                     <a href="index.php?page=invoices-manager&action=edit&id=<?php echo $invoice['invoice_id']; ?>">
@@ -437,115 +547,149 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         </div>
     </div>
 
+    <!-- Modals cho từng invoice - Đặt bên ngoài table -->
+    <?php if (!empty($invoices)): ?>
+        <?php foreach ($invoices as $invoice): ?>
+            <?php
+            // Format trạng thái
+            $statusMap = [
+                'Paid' => 'Đã thanh toán',
+                'Unpaid' => 'Chưa thanh toán',
+                'Refunded' => 'Đã hoàn tiền'
+            ];
+            $statusText = $statusMap[$invoice['status']] ?? $invoice['status'];
+            ?>
+            <!-- Modal Xem Chi Tiết Hóa Đơn -->
+            <div class="modal fade" id="viewInvoiceModal<?php echo $invoice['invoice_id']; ?>" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title"><i class="fas fa-file-invoice"></i> Chi Tiết Hóa Đơn</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6"><strong>Mã Hóa Đơn:</strong> #<?php echo $invoice['invoice_id']; ?></div>
+                                <div class="col-md-6"><strong>Ngày Tạo:</strong> <?php echo formatInvoiceDate($invoice['created_at']); ?></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6"><strong>Khách Hàng:</strong> <?php echo h($invoice['full_name'] ?? ''); ?></div>
+                                <div class="col-md-6"><strong>Điện Thoại:</strong> <?php echo h($invoice['phone'] ?? '-'); ?></div>
+                            </div>
+
+                            <!-- Thông tin phòng (nếu có) -->
+                            <?php if (!empty($invoice['room_number']) && !empty($invoice['room_type_name'])): ?>
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-6"><strong>Phòng:</strong> <?php echo h($invoice['room_number']); ?></div>
+                                    <div class="col-md-6"><strong>Loại Phòng:</strong> <?php echo h($invoice['room_type_name']); ?></div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-6"><strong>Check-in:</strong> <?php echo formatInvoiceDate($invoice['check_in_date']); ?></div>
+                                    <div class="col-md-6"><strong>Check-out:</strong> <?php echo formatInvoiceDate($invoice['check_out_date']); ?></div>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Danh sách dịch vụ -->
+                            <?php if (!empty($invoice['services']) && count($invoice['services']) > 0): ?>
+                            <div class="mb-3">
+                                <strong>Dịch Vụ:</strong>
+                                <table class="table table-sm table-bordered mt-2">
+                                    <thead>
+                                        <tr>
+                                            <th>Tên Dịch Vụ</th>
+                                            <th class="text-center">Số Lượng</th>
+                                            <th class="text-end">Đơn Giá</th>
+                                            <th class="text-end">Thành Tiền</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($invoice['services'] as $service): ?>
+                                        <tr>
+                                            <td><?php echo h($service['service_name'] ?? '-'); ?></td>
+                                            <td class="text-center"><?php echo h($service['quantity'] ?? 0); ?> <?php echo h($service['unit'] ?? ''); ?></td>
+                                            <td class="text-end"><?php echo formatInvoiceMoney($service['unit_price'] ?? 0); ?></td>
+                                            <td class="text-end"><?php echo formatInvoiceMoney($service['total_price'] ?? 0); ?></td>
+                                        </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <?php endif; ?>
+
+                            <!-- Bảng tính tiền -->
+                            <table class="table table-sm mt-3">
+                                <tr>
+                                    <td>Phí Phòng:</td>
+                                    <td class="text-end"><?php echo formatInvoiceMoney($invoice['room_charge']); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Phí Dịch Vụ:</td>
+                                    <td class="text-end"><?php echo formatInvoiceMoney($invoice['service_charge']); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>VAT:</td>
+                                    <td class="text-end"><?php echo formatInvoiceMoney($invoice['vat']); ?></td>
+                                </tr>
+                                <tr style="border-top: 2px solid #ddd; font-weight: bold;">
+                                    <td>Tổng Cộng:</td>
+                                    <td class="text-end"><?php echo formatInvoiceMoney($invoice['total_amount']); ?></td>
+                                </tr>
+                                <tr>
+                                    <td>Tiền Cọc:</td>
+                                    <td class="text-end"><?php echo formatInvoiceMoney($invoice['deposit_amount']); ?></td>
+                                </tr>
+                                <tr style="font-weight: bold;">
+                                    <td>Còn Lại:</td>
+                                    <td class="text-end"><?php echo formatInvoiceMoney($invoice['remaining_amount']); ?></td>
+                                </tr>
+                            </table>
+
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <strong>Hình Thức TT:</strong> <?php echo h($invoice['payment_method'] ?? '-'); ?>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Tình Trạng:</strong> 
+                                    <?php
+                                    $badgeClass = 'badge';
+                                    if ($invoice['status'] == 'Paid') $badgeClass = 'badge bg-success';
+                                    elseif ($invoice['status'] == 'Unpaid') $badgeClass = 'badge bg-danger';
+                                    ?>
+                                    <span class="<?php echo $badgeClass; ?>"><?php echo $statusText; ?></span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <strong>Ngày Thanh Toán:</strong> <?php echo formatInvoiceDate($invoice['payment_time']); ?>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <strong>Ghi Chú:</strong> <?php echo !empty($invoice['note']) ? nl2br(h($invoice['note'])) : '-'; ?>
+                                </div>
+                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                                            <button type="button" class="btn btn-success" onclick="exportInvoiceToWord(<?php echo $invoice['invoice_id']; ?>)">
+                                                <i class="fas fa-file-word"></i> Xuất Word
+                                            </button>
+                                            <a href="index.php?page=invoices-manager&action=edit&id=<?php echo $invoice['invoice_id']; ?>">
+                                                <button type="button" class="btn btn-primary">
+                                                    <i class="fas fa-edit"></i> Chỉnh Sửa
+                                                </button>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
     <!-- pagination -->
     <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
-
-    <!-- View Invoice Modal - Một modal duy nhất cho tất cả invoices -->
-    <div class="modal fade" id="viewInvoiceModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-file-invoice"></i> Chi Tiết Hóa Đơn</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6"><strong>Mã Hóa Đơn:</strong> <span id="viewInvoiceId">-</span></div>
-                        <div class="col-md-6"><strong>Ngày Tạo:</strong> <span id="viewCreatedAt">-</span></div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6"><strong>Khách Hàng:</strong> <span id="viewCustomerName">-</span></div>
-                        <div class="col-md-6"><strong>Điện Thoại:</strong> <span id="viewCustomerPhone">-</span></div>
-                    </div>
-
-                    <!-- Thông tin phòng (nếu có) -->
-                    <div id="viewRoomInfo" style="display: none;" class="mb-3">
-                        <div class="row">
-                            <div class="col-md-6"><strong>Phòng:</strong> <span id="viewRoomNumber">-</span></div>
-                            <div class="col-md-6"><strong>Loại Phòng:</strong> <span id="viewRoomType">-</span></div>
-                        </div>
-                        <div class="row mt-2">
-                            <div class="col-md-6"><strong>Check-in:</strong> <span id="viewCheckIn">-</span></div>
-                            <div class="col-md-6"><strong>Check-out:</strong> <span id="viewCheckOut">-</span></div>
-                        </div>
-                    </div>
-
-                    <!-- Danh sách dịch vụ -->
-                    <div id="viewServicesSection" class="mb-3" style="display: none;">
-                        <strong>Dịch Vụ:</strong>
-                        <table class="table table-sm table-bordered mt-2">
-                            <thead>
-                                <tr>
-                                    <th>Tên Dịch Vụ</th>
-                                    <th class="text-center">Số Lượng</th>
-                                    <th class="text-end">Đơn Giá</th>
-                                    <th class="text-end">Thành Tiền</th>
-                                </tr>
-                            </thead>
-                            <tbody id="viewServicesList">
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <!-- Bảng tính tiền -->
-                    <table class="table table-sm mt-3">
-                        <tr>
-                            <td>Phí Phòng:</td>
-                            <td class="text-end" id="viewRoomCharge">0 VNĐ</td>
-                        </tr>
-                        <tr>
-                            <td>Phí Dịch Vụ:</td>
-                            <td class="text-end" id="viewServiceCharge">0 VNĐ</td>
-                        </tr>
-                        <tr>
-                            <td>VAT:</td>
-                            <td class="text-end" id="viewVat">0 VNĐ</td>
-                        </tr>
-                        <tr style="border-top: 2px solid #ddd; font-weight: bold;">
-                            <td>Tổng Cộng:</td>
-                            <td class="text-end" id="viewTotalAmount">0 VNĐ</td>
-                        </tr>
-                        <tr>
-                            <td>Tiền Cọc:</td>
-                            <td class="text-end" id="viewDepositAmount">0 VNĐ</td>
-                        </tr>
-                        <tr style="font-weight: bold;">
-                            <td>Còn Lại:</td>
-                            <td class="text-end" id="viewRemainingAmount">0 VNĐ</td>
-                        </tr>
-                    </table>
-
-                    <div class="row mt-3">
-                        <div class="col-md-6">
-                            <strong>Hình Thức TT:</strong> <span id="viewPaymentMethod">-</span>
-                        </div>
-                        <div class="col-md-6">
-                            <strong>Tình Trạng:</strong> <span id="viewStatus">-</span>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-md-12">
-                            <strong>Ngày Thanh Toán:</strong> <span id="viewPaymentTime">-</span>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-md-12">
-                            <strong>Ghi Chú:</strong> <span id="viewNote">-</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                    <button type="button" class="btn btn-success" onclick="exportInvoiceToWord()">
-                        <i class="fas fa-file-word"></i> Xuất Word
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="editInvoiceFromView()">
-                        <i class="fas fa-edit"></i> Chỉnh Sửa
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
 
 
 
@@ -864,6 +1008,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
             <form method="POST" id="invoiceForm">
                 <div class="modal-body">
                     <input type="hidden" name="invoice_id" id="invoice_id" value="">
+                    <input type="hidden" name="customer_id" id="customer_id" value="<?php echo $editInvoice['customer_id'] ?? ''; ?>">
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -1192,116 +1337,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         }
     }
 
-    function viewInvoice(invoiceId) {
-        // Lấy dữ liệu từ database qua AJAX
-        fetch(`api/invoice-api.php?action=get_invoice&id=${invoiceId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.invoice) {
-                    const inv = data.invoice;
-
-                    // Format số tiền
-                    const formatMoney = (amount) => {
-                        return new Intl.NumberFormat('vi-VN').format(amount || 0) + ' VNĐ';
-                    };
-
-                    // Format ngày
-                    const formatDate = (dateStr) => {
-                        if (!dateStr || dateStr === '0000-00-00 00:00:00') return '-';
-                        const date = new Date(dateStr);
-                        return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                        });
-                    };
-
-                    // Format trạng thái
-                    const formatStatus = (status) => {
-                        const statusMap = {
-                            'Paid': 'Đã thanh toán',
-                            'Unpaid': 'Chưa thanh toán',
-                            'Refunded': 'Đã hoàn tiền'
-                        };
-                        return statusMap[status] || status;
-                    };
-
-                    // Set text fields trong modal
-                    const setElement = (id, value) => {
-                        const el = document.getElementById(id);
-                        if (el) el.textContent = value;
-                    };
-
-                    setElement('viewInvoiceId', '#' + (inv.invoice_id || '-'));
-                    setElement('viewCustomerName', inv.full_name || '-');
-                    setElement('viewCustomerPhone', inv.phone || '-');
-                    setElement('viewCreatedAt', formatDate(inv.created_at));
-
-                    // Hiển thị thông tin phòng (nếu có)
-                    const roomInfoEl = document.getElementById('viewRoomInfo');
-                    if (inv.room_number && inv.room_type_name) {
-                        setElement('viewRoomNumber', inv.room_number || '-');
-                        setElement('viewRoomType', inv.room_type_name || '-');
-                        setElement('viewCheckIn', inv.check_in_date ? formatDate(inv.check_in_date) : '-');
-                        setElement('viewCheckOut', inv.check_out_date ? formatDate(inv.check_out_date) : '-');
-                        if (roomInfoEl) roomInfoEl.style.display = 'block';
-                    } else {
-                        if (roomInfoEl) roomInfoEl.style.display = 'none';
-                    }
-
-                    // Hiển thị danh sách dịch vụ
-                    const servicesSection = document.getElementById('viewServicesSection');
-                    const servicesList = document.getElementById('viewServicesList');
-                    if (inv.services && inv.services.length > 0) {
-                        if (servicesList) {
-                            servicesList.innerHTML = '';
-                            inv.services.forEach(service => {
-                                const row = document.createElement('tr');
-                                row.innerHTML = `
-                                    <td>${service.service_name || '-'}</td>
-                                    <td class="text-center">${service.quantity || 0} ${service.unit || ''}</td>
-                                    <td class="text-end">${formatMoney(service.unit_price || 0)}</td>
-                                    <td class="text-end">${formatMoney(service.total_price || 0)}</td>
-                                `;
-                                servicesList.appendChild(row);
-                            });
-                        }
-                        if (servicesSection) servicesSection.style.display = 'block';
-                    } else {
-                        if (servicesSection) servicesSection.style.display = 'none';
-                    }
-
-                    // Thông tin thanh toán
-                    setElement('viewRoomCharge', formatMoney(inv.room_charge || 0));
-                    setElement('viewServiceCharge', formatMoney(inv.service_charge || 0));
-                    setElement('viewVat', formatMoney(inv.vat || 0));
-                    setElement('viewTotalAmount', formatMoney(inv.total_amount || 0));
-                    setElement('viewDepositAmount', formatMoney(inv.deposit_amount || 0));
-                    setElement('viewRemainingAmount', formatMoney(inv.remaining_amount || 0));
-                    setElement('viewPaymentMethod', inv.payment_method || '-');
-                    setElement('viewStatus', formatStatus(inv.status));
-                    setElement('viewPaymentTime', inv.payment_time ? formatDate(inv.payment_time) : '-');
-
-                    const noteEl = document.getElementById('viewNote');
-                    if (noteEl) noteEl.textContent = inv.note || '-';
-
-                    // Lưu invoice data để xuất Word và edit
-                    window.currentInvoiceData = inv;
-                    window.currentInvoiceId = inv.invoice_id; // Lưu invoice_id riêng để dùng cho edit
-
-                    // Show modal
-                    const viewModal = new bootstrap.Modal(
-                        document.getElementById("viewInvoiceModal")
-                    );
-                    viewModal.show();
-                } else {
-                    alert('Không tìm thấy thông tin hóa đơn');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Lỗi khi tải thông tin hóa đơn');
-            });
-    }
+    // Hàm viewInvoice đã được thay thế bằng modal render từ PHP
+    // Không cần fetch dữ liệu qua AJAX nữa
 
     function saveInvoice() {
         // Logic to save invoice
@@ -1312,34 +1349,8 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         addModal.hide();
     }
 
-    function editInvoiceFromView() {
-        // Lấy invoice_id từ biến global đã lưu khi view invoice
-        let invoiceId = window.currentInvoiceId;
+    function exportInvoiceToWord(invoiceId) {
         if (!invoiceId) {
-            // Fallback: lấy từ textContent và loại bỏ dấu #
-            const invoiceIdText = document.getElementById("viewInvoiceId")?.textContent || '';
-            invoiceId = invoiceIdText.replace('#', '').trim();
-        }
-
-        if (!invoiceId || invoiceId === '-' || invoiceId === '') {
-            alert('Không tìm thấy mã hóa đơn');
-            return;
-        }
-
-        const viewModal = bootstrap.Modal.getInstance(
-            document.getElementById("viewInvoiceModal")
-        );
-        if (viewModal) {
-            viewModal.hide();
-        }
-
-        // Chuyển đến trang edit với URL đúng
-        window.location.href = 'index.php?page=invoices-manager&action=edit&id=' + invoiceId;
-    }
-
-    function exportInvoiceToWord() {
-        const invoiceId = document.getElementById("viewInvoiceId").textContent;
-        if (!invoiceId || invoiceId === '-') {
             alert('Không tìm thấy mã hóa đơn');
             return;
         }
@@ -1563,6 +1574,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     <?php if ($editInvoice): ?>
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('invoice_id').value = '<?php echo $editInvoice['invoice_id']; ?>';
+            document.getElementById('customer_id').value = '<?php echo $editInvoice['customer_id'] ?? ''; ?>';
             // Booking ID đã được set trong HTML với readonly, không cần set lại bằng JS
             // document.getElementById('booking_id').value = '<?php echo $editInvoice['booking_id'] ?? ''; ?>';
             document.getElementById('room_charge').value = '<?php echo $editInvoice['room_charge']; ?>';
