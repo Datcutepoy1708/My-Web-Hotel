@@ -25,10 +25,6 @@ if ($result->num_rows == 0) {
 
 $service = $result->fetch_assoc();
 
-// Debug: Kiểm tra giá trị status
-// echo "Status value: '" . $service['status'] . "' | Length: " . strlen($service['status']);
-// Uncomment dòng trên để xem giá trị status thực tế
-
 // Lấy 3 dịch vụ gợi ý ngẫu nhiên (loại trừ dịch vụ hiện tại)
 $suggestStmt = $mysqli->prepare("
     SELECT * FROM service 
@@ -49,6 +45,8 @@ $booking_message = '';
 $booking_error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_service'])) {
+    require_once __DIR__ . '/../includes/email_helper.php';
+    
     $customer_name = trim($_POST['customer_name']);
     $customer_phone = trim($_POST['customer_phone']);
     $customer_email = trim($_POST['customer_email']);
@@ -73,7 +71,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['book_service'])) {
         );
         
         if ($stmt_booking->execute()) {
-            $booking_message = "Đặt dịch vụ thành công! Chúng tôi sẽ liên hệ với bạn sớm nhất.";
+            $booking_service_id = $mysqli->insert_id;
+            
+            // Gửi email xác nhận
+            if (!empty($customer_email)) {
+                $bookingData = [
+                    'booking_service_id' => $booking_service_id,
+                    'service_name' => $service['service_name'],
+                    'quantity' => $number_of_people,
+                    'unit_price' => $service['price'],
+                    'booking_date' => date('Y-m-d H:i:s')
+                ];
+                
+                EmailHelper::sendServiceBookingConfirmation(
+                    $customer_email,
+                    $customer_name,
+                    $bookingData
+                );
+            }
+            
+            $booking_message = "Đặt dịch vụ thành công! Email xác nhận đã được gửi đến " . htmlspecialchars($customer_email);
         } else {
             $booking_error = "Có lỗi xảy ra. Vui lòng thử lại!";
         }
@@ -88,396 +105,6 @@ window.SERVICE_ID = <?php echo $service_id; ?>;
 window.SERVICE_NAME = "<?php echo htmlspecialchars($service['service_name']); ?>";
 window.SERVICE_PRICE = <?php echo $service['price']; ?>;
 </script>
-
-<style>
-:root {
-    --primary-color: #deb666;
-    --primary-dark: #c9a155;
-    --primary-light: #e8c784;
-}
-
-.header-title {
-    background: #eee;
-    padding: 40px 0;
-    text-align: center;
-    color: white;
-    margin-bottom: 30px;
-}
-
-.header-title h1 {
-    color: black;
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin: 0;
-}
-
-.detail-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 15px 50px;
-}
-
-.main-content {
-    display: grid;
-    grid-template-columns: 1fr 350px;
-    gap: 30px;
-    margin-bottom: 50px;
-}
-
-.service-info {
-    background: white;
-    border-radius: 10px;
-    padding: 30px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-}
-
-.image-section {
-    margin-bottom: 30px;
-}
-
-.main-image-container {
-    position: relative;
-    height: 400px;
-    border-radius: 10px;
-    overflow: hidden;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.main-image-container img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.main-image-container::before {
-    content: '';
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    top: -100px;
-    right: -50px;
-}
-
-.service-meta {
-    display: flex;
-    gap: 30px;
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 8px;
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1.8rem;
-    color: #495057;
-}
-
-.meta-item i {
-    color: var(--primary-color);
-}
-
-.service-description {
-    margin-bottom: 30px;
-}
-
-.service-description h2 {
-    font-size: 2rem;
-    margin-bottom: 15px;
-    color: #212529;
-    position: relative;
-    padding-bottom: 10px;
-}
-
-.service-description h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: var(--primary-color);
-}
-
-.service-description p {
-    color: #495057;
-    line-height: 1.8;
-    text-align: justify;
-}
-
-.features-section {
-    margin-bottom: 30px;
-}
-
-.features-section h2 {
-    font-size: 2rem;
-    margin-bottom: 20px;
-    color: #212529;
-    position: relative;
-    padding-bottom: 10px;
-}
-
-.features-section h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: var(--primary-color);
-}
-
-.features-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-}
-
-.feature-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    transition: transform 0.3s;
-}
-
-.feature-item:hover {
-    transform: translateX(5px);
-    background: #e9ecef;
-}
-
-.feature-item i {
-    color: var(--primary-color);
-    font-size: 1.5rem;
-}
-
-/* Booking Card */
-.booking-card {
-    background: white;
-    border-radius: 10px;
-    padding: 25px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    position: sticky;
-    top: 20px;
-    height: fit-content;
-}
-
-.price-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 2px solid #f0f0f0;
-}
-
-.price {
-    font-size: 2rem;
-    font-weight: bold;
-    color: var(--primary-color);
-}
-
-.price span {
-    font-size: 1.5rem;
-    color: #6c757d;
-    font-weight: normal;
-}
-
-.status-badge {
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.status-active {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-inactive {
-    background: #f8d7da;
-    color: #721c24;
-}
-
-.booking-form .form-group {
-    margin-bottom: 20px;
-}
-
-.booking-form label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #495057;
-}
-
-.booking-form input,
-.booking-form select,
-.booking-form textarea {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #e9ecef;
-    border-radius: 8px;
-    font-size: 1.5rem;
-    transition: border-color 0.3s;
-}
-
-.booking-form input:focus,
-.booking-form select:focus,
-.booking-form textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-}
-
-.check-service-btn {
-    width: 100%;
-    padding: 15px;
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 1.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-
-.check-service-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(222, 182, 102, 0.4);
-}
-
-.check-service-btn:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
-}
-
-/* Suggestions Section */
-.suggestions-section {
-    margin-top: 50px;
-}
-
-.section-title {
-    font-size: 2.5rem;
-    margin-bottom: 30px;
-    text-align: center;
-    color: #212529;
-    position: relative;
-    padding-bottom: 15px;
-}
-
-.section-title::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80px;
-    height: 3px;
-    background: var(--primary-color);
-}
-
-.suggestions {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 25px;
-}
-
-.suggestion-card {
-    background: white;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s;
-}
-
-.suggestion-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
-}
-
-.suggestion-image {
-    height: 200px;
-    background-size: cover;
-    background-position: center;
-    background-color: #e9ecef;
-}
-
-.suggestion-content {
-    padding: 20px;
-}
-
-.suggestion-title {
-    font-size: 1.8rem;
-    margin-bottom: 10px;
-    color: #212529;
-}
-
-.suggestion-meta {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 10px;
-    color: #6c757d;
-}
-
-.suggestion-price {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 15px;
-    padding-top: 15px;
-    border-top: 1px solid #e9ecef;
-}
-
-.suggestion-price .price {
-    font-size: 1.8rem;
-    color: var(--primary-color);
-    font-weight: bold;
-}
-
-.view-btn {
-    padding: 10px 20px;
-    background: var(--primary-color);
-    color: white;
-    text-decoration: none;
-    border-radius: 5px;
-    transition: background 0.3s;
-}
-
-.view-btn:hover {
-    background: var(--primary-dark);
-    color: white;
-}
-
-@media (max-width: 992px) {
-    .main-content {
-        grid-template-columns: 1fr;
-    }
-
-    .booking-card {
-        position: static;
-    }
-}
-
-@media (max-width: 768px) {
-    .header-title h1 {
-        font-size: 2rem;
-    }
-
-    .suggestions {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
 
 <main>
     <div class="header-title">
@@ -502,11 +129,11 @@ window.SERVICE_PRICE = <?php echo $service['price']; ?>;
                 <!-- Meta Info -->
                 <div class="service-meta">
                     <div class="meta-item">
-                        <i class="bi bi-tag-fill"></i>
+                        <i class="fa-solid fa-tag"></i>
                         <span><?php echo htmlspecialchars($service['service_type']); ?></span>
                     </div>
                     <div class="meta-item">
-                        <i class="bi bi-rulers"></i>
+                        <i class="fa-solid fa-ruler-vertical"></i>
                         <span><?php echo htmlspecialchars($service['unit']); ?></span>
                     </div>
                 </div>
@@ -670,9 +297,9 @@ window.SERVICE_PRICE = <?php echo $service['price']; ?>;
                     <div class="suggestion-content">
                         <h3 class="suggestion-title"><?php echo htmlspecialchars($suggested['service_name']); ?></h3>
                         <div class="suggestion-meta">
-                            <span><i class="bi bi-tag"></i>
+                            <span><i class="fa-solid fa-tag"></i>
                                 <?php echo htmlspecialchars($suggested['service_type']); ?></span>
-                            <span><i class="bi bi-rulers"></i>
+                            <span><i class="fa-solid fa-ruler-vertical"></i>
                                 <?php echo htmlspecialchars($suggested['unit']); ?></span>
                         </div>
                         <p style="color: #666; font-size: 0.95rem;">
@@ -732,6 +359,3 @@ document.addEventListener("DOMContentLoaded", () => {
     <?php endif; ?>
 });
 </script>
-
-<!-- Bootstrap Icons -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">

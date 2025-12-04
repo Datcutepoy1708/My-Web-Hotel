@@ -54,6 +54,8 @@
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/gallery.css?v=<?php echo time(); ?>">';
     if ($current_page == 'room-detail') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/room-detail.css?v=<?php echo time(); ?>">';
+    if ($current_page == 'service-detail') echo '
+    <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/service-detail.css?v=<?php echo time(); ?>">';
     ?>
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/header.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="/My-Web-Hotel/client/assets/css/footer.css?v=<?php echo time(); ?>">
@@ -105,7 +107,7 @@
                             </a>
                         </li>
                         <li class="nav-item drop">
-                            <?php $servicesActive = in_array($current_page, ['dichVu','spa','giaiTri','nhaHang','suKien',]) ? 'nav-link active' : 'nav-link'; ?>
+                            <?php $servicesActive = in_array($current_page, ['dichVu','spa','giaiTri','nhaHang','suKien','service-detail']) ? 'nav-link active' : 'nav-link'; ?>
                             <a class="<?php echo $servicesActive; ?>" href="/My-Web-Hotel/client/index.php?page=dichVu">
                                 <span>Đặt Dịch vụ</span>
                             </a>

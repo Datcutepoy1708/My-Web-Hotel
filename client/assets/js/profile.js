@@ -15,6 +15,12 @@ document.addEventListener("DOMContentLoaded", function () {
       bsAlert.close();
     }, 3000);
   }
+  if (alertBox) {
+    setTimeout(() => {
+      const bsAlert = new bootstrap.Alert(alertBox);
+      bsAlert.close();
+    }, 3000);
+  }
 });
 // Mở tab tương ứng nếu có ?tab=... trong URL
 const params = new URLSearchParams(window.location.search);

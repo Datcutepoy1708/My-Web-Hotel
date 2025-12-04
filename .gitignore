@@ -119,4 +119,7 @@ sessions/
 # Uploads (nếu có thư mục upload local)
 uploads/
 files/
+PHPMailer-master/
+
+
 

@@ -6,7 +6,7 @@ $sort = isset($_GET['sort']) ? $_GET['sort'] : '';
 $categories = isset($_GET['categories']) ? $_GET['categories'] : [];
 
 // Câu SQL cơ bản
-$sql = "SELECT * FROM service WHERE status = 'Active'";
+$sql = "SELECT * FROM service WHERE status = 'Active'and service_type <> 'Personal'";
 
 $params = [];
 $types = "";

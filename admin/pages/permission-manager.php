@@ -12,8 +12,6 @@ $messageType = '';
 $rolesResult = $mysqli->query("SELECT DISTINCT chuc_vu FROM nhan_vien ORDER BY chuc_vu");
 $roles = $rolesResult ? $rolesResult->fetch_all(MYSQLI_ASSOC) : [];
 
-$selectedRole = isset($_GET['chuc_vu']) ? trim($_GET['chuc_vu']) : ($roles[0]['chuc_vu'] ?? '');
-
 // Xử lý lưu
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chuc_vu'])) {
     $selectedRole = trim($_POST['chuc_vu']);
@@ -42,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chuc_vu'])) {
             $mysqli->commit();
             $message = 'Cập nhật phân quyền cho chức vụ "' . h($selectedRole) . '" thành công!';
             $messageType = 'success';
+            // Set flag để JavaScript redirect
+            $redirectAfterSave = true;
         } catch (Throwable $e) {
             $mysqli->rollback();
             error_log('Permission update error: ' . $e->getMessage());
@@ -49,6 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chuc_vu'])) {
             $messageType = 'danger';
         }
     }
+}
+
+// Lấy selectedRole từ GET (sau khi redirect) hoặc từ roles
+if (!isset($selectedRole)) {
+    $selectedRole = isset($_GET['chuc_vu']) ? trim($_GET['chuc_vu']) : ($roles[0]['chuc_vu'] ?? '');
+}
+
+// Hiển thị thông báo thành công nếu có
+if (isset($_GET['saved']) && $_GET['saved'] == '1') {
+    $message = 'Cập nhật phân quyền cho chức vụ "' . h($selectedRole) . '" thành công!';
+    $messageType = 'success';
 }
 
 // Lấy danh sách quyền
@@ -102,6 +113,7 @@ if ($selectedRole !== '') {
     </div>
     <?php endif; ?>
     <form method="POST" id="permissionForm">
+        <input type="hidden" name="chuc_vu" value="<?php echo h($selectedRole); ?>">
         <?php if (empty($permissions)): ?>
         <div class="alert alert-warning">Chưa có dữ liệu quyền trong hệ thống.</div>
         <?php else: ?>
@@ -155,4 +167,9 @@ function toggleGroup(button, groupName) {
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
     checkboxes.forEach(cb => cb.checked = !allChecked);
 }
+
+<?php if (isset($redirectAfterSave) && $redirectAfterSave): ?>
+// Redirect sau khi lưu thành công để tránh resubmit form khi refresh
+window.location.href = 'index.php?page=permission-manager&chuc_vu=<?php echo urlencode($selectedRole); ?>&saved=1';
+<?php endif; ?>
 </script>

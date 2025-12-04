@@ -151,9 +151,9 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
         <?php if ($error !== ''): ?>
         <div class="error" style="color:red; margin-bottom:12px;"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-        <form method="POST">
+        <form method="POST" id="loginForm">
             <div class="input-box">
-                <input type="email" name="email" placeholder="Email" required autocomplete="email"
+                <input type="email" name="email" id="loginEmail" placeholder="Email" required autocomplete="email"
                     value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
             </div>
             <div class="input-box">
@@ -170,8 +170,8 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
             </label>
             <button type="submit" class="btn">Đăng Nhập</button>
             <div class="options">
-                <a href="/my-web-hotel/client/pages/forgotPass.php">Quên mật khẩu ?</a>
-                <a href="/my-web-hotel/client/pages/signup.php">Đăng ký</a>
+                <a href="/My-Web-Hotel/client/pages/forgotPass.php">Quên mật khẩu ?</a>
+                <a href="/My-Web-Hotel/client/pages/signUp.php">Đăng ký</a>
             </div>
             <div class="social-login">
                 <p>ĐĂNG NHẬP VỚI</p>

@@ -1,222 +1,257 @@
 <?php
-// session_start() đã được gọi trong index.php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/../includes/connect.php';
 
-// Lấy thống kê review
-$statsQuery = "SELECT 
-    COUNT(*) as total_reviews,
-    AVG(rating) as avg_rating,
-    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as rating_5,
-    SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as rating_4,
-    SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as rating_3,
-    SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as rating_2,
-    SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as rating_1
-FROM review 
-WHERE status = 'Approved' AND deleted IS NULL";
-$statsResult = $mysqli->query($statsQuery);
-$stats = $statsResult->fetch_assoc();
+$isLoggedIn = isset($_SESSION['user_id']);
+$user_id = $isLoggedIn ? $_SESSION['user_id'] : null;
 
-$totalReviews = $stats['total_reviews'] ?? 0;
-$avgRating = $stats['avg_rating'] ? round($stats['avg_rating'], 1) : 0;
-
-// Hàm hiển thị sao
-function displayStars($rating) {
-    $stars = '';
-    for ($i = 1; $i <= 5; $i++) {
-        if ($i <= $rating) {
-            $stars .= '★';
-        } else {
-            $stars .= '☆';
-        }
-    }
-    return $stars;
+// Lấy thông tin user nếu đã đăng nhập
+$user_info = null;
+if ($user_id) {
+    $stmt = $mysqli->prepare("SELECT full_name, avatar FROM customer WHERE customer_id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $user_info = $result->fetch_assoc();
 }
 
-// Lấy danh sách reviews với thông tin customer và ảnh
-$reviewsQuery = "SELECT 
-    r.review_id,
-    r.rating,
-    r.comment,
-    r.created_at,
-    c.customer_id,
-    c.full_name,
-    c.avatar
-FROM review r
-INNER JOIN customer c ON r.customer_id = c.customer_id
-WHERE r.status = 'Approved' AND r.deleted IS NULL
-ORDER BY r.created_at DESC
-LIMIT 20";
-$reviewsResult = $mysqli->query($reviewsQuery);
-$reviews = $reviewsResult->fetch_all(MYSQLI_ASSOC);
+// Lấy tất cả reviews đã được duyệt
+$reviews_query = "SELECT r.*, c.full_name, c.avatar 
+                  FROM review r 
+                  JOIN customer c ON r.customer_id = c.customer_id 
+                  WHERE r.status = 'Approved' AND r.deleted IS NULL
+                  ORDER BY r.created_at DESC";
+$reviews_result = $mysqli->query($reviews_query);
 
-// Lấy ảnh cho mỗi review
-foreach ($reviews as &$review) {
-    $imagesQuery = "SELECT image_url, display_order 
-                    FROM review_images 
-                    WHERE review_id = ? AND deleted IS NULL 
-                    ORDER BY display_order ASC, id ASC";
-    $imgStmt = $mysqli->prepare($imagesQuery);
-    $imgStmt->bind_param("i", $review['review_id']);
-    $imgStmt->execute();
-    $imagesResult = $imgStmt->get_result();
-    $review['images'] = $imagesResult->fetch_all(MYSQLI_ASSOC);
-    $imgStmt->close();
+// Tính rating trung bình
+$avg_query = "SELECT AVG(rating) as avg_rating, COUNT(*) as total_reviews 
+              FROM review WHERE status = 'Approved' AND deleted IS NULL";
+
+$avg_result = $mysqli->query($avg_query);
+
+if ($avg_result) {
+    $avg_data = $avg_result->fetch_assoc();
+    $avg_rating = round($avg_data['avg_rating'], 1);
+    $total_reviews = $avg_data['total_reviews'];
+} else {
+    // In ra lỗi để dễ debug
+    die("Query error: " . $mysqli->error);
 }
 
-// Lấy tất cả ảnh từ review_images để hiển thị trong gallery bên phải
-$galleryQuery = "SELECT image_url 
-                 FROM review_images 
-                 WHERE deleted IS NULL 
-                 ORDER BY created_at DESC 
-                 LIMIT 20";
-$galleryResult = $mysqli->query($galleryQuery);
-$galleryImages = $galleryResult->fetch_all(MYSQLI_ASSOC);
-
-// Kiểm tra thông báo success/error
-$successMsg = isset($_GET['success']) ? 'Đánh giá của bạn đã được gửi thành công! Cảm ơn bạn đã chia sẻ trải nghiệm.' : null;
-$errorMsg = isset($_GET['error']) ? 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại.' : null;
 ?>
-
-<main>
-    <div class="main-content">
-        <!-- Left -->
-        <div class="left">
+<main class="container">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
             <!-- Summary -->
-            <div class="summary-box">
-                <h2>Tổng lượt đánh giá</h2>
-                <div class="stars"><?php echo displayStars(round($avgRating)); ?> (<?php echo $avgRating; ?>/5)</div>
-                <p>Dựa trên <?php echo number_format($totalReviews); ?> đánh giá</p>
-            </div>
-
-            <!-- Success/Error Messages -->
-            <?php if ($successMsg): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fa fa-check-circle me-2"></i> <?php echo htmlspecialchars($successMsg); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            <?php endif; ?>
-            
-            <?php if ($errorMsg): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="fa fa-times-circle me-2"></i> <?php echo htmlspecialchars($errorMsg); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            <?php endif; ?>
-
-            <!-- Reviews -->
-            <?php if (empty($reviews)): ?>
-                <div class="review">
-                    <p class="text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>
+            <div class="summary-card">
+                <h2>Đánh giá tổng quan</h2>
+                <div class="rating-large"><?= $avg_rating ?>/5.0</div>
+                <div class="stars">
+                    <?php
+                        for ($i = 1; $i <= 5; $i++) {
+                            if ($i <= floor($avg_rating)) {
+                                echo '<i class="fas fa-star"></i>';
+                            } elseif ($i - $avg_rating < 1) {
+                                echo '<i class="fas fa-star-half-alt"></i>';
+                            } else {
+                                echo '<i class="far fa-star"></i>';
+                            }
+                        }
+                        ?>
                 </div>
-            <?php else: ?>
-                <?php foreach ($reviews as $index => $review): ?>
-                <div class="review <?php echo $index >= 3 ? 'hidden' : ''; ?>" data-review-id="<?php echo $review['review_id']; ?>">
+                <p class="mt-3 mb-0">Dựa trên <strong><?= $total_reviews ?></strong> đánh giá</p>
+            </div>
+
+            <!-- Write Review Form -->
+            <div class="write-review-card">
+                <h3><i class="fas fa-pen-fancy me-2"></i>Viết đánh giá của bạn</h3>
+
+                <?php if (!$isLoggedIn): ?>
+                <div class="alert-login">
+                    <i class="fas fa-info-circle" style="color: #ffc107; font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>Vui lòng đăng nhập để viết đánh giá</strong>
+                        <p class="mb-0">Bạn cần đăng nhập để chia sẻ trải nghiệm của mình.</p>
+                    </div>
+                    <a href="login.php" class="btn btn-warning ms-auto">Đăng nhập</a>
+                </div>
+                <?php else: ?>
+                <form id="reviewForm" method="POST" action="/My-Web-Hotel/client/controller/submit-review.php" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Đánh giá của bạn</label>
+                        <div class="star-rating" id="starRating">
+                            <i class="far fa-star" data-rating="1"></i>
+                            <i class="far fa-star" data-rating="2"></i>
+                            <i class="far fa-star" data-rating="3"></i>
+                            <i class="far fa-star" data-rating="4"></i>
+                            <i class="far fa-star" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" name="rating" id="ratingInput" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chia sẻ trải nghiệm của bạn</label>
+                        <textarea class="form-control" name="comment" rows="5"
+                            placeholder="Hãy chia sẻ những điều bạn thích về khách sạn..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-images me-2"></i>Thêm ảnh (tùy chọn)
+                        </label>
+                        <input type="file" class="form-control" id="imageInput" name="imageInput[]" accept="image/*" multiple
+                            onchange="previewImages(event)">
+                        <small class="text-muted">Bạn có thể chọn nhiều ảnh</small>
+                        <div class="image-upload-preview" id="imagePreview"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-submit">
+                        <i class="fas fa-paper-plane me-2"></i>Gửi đánh giá
+                    </button>
+                </form>
+                <?php endif; ?>
+            </div>
+
+            <!-- Reviews List -->
+            <h3 class="mb-4"><i class="fas fa-comments me-2"></i>Đánh giá từ khách hàng</h3>
+
+            <?php if ($reviews_result->num_rows > 0): ?>
+            <div id="reviewsList">
+                <?php while ($review = $reviews_result->fetch_assoc()): ?>
+                <div class="review-card">
                     <div class="review-header">
-                        <?php if (!empty($review['avatar'])): ?>
-                            <img src="<?php echo htmlspecialchars($review['avatar']); ?>" class="avatar" alt="<?php echo htmlspecialchars($review['full_name']); ?>" />
-                        <?php else: ?>
-                            <img src="/My-Web-Hotel/client/assets/images/275f99923b080b18e7b474ed6155a17f.jpg" class="avatar" alt="Avatar" />
-                        <?php endif; ?>
-                        <div>
-                            <div class="review-name"><?php echo htmlspecialchars($review['full_name']); ?></div>
-                            <div class="stars"><?php echo displayStars($review['rating']); ?></div>
+                        <img src="<?= htmlspecialchars(!empty($review['avatar']) ? $review['avatar'] : '/My-Web-Hotel/client/assets/images/user1.jpg') ?>"
+                            alt="Avatar" class="review-avatar"
+                            onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'50\' height=\'50\'%3E%3Ccircle cx=\'25\' cy=\'25\' r=\'25\' fill=\'%23ddd\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\' font-size=\'20\'%3E%3F%3C/text%3E%3C/svg%3E'">
+                        <div class="review-info flex-grow-1">
+                            <h5><?= htmlspecialchars($review['full_name']) ?></h5>
+                            <div class="review-date">
+                                <i class="far fa-clock me-1"></i>
+                                <?= date('d/m/Y', strtotime($review['created_at'])) ?>
+                            </div>
+                        </div>
+                        <div class="review-rating">
+                            <?php for ($i = 0; $i < $review['rating']; $i++): ?>
+                            <i class="fas fa-star"></i>
+                            <?php endfor; ?>
+                            <?php for ($i = $review['rating']; $i < 5; $i++): ?>
+                            <i class="far fa-star"></i>
+                            <?php endfor; ?>
                         </div>
                     </div>
+
                     <div class="review-text">
-                        <?php echo nl2br(htmlspecialchars($review['comment'])); ?>
+                        <?= nl2br(htmlspecialchars($review['comment'])) ?>
                     </div>
-                    <?php if (!empty($review['images'])): ?>
-                        <?php foreach ($review['images'] as $img): ?>
-                            <img src="<?php echo htmlspecialchars($img['image_url']); ?>" 
-                                 class="review-img" 
-                                 alt="Ảnh đánh giá" 
-                                 style="max-height: 60px; width: auto; margin-right: 5px; cursor: pointer;"
-                                 onclick="openImageModal('<?php echo htmlspecialchars($img['image_url']); ?>')" />
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                    <div class="review-date" style="font-size: 0.85em; color: #666; margin-top: 8px;">
-                        <?php echo date('d/m/Y', strtotime($review['created_at'])); ?>
-                    </div>
+
+                    <?php
+                    // Lấy ảnh từ bảng review_images
+                    $review_id = $review['review_id'];
+                    $images_query = "SELECT image_url FROM review_images 
+                                     WHERE review_id = ? AND deleted IS NULL
+                                     ORDER BY display_order ASC";
+                    $images_stmt = $mysqli->prepare($images_query);
+                    
+                    if ($images_stmt) {
+                        $images_stmt->bind_param("i", $review_id);
+                        if ($images_stmt->execute()) {
+                            $images_result = $images_stmt->get_result();
+                            
+                            if ($images_result && $images_result->num_rows > 0):
+                            ?>
+                            <div class="review-images">
+                                <?php while ($img_row = $images_result->fetch_assoc()): 
+                                    if (!empty($img_row['image_url'])):
+                                ?>
+                                <img src="<?= htmlspecialchars($img_row['image_url']) ?>" alt="Review Image"
+                                    onclick="openImageModal(this.src)">
+                                <?php 
+                                    endif;
+                                endwhile; ?>
+                            </div>
+                            <?php 
+                            endif;
+                        } else {
+                            // Log error nếu có
+                            error_log("Error fetching review images: " . $images_stmt->error);
+                        }
+                        $images_stmt->close();
+                    } else {
+                        // Log error nếu prepare failed
+                        error_log("Error preparing review images query: " . $mysqli->error);
+                    }
+                    ?>
                 </div>
-                <?php endforeach; ?>
-            <?php endif; ?>
-            
-            <?php if (count($reviews) > 3): ?>
-            <div>
-                <!-- Nút xem thêm -->
-                <button id="showMore">Xem thêm</button>
+                <?php endwhile; ?>
+            </div>
+
+            <?php if ($total_reviews > 5): ?>
+            <div class="load-more">
+                <button class="btn btn-load-more" onclick="loadMoreReviews()">
+                    <i class="fas fa-chevron-down me-2"></i>Xem thêm đánh giá
+                </button>
             </div>
             <?php endif; ?>
-            
-            <!-- Write Review -->
-            <?php if (isset($_SESSION['user_id'])): ?>
-            <div class="write-review">
-                <h3>Viết đánh giá</h3>
-                <form method="post" action="/My-Web-Hotel/client/controller/submit-review.php" enctype="multipart/form-data" id="reviewForm">
-                    <div class="star-input" id="starInput">
-                        <span data-value="1">★</span>
-                        <span data-value="2">★</span>
-                        <span data-value="3">★</span>
-                        <span data-value="4">★</span>
-                        <span data-value="5">★</span>
-                    </div>
-                    <input type="hidden" name="rating" id="ratingInput" value="0" required>
-                    <textarea name="comment" id="commentInput" placeholder="Chia sẻ trải nghiệm của bạn..." required></textarea>
-                    
-                    <!-- Upload nhiều ảnh -->
-                    <div class="mb-3">
-                        <label class="form-label">Thêm ảnh (tối đa 6 ảnh)</label>
-                        <input type="file" class="form-control" name="review_images[]" id="reviewImagesInput" 
-                               accept="image/*" multiple onchange="previewReviewImages(this)">
-                        <div id="reviewImagesPreview" class="d-flex flex-wrap gap-2 mt-2"></div>
-                        <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB mỗi ảnh.</small>
-                    </div>
-                    
-                    <button type="submit">Gửi đánh giá</button>
-                </form>
-            </div>
             <?php else: ?>
-            <div class="write-review">
-                <p class="text-muted">Vui lòng <a href="/My-Web-Hotel/client/index.php?page=logIn">đăng nhập</a> để viết đánh giá.</p>
+            <div class="text-center py-5">
+                <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                <p class="mt-3 text-muted">Chưa có đánh giá nào. Hãy là người đầu tiên!</p>
             </div>
             <?php endif; ?>
         </div>
 
-        <!-- Right: Gallery -->
-        <div class="right">
-            <?php if (!empty($galleryImages)): ?>
-                <?php foreach ($galleryImages as $galleryImg): ?>
-                    <img src="<?php echo htmlspecialchars($galleryImg['image_url']); ?>" 
-                         alt="Ảnh đánh giá" 
-                         style="cursor: pointer;"
-                         onclick="openImageModal('<?php echo htmlspecialchars($galleryImg['image_url']); ?>')" />
-                <?php endforeach; ?>
-            <?php else: ?>
-                <p class="text-muted">Chưa có ảnh nào</p>
-            <?php endif; ?>
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="sidebar">
+                    <div class="gallery-card">
+                    <h4><i class="fas fa-camera me-2"></i>Ảnh từ khách hàng</h4>
+                    <div class="gallery-grid">
+                        <?php
+                            $gallery_query = "SELECT ri.image_url 
+                                            FROM review_images ri
+                                            INNER JOIN review r ON ri.review_id = r.review_id
+                                            WHERE r.status = 'Approved' 
+                                            AND (r.deleted IS NULL OR r.deleted = '0000-00-00 00:00:00')
+                                            AND (ri.deleted IS NULL OR ri.deleted = '0000-00-00 00:00:00')
+                                            ORDER BY ri.created_at DESC
+                                            LIMIT 8";
+
+                            $gallery_result = $mysqli->query($gallery_query);
+
+                            if ($gallery_result && $gallery_result->num_rows > 0) {
+                                while ($img_row = $gallery_result->fetch_assoc()) {
+                                    if (!empty($img_row['image_url'])) {
+                            ?>
+                        <img src="<?= htmlspecialchars($img_row['image_url']) ?>" alt="Gallery" onclick="openImageModal(this.src)">
+                        <?php
+                                    }
+                                }
+                            } else {
+                                // Không có ảnh hoặc có lỗi
+                                if ($gallery_result === false) {
+                                    error_log("Gallery query error: " . $mysqli->error);
+                                }
+                            }
+                        ?>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </main>
 
 <!-- Image Modal -->
-<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="imageModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="modalImage" src="" alt="Ảnh đánh giá" style="max-width: 100%; height: auto;" />
+            <div class="modal-body p-0">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3 bg-white"
+                    data-bs-dismiss="modal" style="z-index: 10;"></button>
+                <img src="" id="modalImage" class="w-100">
             </div>
         </div>
     </div>
 </div>
-
-<script>
-// Mở modal xem ảnh lớn
-function openImageModal(imageUrl) {
-    document.getElementById('modalImage').src = imageUrl;
-    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
-    modal.show();
-}
-</script>
