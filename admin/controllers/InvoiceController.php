@@ -119,6 +119,15 @@ class InvoiceController extends BaseController {
                 }
             }
             
+            // Tự động cập nhật hạng khách hàng nếu invoice được tạo với status = Paid
+            if ($data['status'] === 'Paid' && !empty($customer_id) && $customer_id > 0) {
+                require_once __DIR__ . '/../includes/customer_rank_helper.php';
+                $rankResult = updateCustomerRank($this->mysqli, $customer_id);
+                if ($rankResult['success'] && $rankResult['old_rank'] !== $rankResult['new_rank']) {
+                    error_log("Customer rank auto-updated: Customer ID {$customer_id} - {$rankResult['old_rank']} -> {$rankResult['new_rank']}");
+                }
+            }
+            
             $_SESSION['message'] = 'Tạo hóa đơn thành công';
             $_SESSION['messageType'] = 'success';
         } else {
@@ -164,6 +173,15 @@ class InvoiceController extends BaseController {
         }
         
         if ($model->update($id, $data)) {
+            // Tự động cập nhật hạng khách hàng nếu invoice được thanh toán
+            if ($data['status'] === 'Paid' && !empty($data['customer_id']) && $data['customer_id'] > 0) {
+                require_once __DIR__ . '/../includes/customer_rank_helper.php';
+                $rankResult = updateCustomerRank($this->mysqli, $data['customer_id']);
+                if ($rankResult['success'] && $rankResult['old_rank'] !== $rankResult['new_rank']) {
+                    error_log("Customer rank auto-updated: Customer ID {$data['customer_id']} - {$rankResult['old_rank']} -> {$rankResult['new_rank']}");
+                }
+            }
+            
             $_SESSION['message'] = 'Cập nhật hóa đơn thành công';
             $_SESSION['messageType'] = 'success';
         } else {

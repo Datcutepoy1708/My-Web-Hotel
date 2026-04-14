@@ -7,6 +7,6 @@ window.addEventListener("load", function () {
     // Xóa element sau khi animation hoàn thành
     setTimeout(function () {
       overlay.remove();
-    }, 500);
-  }, 500); // Delay 500ms trước khi bắt đầu fade out
+    }, 150);
+  }, 150); // Delay 500ms trước khi bắt đầu fade out
 });

@@ -196,6 +196,8 @@ body.dark .quick-action-btn {
   transition: all 0.3s ease;
   font-size: 14px;
   font-weight: 500;
+  text-decoration: none;
+  color: #000;
 }
 
 .quick-action-btn:hover {

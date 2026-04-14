@@ -28,13 +28,13 @@ $room = $roomResult->fetch_assoc();
 
 
     // Lấy ảnh phòng
-    $imgQuery = $mysqli->prepare("SELECT url_image FROM room_images WHERE room_id = ?");
-    $imgQuery->bind_param("s", $roomId);
+    $imgQuery = $mysqli->prepare("SELECT image_url FROM roomtype_images WHERE room_type_id = (SELECT room_type_id FROM room WHERE room_id = ?)");
+    $imgQuery->bind_param("i", $roomId);
     $imgQuery->execute();
     $imgResult = $imgQuery->get_result();
     $images = [];
     while ($img = $imgResult->fetch_assoc()) {
-        $images[] = $img['url_image'];
+        $images[] = $img['image_url'];
     }
 
     // Lấy 3 phòng gợi ý ngẫu nhiên (loại trừ phòng hiện tại)
@@ -45,9 +45,9 @@ $room = $roomResult->fetch_assoc();
             rt.room_type_name AS room_type,
             rt.base_price AS room_price,
             rt.capacity,
-            (SELECT url_image 
-             FROM room_images 
-             WHERE room_images.room_id = r.room_id 
+            (SELECT image_url 
+             FROM roomtype_images 
+             WHERE roomtype_images.room_type_id = r.room_type_id 
              ORDER BY RAND()
              LIMIT 1) AS room_image
         FROM room r
@@ -72,6 +72,7 @@ $room = $roomResult->fetch_assoc();
 window.IS_LOGGED_IN = <?php echo $isLoggedIn ? 'true' : 'false'; ?>;
 window.CURRENT_USER_NAME = "<?php echo htmlspecialchars($userName); ?>";
 window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
+window.MAX_GUESTS = <?php echo isset($room['capacity']) ? $room['capacity'] : 2; ?>;
 </script>
 
 <main>
@@ -86,7 +87,7 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
                         <div class="slider-track" id="sliderTrack">
                             <?php foreach ($images as $img): ?>
                             <div class="slide">
-                                <img src="/My-Web-Hotel/uploads/images/<?php echo $img; ?>" alt="Room Image">
+                                <img src="<?php echo $img; ?>" alt="Room Image">
                             </div>
                             <?php endforeach; ?>
                         </div>
@@ -98,8 +99,7 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
                         <?php foreach ($images as $index => $img): ?>
                         <div class="gallery-item <?php echo $index === 0 ? 'active' : ''; ?>"
                             onclick="goToSlide(<?php echo $index; ?>)">
-                            <img src="/My-Web-Hotel/uploads/images/<?php echo $img; ?>"
-                                alt="Thumb <?php echo $index + 1; ?>">
+                            <img src="<?php echo $img; ?>" alt="Thumb <?php echo $index + 1; ?>">
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -180,26 +180,25 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
                 <div class="price-section">
                     <div class="price">
                         <?php echo number_format($room["room_price"])  ?>₫ <span>/đêm</span>
-                        <span class="original-price"><?php echo number_format($room["room_price"]*100/83)?>₫</span>
                     </div>
-                    <div class="discount-badge">Giảm 17%</div>
                 </div>
 
                 <form class="booking-form">
                     <div class="form-group">
                         <label>Ngày nhận phòng</label>
-                        <input type="date" id="checkin" name="checkin">
+                        <input type="datetime-local" id="checkin" name="checkin">
                     </div>
                     <div class="form-group">
                         <label>Ngày trả phòng</label>
-                        <input type="date" id="checkout" name="checkout">
+                        <input type="datetime-local" id="checkout" name="checkout">
                     </div>
                     <div class="form-group">
                         <label>Số lượng khách</label>
                         <div class="guests-group">
                             <select id="adults">
+                                <option selected>0 Người lớn</option>
                                 <option>1 Người lớn</option>
-                                <option selected>2 Người lớn</option>
+                                <option>2 Người lớn</option>
                                 <option>3 Người lớn</option>
                             </select>
                             <select id="children">
@@ -219,18 +218,21 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="loginPopupLabel">Yêu cầu đăng nhập</h5>
+                        <h5 class="modal-title" id="loginPopupLabel">Ưu đãi đặc biệt</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
                     </div>
-                    <div class="modal-body">
-                        <p>Bạn chưa đăng nhập! Vui lòng đăng nhập để tiếp tục.</p>
+                    <div class="modal-body text-center">
+                        <i class="fa-solid fa-gift fa-3x text-primary mb-3"></i>
+                        <p>Hãy đăng nhập để có nhiều ưu đãi</p>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <div class="modal-footer justify-content-center">
                         <a href="/My-Web-Hotel/client/pages/login.php?redirect=<?php echo urlencode($_SERVER['REQUEST_URI']); ?>"
                             class="btn btn-primary">
                             <i class="fa fa-sign-in-alt me-2"></i>Đăng nhập
                         </a>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="continueBookingBtn">
+                            <i class="fa fa-arrow-right me-2"></i>Tiếp tục đặt
+                        </button>
                     </div>
                 </div>
             </div>
@@ -244,13 +246,10 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
                 <?php 
                     
                     foreach ($suggestedRooms as $index => $suggested):     
-                        // Tính giá giảm 17%
-                        $discountedPrice = $suggested['room_price'];
-                        $originalPrice = round($suggested['room_price'] * 100 / 83);
                     ?>
                 <div class="suggestion-card">
                     <div class="suggestion-image"
-                        style="background-image: url('/My-Web-Hotel/uploads/images/<?php echo htmlspecialchars($suggested['room_image']); ?>');">
+                        style="background-image: url('<?php echo htmlspecialchars($suggested['room_image']); ?>');">
                     </div>
                     <div class="suggestion-content">
                         <h3 class="suggestion-title">
@@ -262,16 +261,8 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
                             <span><i class="fa-solid fa-person fa-lg"></i> <?php echo $suggested['capacity']; ?>
                                 khách</span>
                         </div>
-                        <p style="color: #666; font-size: 1.5rem;">
-                            <?php echo htmlspecialchars($suggested['room_type']); ?> với thiết kế sang trọng và đầy đủ
-                            tiện nghi hiện đại.
-                        </p>
                         <div class="suggestion-price">
-                            <div>
-                                <div class="price"><?php echo number_format($discountedPrice); ?>₫</div>
-                                <span style="color: #999; font-size: 1.4rem; text-decoration: line-through;">
-                                    <?php echo number_format($originalPrice); ?>₫
-                                </span>
+                            <div class="price"><?php echo number_format(htmlspecialchars($suggested['room_price'])); ?>₫
                                 <span style="color: #999; font-size: 1.4rem;">/đêm</span>
                             </div>
                             <a href="/My-Web-Hotel/client/index.php?page=room-detail&id=<?php echo $suggested['room_id']; ?>"
@@ -289,67 +280,139 @@ window.ROOM_ID = "<?php echo htmlspecialchars($roomId); ?>";
         </div>
     </div>
 </main>
+
+<!-- Modal Thông Báo -->
+<div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="notificationModalLabel">Thông Báo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" id="notificationMessage">
+                <!-- Nội dung thông báo -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn bg-secondary" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Load room-detail.js -->
+<script src="/My-Web-Hotel/client/assets/js/room-detail.js?v=<?php echo time(); ?>"></script>
+
 <script>
-// Kiểm tra tình trạng đăng nhập và xử lý đặt phòng
+// ==================== BOOKING BUTTON LOGIC ====================
 document.addEventListener("DOMContentLoaded", () => {
     const checkBtn = document.getElementById("check-room-btn");
     const loginModalEl = document.getElementById("loginPopup");
+    const notificationModalEl = document.getElementById("notificationModal");
+    const continueBookingBtn = document.getElementById("continueBookingBtn");
 
-    // Khởi tạo modal Bootstrap
+    if (!checkBtn) return;
+
     const loginModal = new bootstrap.Modal(loginModalEl);
+    const notificationModal = new bootstrap.Modal(notificationModalEl);
 
-    if (checkBtn) {
-        checkBtn.addEventListener("click", (e) => {
-            e.preventDefault(); // Ngăn hành động mặc định
+    // Function to proceed with booking
+    function proceedToBooking() {
+        const checkinVal = document.getElementById("checkin")?.value || "";
+        const checkoutVal = document.getElementById("checkout")?.value || "";
+        const adultsSelect = document.getElementById("adults");
+        const childrenSelect = document.getElementById("children");
 
-            // Kiểm tra đã đăng nhập chưa
-            if (!window.IS_LOGGED_IN) {
-                // Nếu chưa đăng nhập → hiển thị modal yêu cầu đăng nhập
-                loginModal.show();
-            } else {
-                // Lấy thông tin từ form
-                const checkinDate = document.getElementById("checkin").value;
-                const checkoutDate = document.getElementById("checkout").value;
-                const adultsSelect = document.getElementById("adults");
-                const childrenSelect = document.getElementById("children");
-                const roomId = window.ROOM_ID;
-
-                // Kiểm tra ngày đã được chọn chưa
-                if (!checkinDate || !checkoutDate) {
-                    alert("Vui lòng chọn ngày nhận phòng và trả phòng!");
-                    return;
-                }
-
-                // Kiểm tra ngày checkout phải sau checkin
-                if (new Date(checkoutDate) <= new Date(checkinDate)) {
-                    alert("Ngày trả phòng phải sau ngày nhận phòng!");
-                    return;
-                }
-
-                // Lấy giá trị số người từ select
-                const adultsValue = adultsSelect.selectedIndex + 1; // 1, 2, 3
-                const childrenValue = childrenSelect.selectedIndex; // 0, 1, 2
-
-                // Lấy thông tin phòng từ window (được set từ PHP)
-                const roomData = {
-                    roomId: roomId,
-                    roomName: window.ROOM_NAME || "",
-                    roomType: window.ROOM_TYPE || "",
-                    roomPrice: window.ROOM_PRICE || 0,
-                    checkin: checkinDate,
-                    checkout: checkoutDate,
-                    adults: adultsValue,
-                    children: childrenValue,
-                    maxGuests: window.MAX_GUESTS || 2,
-                };
-
-                // Lưu dữ liệu vào sessionStorage
-                sessionStorage.setItem("bookingData", JSON.stringify(roomData));
-
-                // Chuyển hướng đến trang booking
-                window.location.href =
-                    "/My-Web-Hotel/client/index.php?page=booking&id=" + roomId;
+        // ========== VALIDATE NGÀY ==========
+        if (!checkinVal || !checkoutVal) {
+            const msgEl = document.getElementById("notificationMessage");
+            if (msgEl) {
+                msgEl.textContent = "Vui lòng chọn ngày nhận phòng và trả phòng!";
             }
+            notificationModal.show();
+            return false;
+        }
+
+        // ========== VALIDATE THỜI GIAN QUÁ KHỨ ==========
+        const checkinDate = new Date(checkinVal);
+        const now = new Date();
+        if (checkinDate < now) {
+            const msgEl = document.getElementById("notificationMessage");
+            if (msgEl) {
+                msgEl.textContent = "Vui lòng chọn thời gian nhận phòng trong tương lai!";
+            }
+            notificationModal.show();
+            return false;
+        }
+
+        // ========== LẤY SỐ NGƯỜI ==========
+        const adultsValue = parseInt(adultsSelect?.options[adultsSelect.selectedIndex]?.text) || 0;
+        const childrenValue = parseInt(childrenSelect?.options[childrenSelect.selectedIndex]?.text) || 0;
+        const totalGuests = adultsValue + childrenValue;
+        const maxGuests = window.MAX_GUESTS || 2;
+
+        // ========== VALIDATE SỐ NGƯỜI > 0 ==========
+        if (totalGuests <= 0) {
+            const msgEl = document.getElementById("notificationMessage");
+            if (msgEl) {
+                msgEl.textContent = "Số lượng khách tối thiểu là 1 người, vui lòng chọn lại!";
+            }
+            notificationModal.show();
+            return false;
+        }
+
+        // ========== VALIDATE SỨC CHỨA PHÒNG ==========
+        if (totalGuests > maxGuests) {
+            const msgEl = document.getElementById("notificationMessage");
+            if (msgEl) {
+                msgEl.textContent = `Vượt quá sức chứa, vui lòng chọn lại!`;
+            }
+            notificationModal.show();
+            return false;
+        }
+
+        // ========== LƯU BOOKING DATA ==========
+        const roomData = {
+            roomId: window.ROOM_ID,
+            roomName: window.ROOM_NAME || "",
+            roomType: window.ROOM_TYPE || "",
+            roomPrice: window.ROOM_PRICE || 0,
+            checkin: checkinVal,
+            checkout: checkoutVal,
+            adults: adultsValue,
+            children: childrenValue,
+            maxGuests: maxGuests,
+        };
+
+        sessionStorage.setItem("bookingData", JSON.stringify(roomData));
+
+        // ========== REDIRECT TỚI BOOKING PAGE ==========
+        window.location.href = `/My-Web-Hotel/client/index.php?page=booking&id=${window.ROOM_ID}`;
+        return true;
+    }
+
+    // Main booking button click handler
+    checkBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+
+        // ========== KIỂM TRA ĐĂNG NHẬP ==========
+        if (!window.IS_LOGGED_IN) {
+            // Hiển thị modal khuyến khích đăng nhập
+            loginModal.show();
+            return;
+        }
+
+        // Nếu đã đăng nhập, tiếp tục đặt phòng
+        proceedToBooking();
+    });
+
+    // Handle "Continue Booking" button in login modal
+    if (continueBookingBtn) {
+        continueBookingBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            loginModal.hide();
+            // Proceed with booking without login
+            proceedToBooking();
         });
     }
 });

@@ -24,6 +24,13 @@ class BookingController extends BaseController {
             $this->roomBookingPanel();
         } elseif ($panel === 'serviceBooking-panel') {
             $this->serviceBookingPanel();
+        } elseif ($panel === 'calendar-booking-panel') {
+            // Check permission for calendar panel
+            if (!$this->checkAccessSection('calendar-booking-panel')) {
+                $this->redirect('index.php?page=403');
+                return;
+            }
+            $this->calendarBookingPanel();
         } else {
             $this->redirect('index.php?page=booking-manager&panel=roomBooking-panel');
         }
@@ -50,6 +57,18 @@ class BookingController extends BaseController {
         
         // For now, use old page structure
         $panel = 'serviceBooking-panel';
+        include __DIR__ . '/../pages/booking-manager.php';
+    }
+    
+    /**
+     * Calendar Booking Panel
+     */
+    private function calendarBookingPanel() {
+        // Make $mysqli available in included file scope
+        $mysqli = $this->mysqli;
+        
+        // Use booking-manager.php structure with calendar panel
+        $panel = 'calendar-booking-panel';
         include __DIR__ . '/../pages/booking-manager.php';
     }
     

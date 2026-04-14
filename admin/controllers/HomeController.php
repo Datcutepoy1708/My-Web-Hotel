@@ -8,16 +8,16 @@ require_once __DIR__ . '/../core/BaseController.php';
 class HomeController extends BaseController {
     
     public function index() {
-        // Check permission
-        if (!$this->checkAccessSection('home')) {
-            $this->redirect('index.php?page=403');
-            return;
-        }
-        
         // Redirect staff to my-tasks, managers to dashboard
         $role = $this->getCurrentStaffRole();
         if ($role !== 'Quản lý') {
             $this->redirect('index.php?page=my-tasks');
+            return;
+        }
+        
+        // Check permission for managers only
+        if (!$this->checkAccessSection('home')) {
+            $this->redirect('index.php?page=403');
             return;
         }
         

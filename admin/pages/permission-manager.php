@@ -12,8 +12,6 @@ $messageType = '';
 $rolesResult = $mysqli->query("SELECT DISTINCT chuc_vu FROM nhan_vien ORDER BY chuc_vu");
 $roles = $rolesResult ? $rolesResult->fetch_all(MYSQLI_ASSOC) : [];
 
-$selectedRole = isset($_GET['chuc_vu']) ? trim($_GET['chuc_vu']) : ($roles[0]['chuc_vu'] ?? '');
-
 // Xử lý lưu
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chuc_vu'])) {
     $selectedRole = trim($_POST['chuc_vu']);
@@ -42,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chuc_vu'])) {
             $mysqli->commit();
             $message = 'Cập nhật phân quyền cho chức vụ "' . h($selectedRole) . '" thành công!';
             $messageType = 'success';
+            // Set flag để JavaScript redirect
+            $redirectAfterSave = true;
         } catch (Throwable $e) {
             $mysqli->rollback();
             error_log('Permission update error: ' . $e->getMessage());
@@ -49,6 +49,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chuc_vu'])) {
             $messageType = 'danger';
         }
     }
+}
+
+// Lấy selectedRole từ GET (sau khi redirect) hoặc từ roles
+if (!isset($selectedRole)) {
+    $selectedRole = isset($_GET['chuc_vu']) ? trim($_GET['chuc_vu']) : ($roles[0]['chuc_vu'] ?? '');
+}
+
+// Hiển thị thông báo thành công nếu có
+if (isset($_GET['saved']) && $_GET['saved'] == '1') {
+    $message = 'Cập nhật phân quyền cho chức vụ "' . h($selectedRole) . '" thành công!';
+    $messageType = 'success';
 }
 
 // Lấy danh sách quyền
@@ -84,57 +95,58 @@ if ($selectedRole !== '') {
         <div style="width: 250px;">
             <label class="form-label fw-bold">Chọn chức vụ</label>
             <select class="form-select " name="chuc_vu"
-                onchange="window.location.href='index.php?page=permission-manager&chuc_vu=' + encodeURIComponent(this.value)">
+                onchange="window.location.href='index.php?page=staff-manager&panel=permission-panel&chuc_vu=' + encodeURIComponent(this.value)">
                 <?php foreach ($roles as $role): ?>
-                <option value="<?php echo h($role['chuc_vu']); ?>"
-                    <?php echo $selectedRole === $role['chuc_vu'] ? 'selected' : ''; ?>>
-                    <?php echo h($role['chuc_vu']); ?>
-                </option>
+                    <option value="<?php echo h($role['chuc_vu']); ?>"
+                        <?php echo $selectedRole === $role['chuc_vu'] ? 'selected' : ''; ?>>
+                        <?php echo h($role['chuc_vu']); ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
         </div>
     </div>
 
     <?php if ($message): ?>
-    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-        <?php echo $message; ?>
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    </div>
+        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+            <?php echo $message; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     <?php endif; ?>
     <form method="POST" id="permissionForm">
+        <input type="hidden" name="chuc_vu" value="<?php echo h($selectedRole); ?>">
         <?php if (empty($permissions)): ?>
-        <div class="alert alert-warning">Chưa có dữ liệu quyền trong hệ thống.</div>
+            <div class="alert alert-warning">Chưa có dữ liệu quyền trong hệ thống.</div>
         <?php else: ?>
-        <div class="permission-groups">
-            <?php foreach ($groupedPermissions as $group => $perms): ?>
-            <div class="permission-group mb-4 border rounded p-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0 text-uppercase"><?php echo h($group); ?></h5>
-                    <button type="button" class="btn btn-primary-outline"
-                        onclick="toggleGroup(this, '<?php echo h($group); ?>')">
-                        Chọn/Bỏ tất cả
-                    </button>
-                </div>
-                <div class="row">
-                    <?php foreach ($perms as $perm): ?>
-                    <?php $checked = in_array((int)$perm['id_quyen'], $assignedIds); ?>
-                    <div class="col-md-6 mb-2">
-                        <div class="form-check">
-                            <input class="form-check-input perm-checkbox" type="checkbox"
-                                data-group="<?php echo h($group); ?>" name="permissions[]"
-                                value="<?php echo (int)$perm['id_quyen']; ?>"
-                                id="perm<?php echo (int)$perm['id_quyen']; ?>" <?php echo $checked ? 'checked' : ''; ?>>
-                            <label class="form-check-label" for="perm<?php echo (int)$perm['id_quyen']; ?>">
-                                <strong><?php echo h($perm['ten_quyen']); ?></strong><br>
-                                <small class="text-muted"><?php echo h($perm['mo_ta'] ?? ''); ?></small>
-                            </label>
+            <div class="permission-groups">
+                <?php foreach ($groupedPermissions as $group => $perms): ?>
+                    <div class="permission-group mb-4 border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5 class="mb-0 text-uppercase"><?php echo h($group); ?></h5>
+                            <button type="button" class="btn btn-primary-outline"
+                                onclick="toggleGroup(this, '<?php echo h($group); ?>')">
+                                Chọn/Bỏ tất cả
+                            </button>
+                        </div>
+                        <div class="row">
+                            <?php foreach ($perms as $perm): ?>
+                                <?php $checked = in_array((int)$perm['id_quyen'], $assignedIds); ?>
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input perm-checkbox" type="checkbox"
+                                            data-group="<?php echo h($group); ?>" name="permissions[]"
+                                            value="<?php echo (int)$perm['id_quyen']; ?>"
+                                            id="perm<?php echo (int)$perm['id_quyen']; ?>" <?php echo $checked ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="perm<?php echo (int)$perm['id_quyen']; ?>">
+                                            <strong><?php echo h($perm['ten_quyen']); ?></strong><br>
+                                            <small class="text-muted"><?php echo h($perm['mo_ta'] ?? ''); ?></small>
+                                        </label>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
-                    <?php endforeach; ?>
-                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
-        </div>
         <?php endif; ?>
 
 
@@ -149,10 +161,15 @@ if ($selectedRole !== '') {
 </div>
 
 <script>
-function toggleGroup(button, groupName) {
-    const checkboxes = document.querySelectorAll('.perm-checkbox[data-group="' + groupName + '"]');
-    if (!checkboxes.length) return;
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    checkboxes.forEach(cb => cb.checked = !allChecked);
-}
+    function toggleGroup(button, groupName) {
+        const checkboxes = document.querySelectorAll('.perm-checkbox[data-group="' + groupName + '"]');
+        if (!checkboxes.length) return;
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+    }
+
+    <?php if (isset($redirectAfterSave) && $redirectAfterSave): ?>
+        // Redirect sau khi lưu thành công để tránh resubmit form khi refresh
+        window.location.href = 'index.php?page=staff-manager&panel=permission-panel&chuc_vu=<?php echo urlencode($selectedRole); ?>';
+    <?php endif; ?>
 </script>

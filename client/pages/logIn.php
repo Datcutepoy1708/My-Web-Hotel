@@ -37,9 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if (password_needs_rehash($stored, PASSWORD_DEFAULT)) {
                             $newHash = password_hash($password, PASSWORD_DEFAULT);
                             if ($newHash !== false) {
-                                $upd = $mysqli->prepare('UPDATE users SET password = ? WHERE id = ?');
+                                $upd = $mysqli->prepare('UPDATE customer SET password = ? WHERE customer_id = ?');
                                 if ($upd) {
-                                    $upd->bind_param('si', $newHash, $user['id']);
+                                    $upd->bind_param('si', $newHash, $user['customer_id']);
                                     $upd->execute();
                                     $upd->close();
                                 }
@@ -52,9 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             // migrate lên hash
                             $newHash = password_hash($password, PASSWORD_DEFAULT);
                             if ($newHash !== false) {
-                                $upd = $mysqli->prepare('UPDATE users SET password = ? WHERE id = ?');
+                                $upd = $mysqli->prepare('UPDATE customer SET password = ? WHERE customer_id = ?');
                                 if ($upd) {
-                                    $upd->bind_param('si', $newHash, $user['id']);
+                                    $upd->bind_param('si', $newHash, $user['customer_id']);
                                     $upd->execute();
                                     $upd->close();
                                 }
@@ -151,9 +151,9 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
         <?php if ($error !== ''): ?>
         <div class="error" style="color:red; margin-bottom:12px;"><?php echo htmlspecialchars($error); ?></div>
         <?php endif; ?>
-        <form method="POST">
+        <form method="POST" id="loginForm">
             <div class="input-box">
-                <input type="email" name="email" placeholder="Email" required autocomplete="email"
+                <input type="email" name="email" id="loginEmail" placeholder="Email" required autocomplete="email"
                     value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" />
             </div>
             <div class="input-box">
@@ -170,22 +170,8 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
             </label>
             <button type="submit" class="btn">Đăng Nhập</button>
             <div class="options">
-                <a href="/my-web-hotel/client/pages/forgotPass.php">Quên mật khẩu ?</a>
-                <a href="/my-web-hotel/client/pages/signup.php">Đăng ký</a>
-            </div>
-            <div class="social-login">
-                <p>ĐĂNG NHẬP VỚI</p>
-                <div class="social-icons">
-                    <!-- Nút Google Sign-In -->
-                    <div id="g_id_onload" data-client_id="<?php echo GOOGLE_CLIENT_ID; ?>"
-                        data-callback="handleCredentialResponse" data-auto_prompt="false">
-                    </div>
-                    <a href="#" id="googleLoginBtn" onclick="googleLogin(event)">
-                        <i class="fab fa-google"></i>
-                    </a>
-                    <a href="#"><i class="fab fa-facebook"></i></a>
-                    <a href="#"><i class="fab fa-twitter"></i></a>
-                </div>
+                <a href="/My-Web-Hotel/client/pages/forgotPass.php">Quên mật khẩu ?</a>
+                <a href="/My-Web-Hotel/client/pages/signUp.php">Đăng ký</a>
             </div>
         </form>
     </div>
@@ -203,80 +189,6 @@ if (isset($mysqli) && $mysqli instanceof mysqli) {
             passwordInput.type = "password";
             eyeIcon.classList.remove("fa-eye-slash");
             eyeIcon.classList.add("fa-eye");
-        }
-    }
-
-    // Xử lý callback từ Google
-    function handleCredentialResponse(response) {
-        if (!response.credential) {
-            alert('Không nhận được thông tin đăng nhập từ Google');
-            return;
-        }
-
-        // Hiển thị loading
-        const googleBtn = document.getElementById('googleLoginBtn');
-        const originalHTML = googleBtn.innerHTML;
-        googleBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        googleBtn.style.pointerEvents = 'none';
-
-        // Gửi ID token đến server
-        const formData = new FormData();
-        formData.append('credential', response.credential);
-
-        fetch('/My-Web-Hotel/client/pages/google-login-handler.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error('Server response not OK');
-                }
-                return res.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    window.location.href = data.redirect || '/My-Web-Hotel/client/index.php?page=home';
-                } else {
-                    googleBtn.innerHTML = originalHTML;
-                    googleBtn.style.pointerEvents = 'auto';
-                    alert('Đăng nhập thất bại: ' + (data.message || 'Lỗi không xác định'));
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                googleBtn.innerHTML = originalHTML;
-                googleBtn.style.pointerEvents = 'auto';
-                alert('Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại.');
-            });
-    }
-
-    // Kích hoạt Google Sign-In khi click vào icon
-    function googleLogin(e) {
-        e.preventDefault();
-
-        // Kiểm tra xem google.accounts có tồn tại không
-        if (typeof google === 'undefined' || !google.accounts) {
-            alert('Google Sign-In chưa sẵn sàng. Vui lòng tải lại trang.');
-            return;
-        }
-
-        try {
-            google.accounts.id.initialize({
-                client_id: '<?php echo GOOGLE_CLIENT_ID; ?>',
-                callback: handleCredentialResponse,
-                auto_select: false,
-                cancel_on_tap_outside: true
-            });
-            google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                    console.log('Popup không hiển thị:', notification.getNotDisplayedReason());
-                    // Thử dùng cách khác
-                    document.getElementById('g_id_onload').click();
-                }
-            });
-        } catch (error) {
-            console.error('Lỗi khởi tạo Google Sign-In:', error);
-            alert('Không thể khởi tạo Google Sign-In. Vui lòng kiểm tra kết nối internet.');
         }
     }
     </script>

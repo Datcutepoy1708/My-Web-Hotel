@@ -20,7 +20,7 @@
                     <h3>Giải trí</h3>
                 </a>
                 <a href="/My-Web-Hotel/client/index.php?page=restaurant" class="service-card restaurant">
-                    <h3>Nhà hàng</h3>
+                    <h3>Ăn uống</h3>
                 </a>
                 <a href="/My-Web-Hotel/client/index.php?page=suKien" class="service-card event">
                     <h3>Hội nghị & Sự kiện</h3>
@@ -53,10 +53,10 @@
                         </select>
                     </div>
                     <div class="catalog">
-                        <span>Danh Mục:</span>
+                        <span>Loại dịch vụ:</span>
                         <fieldset>
                             <?php 
-                            $sql = "SELECT DISTINCT service_type FROM service";
+                            $sql = "SELECT DISTINCT service_type FROM service WHERE service_type <> 'Dịch vụ cá nhân'";
                             $result = $mysqli->query($sql);
                             while ($row = $result->fetch_assoc()):
                                 $type = htmlspecialchars($row['service_type']); // tránh lỗi XSS

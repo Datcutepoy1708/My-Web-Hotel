@@ -15,10 +15,14 @@ class BookingModel extends BaseModel {
     public function getBookingsWithDetails($where = '', $orderBy = 'booking_id DESC', $limit = '') {
         $query = "
             SELECT b.*, 
-                   c.full_name, c.phone, c.email,
+                   COALESCE(c.full_name, w.full_name) as full_name,
+                   COALESCE(c.phone, w.phone) as phone,
+                   COALESCE(c.email, w.email) as email,
+                   CASE WHEN b.walk_in_guest_id IS NOT NULL THEN 'Walk-in' ELSE 'Registered' END as guest_type,
                    r.room_number, rt.room_type_name, rt.base_price
             FROM {$this->table} b
             LEFT JOIN customer c ON b.customer_id = c.customer_id
+            LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
             LEFT JOIN room r ON b.room_id = r.room_id
             LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
             WHERE b.deleted IS NULL

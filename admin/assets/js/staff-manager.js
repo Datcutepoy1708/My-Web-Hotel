@@ -68,7 +68,6 @@ function viewEmployee(id) {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             alert('Có lỗi xảy ra khi tải thông tin nhân viên');
         });
 }
@@ -101,8 +100,6 @@ function openPermissionModal(id) {
                 const rolePermissions = data.rolePermissions || [];
                 const personalPermissions = data.personalPermissions || [];
                 
-                console.log('Role Permissions:', rolePermissions);
-                console.log('Personal Permissions:', personalPermissions);
                 
                 let content = `
                     <div class="mb-3">
@@ -167,7 +164,6 @@ function openPermissionModal(id) {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             alert('Có lỗi xảy ra khi tải thông tin quyền');
         });
 }

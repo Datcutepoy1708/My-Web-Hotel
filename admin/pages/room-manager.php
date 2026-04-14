@@ -171,6 +171,7 @@ $query = "SELECT
             rt.capacity,
             rt.area,
             rt.amenities,
+            rt.description,
             (
                 SELECT image_url 
                 FROM roomtype_images rti 
@@ -197,6 +198,28 @@ if ($stmt->execute()) {
     die("Lỗi query: " . $stmt->error);
 }
 $stmt->close();
+
+// Lấy TOÀN BỘ danh sách phòng (không phân trang) để hiển thị trong Grid View
+$queryAll = "SELECT 
+                r.*,
+                rt.room_type_name,
+                rt.base_price,
+                rt.capacity,
+                rt.area,
+                rt.amenities,
+                rt.description
+              FROM room r 
+              LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id 
+              $where
+              ORDER BY r.floor ASC, r.room_number ASC";
+$stmtAll = $mysqli->prepare($queryAll);
+if (!empty($params)) {
+    $stmtAll->bind_param($types, ...$params);
+}
+if ($stmtAll->execute()) {
+    $allRooms = $stmtAll->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+$stmtAll->close();
 
 $roomTypesResult = $mysqli->query("SELECT * FROM room_type WHERE deleted IS NULL");
 $roomTypes = $roomTypesResult->fetch_all(MYSQLI_ASSOC);
@@ -288,10 +311,10 @@ $stmtRoomTypes->close();
         </ul>
     </div>
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo h($message); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <?php endif; ?>
 
     <!-- content -->
@@ -311,26 +334,15 @@ $stmtRoomTypes->close();
 
     </div>
     <script>
-        function editRoom(id) {
-            window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
-        }
+    function editRoom(id) {
+        window.location.href = 'index.php?page=room-manager&action=edit&id=' + id;
+    }
 
-        function deleteRoom(id) {
-            if (confirm('Bạn có chắc chắn muốn xóa phòng này?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = '<input type="hidden" name="room_id" value="' + id + '">' +
-                    '<input type="hidden" name="delete_room" value="1">';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-
-        <?php if ($editRoom): ?>
-            document.addEventListener('DOMContentLoaded', function() {
-                const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
-                modal.show();
-            });
-        <?php endif; ?>
+    <?php if ($editRoom): ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = new bootstrap.Modal(document.getElementById('addRoomModal'));
+        modal.show();
+    });
+    <?php endif; ?>
     </script>
     </script>

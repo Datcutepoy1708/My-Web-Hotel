@@ -334,3 +334,60 @@ if ($category_filter) $baseUrl .= "&category=" . urlencode($category_filter);
         </div>
     </div>
 </div>
+
+<!-- Modal Xác nhận xóa bài viết -->
+<div class="modal fade" id="confirmDeleteBlogModal" tabindex="-1" aria-labelledby="confirmDeleteBlogModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteBlogModalLabel">Xác nhận xóa</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mt-3 mb-0">Bạn có chắc muốn xóa bài viết này?<br>Hành động này không thể hoàn tác.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">Hủy</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDeleteBlog" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-trash-alt me-2"></i>Xác nhận xóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function editBlog(id) {
+        window.location.href = 'index.php?page=blogs-manager&action=edit&id=' + id;
+    }
+
+    let blogIdToDelete = null;
+
+    function deleteBlog(id) {
+        blogIdToDelete = id;
+        const modal = new bootstrap.Modal(document.getElementById('confirmDeleteBlogModal'));
+        modal.show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnConfirmDelete = document.getElementById('btnConfirmDeleteBlog');
+        if (btnConfirmDelete) {
+            btnConfirmDelete.addEventListener('click', function() {
+                if (blogIdToDelete) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.innerHTML = '<input type="hidden" name="blog_id" value="' + blogIdToDelete + '">' +
+                        '<input type="hidden" name="delete_blog" value="1">';
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        }
+    });
+
+    <?php if ($editBlog): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addBlogModal'));
+            modal.show();
+        });
+    <?php endif; ?>
+</script>

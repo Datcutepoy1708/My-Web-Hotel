@@ -35,11 +35,9 @@ function loadRevenueTrend(period = 'month') {
                     revenueChart.update();
                 }
             } catch (e) {
-                console.error('Error parsing JSON:', e, 'Response:', text);
             }
         })
         .catch(error => {
-            console.error('Error loading revenue trend:', error);
         });
 }
 
@@ -61,11 +59,9 @@ function loadRevenueDistribution() {
                     revenuePieChart.update();
                 }
             } catch (e) {
-                console.error('Error parsing JSON:', e, 'Response:', text);
             }
         })
         .catch(error => {
-            console.error('Error loading revenue distribution:', error);
         });
 }
 
@@ -91,11 +87,9 @@ function loadServiceRevenue() {
                     roomTypeChart.update();
                 }
             } catch (e) {
-                console.error('Error parsing JSON:', e, 'Response:', text);
             }
         })
         .catch(error => {
-            console.error('Error loading service revenue:', error);
         });
 }
 
@@ -121,11 +115,9 @@ function loadOccupancyByFloor() {
                     occupancyChart.update();
                 }
             } catch (e) {
-                console.error('Error parsing JSON:', e, 'Response:', text);
             }
         })
         .catch(error => {
-            console.error('Error loading occupancy by floor:', error);
         });
 }
 
@@ -180,11 +172,9 @@ function loadSummary() {
                     }
                 }
             } catch (e) {
-                console.error('Error parsing JSON:', e, 'Response:', text);
             }
         })
         .catch(error => {
-            console.error('Error loading summary:', error);
         });
 }
 

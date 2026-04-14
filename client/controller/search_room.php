@@ -11,14 +11,14 @@ $sql = "SELECT r.room_id, r.status, r.room_number,
                rt.base_price AS room_price, 
                rt.description AS `desc`, 
                rt.capacity,
-               (SELECT url_image 
-             FROM room_images 
-             WHERE room_images.room_id = r.room_id 
+               (SELECT image_url 
+             FROM roomtype_images 
+             WHERE roomtype_images.room_type_id = rt.room_type_id 
              ORDER BY RAND()
              LIMIT 1) AS room_image 
         FROM room r
         JOIN room_type rt ON rt.room_type_id = r.room_type_id
-        WHERE r.status = 'available'";
+        WHERE r.status = 'available' and r.deleted IS NULL";
 
 $params = [];
 $types = "";
@@ -77,14 +77,14 @@ if ($result && $result->num_rows > 0) {
         echo '<div class="card" style="max-width: 90%">';
         echo '  <div class="row g-0">';
         echo '    <div class="picture col-md-4">';
-        echo '      <img src="/My-Web-Hotel/uploads/images/' . htmlspecialchars($row["room_image"]) . '" class="img-fluid rounded-start" alt="' . htmlspecialchars($row["room_type"]) . '" />';
+        echo '      <img src="' . htmlspecialchars($row["room_image"]) . '" class="img-fluid rounded-start" alt="' . htmlspecialchars($row["room_type"]) . '" />';
         echo '    </div>';
         echo '    <div class="information col-md-5">';
         echo '      <div class="card-body">';
         echo '        <h3 class="card-title"> Phòng ' . htmlspecialchars($row["room_number"]) . ' </h3>';
-        echo '        <p class="card-text"><span>Loại: ' . htmlspecialchars($row["room_type"]) . ' </span> </p>';
-        echo '        <p class="card-text"><span>Diện tích: 38m²</span> </p>';
-        echo '        <p class="card-text"> <span>Tối đa: '.  htmlspecialchars($row["capacity"]) .' khách</span> </p>';
+        echo '        <p class="card-text"><span><strong>Loại</strong>: ' . htmlspecialchars($row["room_type"]) . ' </span> </p>';
+        echo '        <p class="card-text"><span><strong>Diện tích</strong>: 38m²</span> </p>';
+        echo '        <p class="card-text"> <span><strong>Tối đa</strong>: '.  htmlspecialchars($row["capacity"]) .' khách</span> </p>';
         echo '      </div>';
         echo '    </div>';
         echo '    <div class="money col-md-3">';

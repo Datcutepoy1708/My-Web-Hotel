@@ -128,9 +128,14 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 .modal-header {
-  background: #f8f9fa;
+  background: #fffcf0;
   border-bottom: 1px solid #eee;
   border-radius: 14px 14px 0 0;
+}
+
+.modal-body .desc {
+  background: #eee;
+  border-radius: 10px;
 }
 .form-control,
 .form-select {

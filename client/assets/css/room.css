@@ -216,9 +216,13 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 .picture {
+  height: 200px;
   overflow: hidden;
 }
 .card .row .picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   transition: transform 0.4s ease;
 }
 .card:hover .row .picture img {
@@ -230,6 +234,7 @@
 .information .card-body {
   margin: 10px;
 }
+
 .card-title {
   margin-bottom: 20px;
   font-size: 1.2em;
@@ -243,6 +248,8 @@
   padding: 20px;
 }
 .money h2 {
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 24px;
   color: #deb666;
 }
 

@@ -1,0 +1,370 @@
+/* ── LuxBot Widget ── */
+#luxbot-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9900;
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* ── Toggle button ── */
+#luxbot-toggle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4A373 0%, #B8895A 100%);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 18px rgba(212,163,115,0.55);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1), box-shadow 0.3s;
+    position: relative;
+}
+
+#luxbot-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(212,163,115,0.65);
+}
+
+#luxbot-toggle .toggle-icon {
+    font-size: 20px;
+    font-weight: bold;
+    color: #fff;
+    transition: all 0.3s ease;
+    line-height: 1;
+}
+
+/* Unread badge */
+#luxbot-unread {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 20px;
+    height: 20px;
+    background: #e74c3c;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+    animation: popIn 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes popIn {
+    from { transform: scale(0); }
+    to   { transform: scale(1); }
+}
+
+/* ── Chat box ── */
+#luxbot-box {
+    position: absolute;
+    bottom: 96px;
+    right: 0;
+    width: 480px;
+    height: 700px;
+    max-height: 85vh;
+    background: #FFFCF0;
+    border-radius: 20px;
+    border: 1px solid #e8ddd0;
+    box-shadow: 0 10px 40px rgba(100,60,20,0.18);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+    transform-origin: bottom right;
+    transition: opacity 0.3s ease, transform 0.3s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+}
+
+#luxbot-box.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: all;
+}
+
+/* ── Header ── */
+.luxbot-header {
+    background: linear-gradient(135deg, #D4A373 0%, #B8895A 100%);
+    padding: 16px 18px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.luxbot-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.4);
+    flex-shrink: 0;
+}
+
+.luxbot-header-info { flex: 1; }
+
+.luxbot-header-info h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 2px;
+}
+
+.luxbot-header-info span {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.luxbot-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #a8f0a8;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.luxbot-close-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.luxbot-close-btn:hover { background: rgba(255,255,255,0.3); }
+
+/* ── Messages area ── */
+#luxbot-messages {
+    flex: 1;
+    padding: 16px 14px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    scroll-behavior: smooth;
+}
+
+#luxbot-messages::-webkit-scrollbar { width: 4px; }
+#luxbot-messages::-webkit-scrollbar-track { background: transparent; }
+#luxbot-messages::-webkit-scrollbar-thumb { background: #d4a373; border-radius: 4px; }
+
+/* ── Bubbles ── */
+.luxbot-msg {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+    max-width: 100%;
+    animation: msgIn 0.25s ease;
+}
+
+@keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.luxbot-msg.bot { flex-direction: row; }
+.luxbot-msg.user { flex-direction: row-reverse; }
+
+.luxbot-msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4A373, #B8895A);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.luxbot-bubble {
+    max-width: 78%;
+    padding: 14px 18px;
+    border-radius: 18px;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+.luxbot-msg.bot .luxbot-bubble {
+    background: #fff;
+    color: #3d2b1f;
+    border-radius: 4px 16px 16px 16px;
+    box-shadow: 0 2px 8px rgba(100,60,20,0.08);
+    border: 1px solid #f0e4d0;
+}
+
+.luxbot-msg.bot .luxbot-bubble a {
+    color: #B8895A;
+    font-weight: bold;
+    text-decoration: underline;
+    transition: color 0.2s;
+}
+
+.luxbot-msg.bot .luxbot-bubble a:hover {
+    color: #8c603a;
+}
+
+.luxbot-msg.user .luxbot-bubble {
+    background: linear-gradient(135deg, #D4A373, #B8895A);
+    color: #fff;
+    border-radius: 16px 4px 16px 16px;
+}
+
+.luxbot-time {
+    font-size: 0.75rem;
+    color: #bba899;
+    text-align: center;
+    margin-top: -4px;
+}
+
+/* ── Typing indicator ── */
+.luxbot-typing {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    padding: 12px 14px;
+    background: #fff;
+    border-radius: 4px 16px 16px 16px;
+    box-shadow: 0 2px 8px rgba(100,60,20,0.08);
+    border: 1px solid #f0e4d0;
+    width: fit-content;
+}
+
+.luxbot-typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #d4a373;
+    animation: typingDot 1.4s infinite;
+}
+
+.luxbot-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.luxbot-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingDot {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+    30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ── Quick replies ── */
+.luxbot-quick-replies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+    padding: 0 14px 10px;
+}
+
+.luxbot-quick-btn {
+    background: #fff;
+    border: 1.5px solid #D4A373;
+    color: #B8895A;
+    border-radius: 20px;
+    padding: 6px 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.luxbot-quick-btn:hover {
+    background: #D4A373;
+    color: #fff;
+}
+
+/* ── Input bar ── */
+.luxbot-input-area {
+    padding: 12px 14px;
+    border-top: 1px solid #e8ddd0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #FFFCF0;
+    flex-shrink: 0;
+}
+
+#luxbot-input {
+    flex: 1;
+    border: 1.5px solid #e8ddd0;
+    border-radius: 26px;
+    padding: 14px 20px;
+    font-size: 1.05rem;
+    outline: none;
+    background: #fff;
+    color: #3d2b1f;
+    transition: border-color 0.2s;
+    font-family: inherit;
+}
+
+#luxbot-input:focus { border-color: #D4A373; }
+#luxbot-input::placeholder { color: #bba899; }
+
+#luxbot-send {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D4A373, #B8895A);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex-shrink: 0;
+}
+
+#luxbot-send:hover {
+    transform: scale(1.08);
+    box-shadow: 0 3px 10px rgba(212,163,115,0.5);
+}
+
+#luxbot-send:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 420px) {
+    #luxbot-box {
+        width: calc(100vw - 24px);
+        right: -8px;
+    }
+    #luxbot-widget { right: 12px; bottom: 16px; }
+}

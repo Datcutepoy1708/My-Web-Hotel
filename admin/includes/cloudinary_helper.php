@@ -10,37 +10,40 @@
  * 2. Cấu hình Cloudinary credentials trong file config hoặc biến môi trường
  */
 
+
+
+
 // Load .env file nếu có - PHẢI load TRƯỚC khi require Cloudinary SDK
-if (file_exists(__DIR__ . '/../../.env')) {
-    $envFile = __DIR__ . '/../../.env';
-    $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-    foreach ($lines as $line) {
-        $line = trim($line);
-        // Skip empty lines and comments
-        if (empty($line) || strpos($line, '#') === 0) {
-            continue;
-        }
+// if (file_exists(__DIR__ . '/../../.env')) {
+//     $envFile = __DIR__ . '/../../.env';
+//     $lines = file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+//     foreach ($lines as $line) {
+//         $line = trim($line);
+//         // Skip empty lines and comments
+//         if (empty($line) || strpos($line, '#') === 0) {
+//             continue;
+//         }
         
-        // Parse key=value
-        if (strpos($line, '=') !== false) {
-            list($key, $value) = explode('=', $line, 2);
-            $key = trim($key);
-            $value = trim($value);
+//         // Parse key=value
+//         if (strpos($line, '=') !== false) {
+//             list($key, $value) = explode('=', $line, 2);
+//             $key = trim($key);
+//             $value = trim($value);
             
-            // Remove quotes if present
-            if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
-                (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
-                $value = substr($value, 1, -1);
-            }
+//             // Remove quotes if present
+//             if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+//                 (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
+//                 $value = substr($value, 1, -1);
+//             }
             
-            if (!empty($key)) {
-                $_ENV[$key] = $value;
-                $_SERVER[$key] = $value; // Cloudinary SDK có thể đọc từ $_SERVER
-                putenv("$key=$value");
-            }
-        }
-    }
-}
+//             if (!empty($key)) {
+//                 $_ENV[$key] = $value;
+//                 $_SERVER[$key] = $value; // Cloudinary SDK có thể đọc từ $_SERVER
+//                 putenv("$key=$value");
+//             }
+//         }
+//     }
+// }
 
 // Uncomment sau khi cài đặt Cloudinary SDK
 require_once __DIR__ . '/../../vendor/autoload.php';
@@ -51,8 +54,79 @@ use Cloudinary\Api\Upload\UploadApi;
 
 class CloudinaryHelper
 {
-
     private static $cloudinary = null;
+    private static $envLoaded = false;
+
+    /**
+     * Đọc biến môi trường từ .env và cloudinary_config.php (nếu có)
+     * Giúp tránh lỗi "Invalid configuration" khi chưa nạp ENV ở nơi khác.
+     */
+    private static function loadEnv()
+    {
+        if (self::$envLoaded) {
+            return;
+        }
+
+        // 1) .env ở thư mục gốc
+        $envPath = __DIR__ . '/../../.env';
+        if (file_exists($envPath)) {
+            $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line === '' || strpos($line, '#') === 0 || strpos($line, '=') === false) {
+                    continue;
+                }
+                list($key, $value) = explode('=', $line, 2);
+                $key = trim($key);
+                $value = trim($value);
+                if ((substr($value, 0, 1) === '"' && substr($value, -1) === '"') ||
+                    (substr($value, 0, 1) === "'" && substr($value, -1) === "'")) {
+                    $value = substr($value, 1, -1);
+                }
+                if ($key !== '') {
+                    $_ENV[$key] = $value;
+                    $_SERVER[$key] = $value;
+                    putenv("$key=$value");
+                }
+            }
+        }
+
+        // 2) cloudinary_config.php nếu tồn tại
+        $configFile = __DIR__ . '/cloudinary_config.php';
+        if (file_exists($configFile)) {
+            $config = require $configFile;
+            if (!empty($config['cloud_name'])) {
+                $_ENV['CLOUDINARY_CLOUD_NAME'] = $config['cloud_name'];
+                $_SERVER['CLOUDINARY_CLOUD_NAME'] = $config['cloud_name'];
+                putenv('CLOUDINARY_CLOUD_NAME=' . $config['cloud_name']);
+            }
+            if (!empty($config['api_key'])) {
+                $_ENV['CLOUDINARY_API_KEY'] = $config['api_key'];
+                $_SERVER['CLOUDINARY_API_KEY'] = $config['api_key'];
+                putenv('CLOUDINARY_API_KEY=' . $config['api_key']);
+            }
+            if (!empty($config['api_secret'])) {
+                $_ENV['CLOUDINARY_API_SECRET'] = $config['api_secret'];
+                $_SERVER['CLOUDINARY_API_SECRET'] = $config['api_secret'];
+                putenv('CLOUDINARY_API_SECRET=' . $config['api_secret']);
+            }
+        }
+
+        // Tự build CLOUDINARY_URL nếu chưa có
+        if (empty(getenv('CLOUDINARY_URL'))) {
+            $cloudName = getenv('CLOUDINARY_CLOUD_NAME');
+            $apiKey = getenv('CLOUDINARY_API_KEY');
+            $apiSecret = getenv('CLOUDINARY_API_SECRET');
+            if ($cloudName && $apiKey && $apiSecret) {
+                $url = "cloudinary://{$apiKey}:{$apiSecret}@{$cloudName}";
+                putenv('CLOUDINARY_URL=' . $url);
+                $_ENV['CLOUDINARY_URL'] = $url;
+                $_SERVER['CLOUDINARY_URL'] = $url;
+            }
+        }
+
+        self::$envLoaded = true;
+    }
 
     /**
      * Khởi tạo Cloudinary client
@@ -60,6 +134,8 @@ class CloudinaryHelper
      */
     private static function init()
     {
+        self::loadEnv(); // bảo đảm ENV đã sẵn sàng
+
         if (self::$cloudinary === null) {
             // Thử lấy từ CLOUDINARY_URL trước (format: cloudinary://api_key:api_secret@cloud_name)
             $cloudinaryUrl = self::getConfig('CLOUDINARY_URL');

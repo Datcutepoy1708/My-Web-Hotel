@@ -7,6 +7,85 @@
   width: 100%;
 }
 
+/* Calendar Filter Buttons - Style for calendar panel in booking-manager */
+.calendar-filters-section .filter-buttons-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.calendar-filters-section .filter-btn {
+  padding: 10px 20px !important;
+  border: 1.5px solid #e0e0e0 !important;
+  background: #fff !important;
+  color: #666 !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05) !important;
+  margin: 0 !important;
+  text-decoration: none !important;
+  outline: none !important;
+}
+
+.calendar-filters-section .filter-btn:hover {
+  border-color: #deb666 !important;
+  color: #deb666 !important;
+  background: rgba(222, 182, 102, 0.1) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(222, 182, 102, 0.2) !important;
+}
+
+.calendar-filters-section .filter-btn.active {
+  background: #deb666 !important;
+  border-color: #deb666 !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(222, 182, 102, 0.4) !important;
+  font-weight: 600 !important;
+}
+
+.calendar-filters-section .filter-btn.active:hover {
+  background: #c9a555 !important;
+  border-color: #c9a555 !important;
+  color: #fff !important;
+}
+
+.calendar-filters-section .filter-btn i {
+  font-size: 14px !important;
+  margin-right: 8px !important;
+}
+
+body.dark .calendar-filters-section .filter-btn {
+  background: #2d2d2d !important;
+  border-color: #444 !important;
+  color: #ccc !important;
+}
+
+body.dark .calendar-filters-section .filter-btn:hover {
+  background: #333 !important;
+  border-color: #deb666 !important;
+  color: #deb666 !important;
+}
+
+body.dark .calendar-filters-section .filter-btn.active {
+  background: #deb666 !important;
+  border-color: #deb666 !important;
+  color: #000 !important;
+  font-weight: 600 !important;
+}
+
+body.dark .calendar-filters-section .filter-btn.active:hover {
+  background: #c9a555 !important;
+  border-color: #c9a555 !important;
+  color: #000 !important;
+}
+
 .content-header {
   display: flex;
   justify-content: space-between;
@@ -84,17 +163,31 @@
   background-color: #deb666;
   color: #fff;
   border: none;
-  padding: 10px 24px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.3s;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  box-shadow: 0 2px 6px rgba(222, 182, 102, 0.25);
+  cursor: pointer;
 }
 
 .btn-primary-custom:hover {
-  background-color: #c5a878;
+  background-color: #c9a555;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(222, 182, 102, 0.4);
+}
+
+.btn-primary-custom:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(222, 182, 102, 0.25);
+}
+
+.btn-primary-custom i {
+  font-size: 14px;
 }
 
 .filter-section {
@@ -136,7 +229,23 @@
   height: 44px;
   border-radius: 8px;
   margin-right: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
+
+.row .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.row .btn:active {
+  transform: translateY(0);
+}
+
 /* Table */
 .table-container {
   background: #fff;
@@ -167,6 +276,96 @@
 }
 .btn-sm {
   border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-width: 1.5px;
+}
+
+.btn-sm i {
+  font-size: 13px;
+}
+
+/* Action buttons - View, Edit, Delete */
+.btn-outline-info {
+  color: #0dcaf0;
+  border-color: #0dcaf0;
+  background: transparent;
+}
+
+.btn-outline-info:hover {
+  background: #0dcaf0;
+  border-color: #0dcaf0;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(13, 202, 240, 0.3);
+}
+
+.btn-outline-warning {
+  color: #ffc107;
+  border-color: #ffc107;
+  background: transparent;
+}
+
+.btn-outline-warning:hover {
+  background: #ffc107;
+  border-color: #ffc107;
+  color: #000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.btn-outline-danger {
+  color: #dc3545;
+  border-color: #dc3545;
+  background: transparent;
+}
+
+.btn-outline-danger:hover {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.btn-outline-danger.border-0 {
+  border: 1.5px solid #dc3545 !important;
+}
+
+.btn-outline-danger.border-0:hover {
+  border-color: #dc3545;
+}
+
+/* Success button */
+.btn-success {
+  background: #28a745;
+  border-color: #28a745;
+  color: #fff;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.btn-success:hover {
+  background: #218838;
+  border-color: #218838;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.btn-success:active {
+  transform: translateY(0);
+}
+
+.btn-success i {
+  font-size: 13px;
 }
 
 /* Badges */
@@ -234,19 +433,25 @@
 /* Modal */
 .modal-content {
   border: none;
-  border-radius: 14px;
+  border-radius: 14px !important; /* Force override calendar-booking.css (24px) */
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
-  background-color: #deb666;
-  color: #fff;
+  background-color: #fffcf0 !important; /* Force override calendar-booking.css */
+  color: #121212 !important;
   border-bottom: 1px solid #eee;
-  border-radius: 14px 14px 0 0;
+  border-radius: 14px 14px 0 0 !important;
+  padding: 1rem 1rem !important; /* Reset padding from calendar-booking.css which sets 24px 30px */
 }
 
 .modal-header .btn-close {
   filter: brightness(0) invert(1);
+}
+
+.modal-body {
+  padding: 1rem !important; /* Standard padding */
+  background: #fff !important;
 }
 
 .modal-body td {
@@ -259,28 +464,83 @@
   color: #333;
 }
 
+/* Primary buttons */
 .btn-primary {
   background: #deb666;
   border-color: #deb666;
+  color: #fff;
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(222, 182, 102, 0.2);
 }
 
 .btn-primary:hover {
-  background: #d4a853;
-  border-color: #d4a853;
+  background: #c9a555;
+  border-color: #c9a555;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(222, 182, 102, 0.4);
 }
 
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(222, 182, 102, 0.2);
+}
+
+.btn-primary i {
+  font-size: 14px;
+}
+
+/* Secondary buttons */
+.btn-secondary,
+.btn.bg-secondary {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
+  font-weight: 500;
+  padding: 10px 24px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-secondary:hover,
+.btn.bg-secondary:hover {
+  background: #5a6268;
+  border-color: #5a6268;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.btn-secondary:active,
+.btn.bg-secondary:active {
+  transform: translateY(0);
+}
+
+/* Outline primary */
 .btn-outline-primary {
   color: #deb666;
   border-color: #deb666;
+  background: transparent;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .btn-outline-primary:hover {
   background: #deb666;
   border-color: #deb666;
-}
-
-.btn-outline-info:hover {
   color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(222, 182, 102, 0.3);
 }
 
 /* Dark mode */
@@ -424,6 +684,88 @@ body.dark .btn-outline-primary {
 body.dark .btn-outline-primary:hover {
   background: #deb666;
   color: #000;
+  box-shadow: 0 4px 8px rgba(222, 182, 102, 0.3);
+}
+
+body.dark .btn-outline-info {
+  color: #0dcaf0;
+  border-color: #0dcaf0;
+}
+
+body.dark .btn-outline-info:hover {
+  background: #0dcaf0;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(13, 202, 240, 0.3);
+}
+
+body.dark .btn-outline-warning {
+  color: #ffc107;
+  border-color: #ffc107;
+}
+
+body.dark .btn-outline-warning:hover {
+  background: #ffc107;
+  color: #000;
+  box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+body.dark .btn-outline-danger {
+  color: #dc3545;
+  border-color: #dc3545;
+}
+
+body.dark .btn-outline-danger:hover {
+  background: #dc3545;
+  color: #fff;
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+body.dark .btn-primary {
+  background: #deb666;
+  border-color: #deb666;
+  color: #000;
+}
+
+body.dark .btn-primary:hover {
+  background: #c9a555;
+  border-color: #c9a555;
+  box-shadow: 0 4px 12px rgba(222, 182, 102, 0.4);
+}
+
+body.dark .btn-secondary,
+body.dark .btn.bg-secondary {
+  background: #6c757d;
+  border-color: #6c757d;
+  color: #fff;
+}
+
+body.dark .btn-secondary:hover,
+body.dark .btn.bg-secondary:hover {
+  background: #5a6268;
+  border-color: #5a6268;
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+body.dark .btn-primary-custom {
+  background: #deb666;
+  color: #000;
+}
+
+body.dark .btn-primary-custom:hover {
+  background: #c9a555;
+  box-shadow: 0 4px 12px rgba(222, 182, 102, 0.4);
+}
+
+body.dark .btn-success {
+  background: #28a745;
+  border-color: #28a745;
+  color: #fff;
+}
+
+body.dark .btn-success:hover {
+  background: #218838;
+  border-color: #218838;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
 }
 
 body.dark .page-link {

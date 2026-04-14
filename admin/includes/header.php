@@ -41,8 +41,13 @@
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/services-manager.css?v=<?php echo time(); ?>">';
     if ($current_page == 'invoices-manager') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/invoices-manager.css?v=<?php echo time(); ?>">';
-    if ($current_page == 'booking-manager') echo '
-    <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/booking-manager.css?v=<?php echo time(); ?>">';
+    if ($current_page == 'booking-manager') {
+        echo '<link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/booking-manager.css?v=' . time() . '">';
+        // Load calendar CSS for all booking panels to share premium status styles
+        echo '<link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/calendar-booking.css?v=' . time() . '">';
+    }
+    if ($current_page == 'calendar-booking') echo '
+    <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/calendar-booking.css?v=<?php echo time(); ?>">';
     if ($current_page == 'customers-manager') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/customers-manager.css?v=<?php echo time(); ?>">';
     if ($current_page == 'staff-manager') echo '
@@ -57,6 +62,9 @@
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/voucher-manager.css?v=<?php echo time(); ?>">';
     if ($current_page == 'my-tasks') echo '
     <link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/my-tasks.css?v=<?php echo time(); ?>">';
+    if ($current_page == 'chatbot-manager') {
+        echo '<link rel="stylesheet" href="/My-Web-Hotel/admin/assets/css/chatbot-manager.css?v=' . time() . '">';
+    }
     ?>
 
 </head>

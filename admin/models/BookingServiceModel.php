@@ -16,13 +16,17 @@ class BookingServiceModel extends BaseModel {
         $query = "
             SELECT bs.*,
                    s.service_name, s.service_type, s.price,
-                   c.full_name, c.phone, c.email,
-                   b.booking_id, b.check_in_date, b.check_out_date,
+                   COALESCE(c.full_name, w.full_name) as full_name,
+                   COALESCE(c.phone, w.phone) as phone,
+                   COALESCE(c.email, w.email) as email,
+                   CASE WHEN bs.customer_id IS NULL THEN 'Walk-in' ELSE 'Registered' END as guest_type,
+                   b.booking_id, b.check_in_date, b.check_out_date, b.walk_in_guest_id,
                    r.room_number, rt.room_type_name
             FROM {$this->table} bs
             LEFT JOIN service s ON bs.service_id = s.service_id
-            LEFT JOIN customer c ON bs.customer_id = c.customer_id
+            LEFT JOIN customer c ON bs.customer_id = c.customer_id AND bs.customer_id IS NOT NULL
             LEFT JOIN booking b ON bs.booking_id = b.booking_id
+            LEFT JOIN walk_in_guest w ON (b.walk_in_guest_id = w.id OR (bs.customer_id IS NULL AND b.walk_in_guest_id IS NOT NULL AND b.walk_in_guest_id = w.id))
             LEFT JOIN room r ON b.room_id = r.room_id
             LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
             WHERE bs.deleted IS NULL

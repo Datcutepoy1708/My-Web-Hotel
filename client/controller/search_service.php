@@ -6,7 +6,7 @@ $sort = isset($_GET['sort']) ? $_GET['sort'] : '';
 $categories = isset($_GET['categories']) ? $_GET['categories'] : [];
 
 // Câu SQL cơ bản
-$sql = "SELECT * FROM service WHERE status = 'Active'";
+$sql = "SELECT * FROM service WHERE status = 'Active'and service_type <> 'Dịch vụ cá nhân' and deleted IS NULL";
 
 $params = [];
 $types = "";
@@ -61,28 +61,10 @@ $result = $stmt->get_result();
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        // Xác định hình ảnh theo loại hình
-        switch ($row["service_type"]) {
-            case 'Health':
-                $hinhAnh = "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400";
-                break;
-            case 'Food':
-                $hinhAnh = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400";
-                break;
-            case 'Entertainment':
-                $hinhAnh = "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=400";
-                break;
-            case 'Event':
-                $hinhAnh = "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400";
-                break;
-            default:
-                $hinhAnh = "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=400";
-        }
-
         echo '<div class="card" style="max-width: 90%">';
         echo '  <div class="row g-0">';
         echo '    <div class="picture col-md-4">';
-        echo '      <img src="' . $hinhAnh . '" class="img-fluid rounded-start service-image" alt="' . htmlspecialchars($row["service_name"]) . '" />';
+        echo '      <img src="' . htmlspecialchars($row["image"]) . '" class="img-fluid rounded-start service-image" alt="' . htmlspecialchars($row["service_name"]) . '" />';
         echo '    </div>';
         echo '    <div class="information col-md-5">';
         echo '      <div class="card-body">';

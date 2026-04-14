@@ -75,15 +75,6 @@
   color: #ffcc00;
 }
 
-#language-select {
-  margin-left: 15px;
-  padding: 5px;
-  background-color: #333;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .footer-top {

@@ -19,7 +19,6 @@
 // Ensure $page is defined
 $page = $page ?? (isset($_GET['page']) ? trim($_GET['page']) : 'home');
 
-if ($page == 'home') echo '<script src="/My-Web-Hotel/admin/assets/js/home.js"></script>';
 if ($page == 'room-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/room-manager.js"></script>';
 if ($page == 'staff-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/staff-manager.js"></script>';
 if ($page == 'staff-manager') echo '<script src="/My-Web-Hotel/admin/assets/js/task-manager.js"></script>';

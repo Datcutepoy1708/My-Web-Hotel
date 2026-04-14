@@ -37,10 +37,10 @@
                     </select>
                 </div>
                 <div class="catalog">
-                    <span>Danh Mục:</span>
+                    <span>Loại phòng:</span>
                     <fieldset>
                         <?php 
-                            $sql = "SELECT room_type_name FROM room_type";
+                            $sql = "SELECT room_type_name FROM room_type WHERE deleted IS NULL";
                             $result = $mysqli->query($sql);
                             while ($row = $result->fetch_assoc()):
                                 $type = htmlspecialchars($row['room_type_name']); // tránh lỗi XSS

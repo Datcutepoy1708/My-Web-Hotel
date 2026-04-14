@@ -119,35 +119,252 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 .modal-header {
-  background: #f8f9fa;
+  background: #fffcf0;
   border-bottom: 1px solid #eee;
   border-radius: 14px 14px 0 0;
 }
-.modal-body td {
-  text-align: start;
+
+/* Info Card */
+.info-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.3s ease;
 }
-.form-control,
-.form-select {
+
+.info-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.info-card-header {
+  background: #ddd;
+  color: #121212;
+  padding: 12px 18px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.info-card-header i {
+  margin-right: 8px;
+}
+
+.info-card-body {
+  padding: 18px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.info-label {
+  color: #6c757d;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.info-value {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+/* Table Styles */
+.table-hover tbody tr:hover {
+  background-color: #f8f9fa;
+}
+
+.table thead th {
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  border-bottom: 2px solid #dee2e6;
+  padding: 12px;
+  font-size: 0.9rem;
+}
+
+.table tbody td {
+  padding: 12px;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+/* Calculation Table */
+.calculation-table td {
+  padding: 10px 0;
+  font-size: 0.95rem;
+}
+
+.calculation-table tr {
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.calculation-table tr:last-child {
+  border-bottom: none;
+}
+
+.total-row {
+  border-top: 2px solid #dee2e6 !important;
+  border-bottom: none !important;
+  padding-top: 14px !important;
+}
+
+.total-row td {
+  padding-top: 14px !important;
+}
+
+.remaining-row {
+  background: #fff3cd;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.remaining-row td {
+  padding: 12px 14px !important;
+}
+
+.discount-row td {
+  color: #28a745 !important;
+  font-weight: 600;
+}
+
+/* Payment Info */
+.payment-info {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.payment-detail-box {
+  background: #f8f9fa;
+  padding: 14px;
   border-radius: 10px;
+  height: 100%;
+  border-left: 4px solid #deb666;
 }
+
+.payment-detail-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-weight: 500;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.payment-detail-value {
+  font-size: 1rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Badge Custom */
+.badge-custom {
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: inline-block;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.badge-warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-secondary {
+  background: #e9ecef;
+  color: #6c757d;
+}
+
+/* Note Section */
+.note-section {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.note-header {
+  background: #f8f9fa;
+  padding: 12px 18px;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.note-body {
+  padding: 16px 18px;
+  color: #495057;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+/* Modal Footer */
+
+
+/* Button Styles */
+
 .btn-primary {
-  background: #deb666;
-  border-color: #deb666;
+  background: linear-gradient(135deg, #deb666 0%, #d4a853 100%);
+  border: none;
+  color: white;
 }
+
 .btn-primary:hover {
-  background: #d4a853;
-  border-color: #d4a853;
+  background: linear-gradient(135deg, #d4a853 0%, #c89d4a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(222, 182, 102, 0.4);
 }
-.btn-outline-primary {
-  color: #deb666;
-  border-color: #deb666;
+
+.btn-success {
+  background: #28a745;
+  border: none;
 }
-.btn-outline-primary:hover {
-  background: #deb666;
-  border-color: #deb666;
+
+.btn-success:hover {
+  background: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
 }
-.btn-outline-info:hover {
-  color: #fff;
+
+.btn-secondary {
+  background: #6c757d;
+  border: none;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 10px;
+  }
+
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .payment-detail-box {
+    margin-bottom: 12px;
+  }
 }
 /* Dark mode */
 body.dark .main-content {

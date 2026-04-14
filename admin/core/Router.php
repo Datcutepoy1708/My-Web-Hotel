@@ -22,6 +22,7 @@ class Router {
             'services-manager' => 'ServiceController@index',
             'invoices-manager' => 'InvoiceController@index',
             'booking-manager' => 'BookingController@index',
+            'calendar-booking' => 'CalendarController@index',
             'customers-manager' => 'CustomerController@index',
             'staff-manager' => 'StaffController@index',
             'task-manager' => 'TaskController@index',
@@ -32,6 +33,7 @@ class Router {
             'profile' => 'ProfileController@index',
             'logout' => 'AuthController@logout',
             'my-tasks' => 'TaskController@myTasks',
+            'chatbot-manager' => 'ChatbotController@index',
         ];
     }
     
@@ -53,8 +55,8 @@ class Router {
             return;
         }
         
-        // Check permission
-        if (function_exists('canAccessSection') && !canAccessSection($page)) {
+        // Check permission (skip for 'home' as HomeController handles its own logic)
+        if ($page !== 'home' && function_exists('canAccessSection') && !canAccessSection($page)) {
             $this->handle403();
             return;
         }
@@ -109,6 +111,7 @@ class Router {
             'services-manager' => 'pages/services-manager.php',
             'invoices-manager' => 'pages/invoices-manager.php',
             'booking-manager' => 'pages/booking-manager.php',
+            'calendar-booking' => 'pages/calendar-booking.php',
             'customers-manager' => 'pages/customers-manager.php',
             'staff-manager' => 'pages/staff-manager.php',
             'task-manager' => 'pages/task-manager.php',
@@ -118,7 +121,8 @@ class Router {
             'voucher-manager' => 'pages/voucher-manager.php',
             'profile' => 'pages/profile.php',
             'logout' => 'pages/logout.php',
-            'my-tasks' => 'pages/my-tasks.php',
+            'my-tasks'           => 'pages/my-tasks.php',
+            'chatbot-manager'    => 'pages/chatbot-manager.php',
         ];
         
         if (isset($allowed[$page])) {

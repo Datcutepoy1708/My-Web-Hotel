@@ -1,20 +1,22 @@
 <?php
-$sql = "SELECT 
+$sql = " SELECT 
             r.room_id,
             r.room_number,
+            rt.area,
             rt.room_type_name AS room_type,
             rt.base_price AS room_price,
             rt.capacity,
-            (SELECT url_image 
-             FROM room_images 
-             WHERE room_images.room_id = r.room_id 
+            (SELECT image_url 
+             FROM roomtype_images 
+             WHERE roomtype_images.room_type_id = r.room_type_id 
              ORDER BY RAND()
              LIMIT 1) AS room_image
         FROM room r
         JOIN room_type rt ON rt.room_type_id = r.room_type_id
         WHERE r.status = 'available'
-        ORDER BY room_price DESC 
-        LIMIT 10";
+        ORDER BY RAND()
+        LIMIT 10
+    ";
 
 $stmt = $mysqli->prepare($sql);
 $stmt->execute();
@@ -27,25 +29,78 @@ if ($result && $result->num_rows > 0) {
         $bestRooms[] = $row;
     }
 }
+$reviews_query = "SELECT r.*, c.full_name, c.avatar, c.address
+                FROM review r
+                JOIN customer c ON r.customer_id = c.customer_id
+                WHERE r.status = 'Approved' AND r.deleted IS NULL
+                ORDER BY r.rating DESC, r.created_at DESC
+                LIMIT 10;";
+$reviews_result = $mysqli->query($reviews_query);
+$reviews = [];
 ?>
 
 <main>
     <!-- Hero -->
     <section class="hero">
         <div class="hero-content">
-            <div data-aos="fade-down" data-aos-duration="1000">
-                <h1>Cảm nhận <span>sự thoải mái</span></h1>
-                <p>VỚI DỊCH VỤ TỐT NHẤT CỦA CHÚNG TÔI</p>
+            <h1 class="hero-title">Khám phá không gian nghỉ dưỡng lý tưởng</h1>
+            <p class="hero-subtitle">
+                Đặt phòng khách sạn nhanh chóng, minh bạch và an toàn. Trải nghiệm
+                dịch vụ cao cấp với mức giá tốt nhất.
+            </p>
+            <div class="cta-buttons">
+                <a href="/My-Web-Hotel/client/index.php?page=room" class="btn btn-primary">Đặt phòng ngay</a>
+                <a href="/My-Web-Hotel/client/index.php?page=about" class="btn btn-secondary">Tìm hiểu thêm</a>
             </div>
-            <div class="buttons" data-aos="fade-up" data-aos-duration="1000">
-                <button class="btn btn-booking"
-                    onclick="window.location.href = '/My-Web-Hotel/client/index.php?page=room'">
-                    ĐẶT PHÒNG NGAY
-                </button>
-                <button class="btn btn-outline"
-                    onclick="window.location.href = '/My-Web-Hotel/client/index.php?page=about'">
-                    TÌM HIỂU THÊM
-                </button>
+        </div>
+        <div class="honeycomb-container">
+            <div class="honeycomb">
+                <!-- Center large hexagon -->
+                <div class="hexagon hex-center">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&q=80');
+              "></div>
+                </div>
+
+                <!-- Top -->
+                <div class="hexagon hex-1">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80');
+              "></div>
+                </div>
+
+                <!-- Middle row -->
+                <div class="hexagon hex-2">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80');
+              "></div>
+                </div>
+
+                <div class="hexagon hex-3">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80');
+              "></div>
+                </div>
+
+                <!-- Bottom middle row -->
+                <div class="hexagon hex-4">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=800&q=80');
+              "></div>
+                </div>
+
+                <div class="hexagon hex-5">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?w=800&q=80');
+              "></div>
+                </div>
+
+                <!-- Bottom -->
+                <div class="hexagon hex-6">
+                    <div class="hex-inner" style="
+                background-image: url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&q=80');
+              "></div>
+                </div>
             </div>
         </div>
     </section>
@@ -59,12 +114,27 @@ if ($result && $result->num_rows > 0) {
             <div class="slider" id="slider">
                 <?php foreach ($bestRooms as $room): ?>
                 <div class="slide" data-id="<?php echo $room['room_id']; ?>">
-                    <img src="/My-Web-Hotel/uploads/images/<?php echo $room['room_image'] ?: '/my-web-hotel/client/assets/images/no-image.jpg'; ?>"
-                        alt="Room <?php echo htmlspecialchars($room['room_number']); ?>" />
+                    <div class="image-container">
+                        <img src="<?php echo htmlspecialchars($room['room_image'])  ?>"
+                            alt="Room <?php echo htmlspecialchars($room['room_number']); ?>" />
+                    </div>
 
-                    <h3>Phòng <?php echo htmlspecialchars($room['room_number']); ?></h3>
-                    <p><?php echo htmlspecialchars($room['room_type']); ?></p>
-                    <p><?php echo number_format($room['room_price'], 0, ',', '.'); ?>đ / đêm</p>
+                    <div class="room-info">
+                        <h3>Phòng <?php echo htmlspecialchars($room['room_number']); ?> -
+                            <?php echo htmlspecialchars($room['room_type']); ?></h3>
+                        <div class="room-meta">
+                            <span><i class="fa-solid fa-ruler"></i> <?php echo $room['area']; ?> m²</span>
+                            <span><i class="fa-solid fa-person fa-lg"></i> <?php echo $room['capacity']; ?>
+                                khách</span>
+                        </div>
+                    </div>
+                    <div class="room-footer">
+                        <div class="price"><?php echo number_format(htmlspecialchars($room['room_price'])); ?>₫
+                            <span style="color: #999; font-size: 1.4rem;">/đêm</span>
+                        </div> <button class="btn btn-primary"
+                            onclick="window.location.href='/My-Web-Hotel/client/index.php?page=room-detail&room_id=<?php echo $room['room_id']; ?>'"><i
+                                class=" fa-solid fa-cart-shopping"></i> Đặt phòng</button>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -84,27 +154,31 @@ if ($result && $result->num_rows > 0) {
         </div>
 
         <div class="services-grid">
-            <div class="service-card" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="100">
+            <div class="service-card" onclick="window.location.href='/My-Web-Hotel/client/index.php?page=spa'"
+                data-aos="fade-up" data-aos-duration="1000" data-aos-delay="100">
                 <img src="/my-web-hotel/client/assets/images/Spa.jpg" alt="Spa thư giãn" />
-                <h3>5 Spa thư giãn</h3>
+                <h3>Spa & sức khỏe</h3>
                 <p>
                     Trải nghiệm liệu pháp chăm sóc cơ thể chuyên nghiệp trong không
                     gian yên tĩnh.
                 </p>
             </div>
-            <div class="service-card" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
+            <div class="service-card" onclick="window.location.href='/My-Web-Hotel/client/index.php?page=nhaHang'"
+                data-aos="fade-up" data-aos-duration="1000" data-aos-delay="200">
                 <img src="/my-web-hotel/client/assets/images/NhaAn.jpg" alt="Nhà hàng cao cấp" />
-                <h3>2 Nhà hàng cao cấp</h3>
+                <h3>Nhà hàng cao cấp</h3>
                 <p>Thực đơn đa dạng từ Á đến Âu, phục vụ bởi đầu bếp 5 sao.</p>
             </div>
-            <div class="service-card" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300">
+            <div class="service-card" onclick="window.location.href='/My-Web-Hotel/client/index.php?page=giaiTri'"
+                data-aos="fade-up" data-aos-duration="1000" data-aos-delay="300">
                 <img src="/my-web-hotel/client/assets/images/HoBoi.jpg" alt="Hồ bơi ngoài trời" />
-                <h3>10 Hồ bơi ngoài trời</h3>
+                <h3>Trải nghiệm giải trí hấp dẫn</h3>
                 <p>Hồ bơi rộng rãi với tầm nhìn thoáng đãng và quầy bar bên hồ.</p>
             </div>
-            <div class="service-card" data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">
+            <div class="service-card" onclick="window.location.href='/My-Web-Hotel/client/index.php?page=suKien'"
+                data-aos="fade-up" data-aos-duration="1000" data-aos-delay="400">
                 <img src="/my-web-hotel/client/assets/images/PHop.jpg" alt="Phòng họp hiện đại" />
-                <h3>8 Phòng họp hiện đại</h3>
+                <h3>Tổ chức sự kiện hiện đại</h3>
                 <p>
                     Trang bị đầy đủ thiết bị hội nghị, phù hợp cho sự kiện và hội
                     thảo.
@@ -179,57 +253,34 @@ if ($result && $result->num_rows > 0) {
             </button>
 
             <div class="testimonial-grid" id="testimonial-slider">
+                <?php while ($review = $reviews_result->fetch_assoc()): ?>
                 <div class="testimonial-card">
-                    <img src="/my-web-hotel/client/assets/images/user1.jpg" alt="Brad Knight" class="avatar" />
-                    <h3>Brad Knight</h3>
-                    <p class="location">Athens, Greece</p>
-                    <div class="stars">★★★★★</div>
-                    <p class="review">
-                        I stay at this hotel about once a week. The staff is friendly,
-                        and the breakfast is great!
-                    </p>
-                </div>
 
-                <div class="testimonial-card">
-                    <img src="/my-web-hotel/client/assets/images/user2.jpg" alt="Nguyễn Linh" class="avatar" />
-                    <h3>Nguyễn Linh</h3>
-                    <p class="location">Hà Nội, Việt Nam</p>
-                    <div class="stars">★★★★☆</div>
+                    <div class="row g-0">
+                        <div class="col col-md-3">
+                            <img src=" <?php echo htmlspecialchars(!empty($review['avatar']) ? $review['avatar'] : '/My-Web-Hotel/client/assets/images/275f99923b080b18e7b474ed6155a17f.jpg'); ?>"
+                                alt="avatar" class="avatar" />
+                        </div>
+                        <div class="col col-md-6">
+                            <h3><?php echo htmlspecialchars($review['full_name']); ?></h3>
+                            <div class="stars">
+                                <?php
+                                for ($i = 0; $i < 5; $i++) {
+                                    if ($i < $review['rating']) {
+                                        echo '★';
+                                    } else {
+                                        echo '☆';
+                                    }
+                                }
+                                ?>
+                            </div>
+                        </div>
+                    </div>
                     <p class="review">
-                        Phòng sạch sẽ, view đẹp. Nhân viên nhiệt tình. Sẽ quay lại lần
-                        sau!
+                        <?php echo htmlspecialchars($review['comment']); ?>
                     </p>
                 </div>
-
-                <div class="testimonial-card">
-                    <img src="/my-web-hotel/client/assets/images/user3.jpg" alt="Tom Harris" class="avatar" />
-                    <h3>Tom Harris</h3>
-                    <p class="location">London, UK</p>
-                    <div class="stars">★★★★★</div>
-                    <p class="review">
-                        Amazing location and very comfortable beds. Highly recommended!
-                    </p>
-                </div>
-
-                <div class="testimonial-card">
-                    <img src="/my-web-hotel/client/assets/images/user4.jpg" alt="Trần Mai" class="avatar" />
-                    <h3>Trần Mai</h3>
-                    <p class="location">Đà Nẵng, Việt Nam</p>
-                    <div class="stars">★★★★☆</div>
-                    <p class="review">
-                        Khách sạn gần biển, thuận tiện di chuyển. Giá hợp lý.
-                    </p>
-                </div>
-
-                <div class="testimonial-card">
-                    <img src="/my-web-hotel/client/assets/images/user5.jpg" alt="Alex Kim" class="avatar" />
-                    <h3>Alex Kim</h3>
-                    <p class="location">Seoul, Korea</p>
-                    <div class="stars">★★★★★</div>
-                    <p class="review">
-                        Staff were super helpful and the breakfast buffet was delicious!
-                    </p>
-                </div>
+                <?php endwhile; ?>
             </div>
 
             <button class="btn right" onclick="moveTestimonial(1)">
@@ -239,4 +290,53 @@ if ($result && $result->num_rows > 0) {
 
         <a href="/My-Web-Hotel/client/index.php?page=danhGia" class="view-all">Xem Tất Cả</a>
     </section>
+
+    <!-- Booking success modal (Bootstrap) -->
+    <div class="modal fade" id="bookingSuccessModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đặt phòng thành công</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p id="bookingSuccessText">Cảm ơn quý khách đã tin tưởng, nhân viên chúng tôi sẽ liên hệ sớm nhất có
+                        thể!</p>
+                </div>
+                <div class="modal-footer">
+                    <button id="bookingSuccessClose" type="button" class="btn bg-secondary"
+                        data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const params = new URLSearchParams(window.location.search);
+        const success = params.get('booking_success');
+        const code = params.get('booking_code');
+
+        if (success) {
+            // Show Bootstrap 5 modal if available
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = new bootstrap.Modal(document.getElementById('bookingSuccessModal'));
+                modal.show();
+            } else if (window.jQuery && typeof jQuery('#bookingSuccessModal').modal === 'function') {
+                // Bootstrap 3/4 via jQuery
+                jQuery('#bookingSuccessModal').modal('show');
+            } else {
+                // Fallback simple alert
+                alert(textEl.textContent);
+            }
+
+            // Remove params so modal won't show again on reload
+            params.delete('booking_success');
+            params.delete('booking_code');
+            const newSearch = params.toString();
+            const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    });
+    </script>
 </main>

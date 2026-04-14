@@ -1,7 +1,7 @@
 // Rooms
 function moveSlide(direction) {
   const slider = document.getElementById("slider");
-  const cardWidth = 250;
+  const cardWidth = 350;
   const gap = 20;
   const scrollAmount = cardWidth + gap;
 
@@ -48,7 +48,7 @@ function moveTestimonial(direction) {
   });
 }
 // Ham tu dong cuon
-function autoScrollSlider(sliderId, cardWidth, gap, interval = 2500) {
+function autoScrollSlider(sliderId, cardWidth, gap, interval = 5000) {
   const slider = document.getElementById(sliderId);
   const scrollAmount = cardWidth + gap;
 
@@ -79,7 +79,7 @@ function autoScrollSlider(sliderId, cardWidth, gap, interval = 2500) {
 // Khởi động cho cả hai slider
 window.addEventListener("DOMContentLoaded", () => {
   autoScrollSlider("experience-slider", 263, 20); // Trải nghiệm cao cấp
-  autoScrollSlider("slider", 250, 20); // Phòng tốt nhất
+  autoScrollSlider("slider", 350, 20); // Phòng tốt nhất
   autoScrollSlider("testimonial-slider", 350, 20);
 });
 document.addEventListener("DOMContentLoaded", function () {

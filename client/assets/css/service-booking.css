@@ -3,6 +3,11 @@
   --gold-light: #deb666;
   --gold-pale: #fffdf5;
   --gold-bg: #fef8e8;
+  --primary-gold: #deb666;
+  --primary-gold-dark: #b69854;
+  --bg-cream: #fffcf0;
+  --text-dark: #333;
+  --border-color: #ddd;
 }
 
 .main-container {
@@ -22,7 +27,9 @@
   overflow: hidden;
   margin-bottom: 20px;
 }
-
+.card-body {
+  padding: 50px;
+}
 .card-header-custom {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
   color: white;
@@ -128,18 +135,56 @@
   font-size: 2rem;
   font-weight: 700;
 }
+.promo-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
 
+.promo-input-group input {
+  flex: 1;
+}
+.btn-apply-promo {
+  padding: 12px 25px;
+  background: #e9c171;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.btn-apply-promo:hover {
+  background: #caa95a;
+  transform: translateY(-2px);
+}
+.discount-display {
+  margin-top: 10px;
+  padding: 12px 15px;
+  background: #d4edda;
+  border: 2px solid #28a745;
+  border-radius: 10px;
+  color: #155724;
+  font-weight: 600;
+  display: none;
+}
+
+.discount-display.active {
+  display: block;
+}
 .btn-submit {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
   border: none;
   color: white;
-  padding: 15px;
+  padding: 5px;
   font-size: 1.8rem;
   font-weight: 700;
   border-radius: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   width: 100%;
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
 }
@@ -179,7 +224,7 @@
   border-left: 4px solid var(--gold);
   border-radius: 8px;
   padding: 15px;
-  margin-top: 20px;
+  margin: 20px 0;
 }
 
 .invoice-section {
@@ -222,28 +267,6 @@
   font-weight: 600;
 }
 
-.booking-code {
-  background: linear-gradient(135deg, var(--gold-pale) 0%, var(--gold-bg) 100%);
-  border: 2px dashed var(--gold);
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-.booking-code-label {
-  font-size: 1.5rem;
-  color: #666;
-  margin-bottom: 5px;
-}
-
-.booking-code-value {
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 2px;
-}
-
 .required {
   color: #dc3545;
 }
@@ -254,6 +277,30 @@
   padding: 5px 15px;
   border-radius: 20px;
   font-weight: 600;
+}
+/* Giao diện popup */
+.modal-content {
+  border-radius: 12px;
+}
+
+.modal-header {
+  background: var(--bg-cream);
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 12px 12px 0 0;
+}
+.modal-header .modal-title {
+  font-size: 2rem;
+}
+.modal-footer .btn {
+  height: 38px;
+  margin: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.btn {
+  border: none;
 }
 
 @media (max-width: 768px) {

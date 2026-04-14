@@ -131,6 +131,30 @@ function uploadRoomTypeImages($files, $roomTypeId, $maxImages = 6)
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
+    // ✅ XỬ LÝ XÓA ẢNH (thêm vào trước update_room_type)
+    if (isset($_POST['delete_image_id']) && $canEditRoomType) {
+        $imageId = intval($_POST['delete_image_id']);
+
+        // Lấy info ảnh (để xóa trên Cloudinary nếu cần)
+        $imgStmt = $mysqli->prepare("SELECT image_url, room_type_id FROM roomtype_images WHERE id = ?");
+        $imgStmt->bind_param("i", $imageId);
+        $imgStmt->execute();
+        $imgResult = $imgStmt->get_result();
+        $imgRow = $imgResult->fetch_assoc();
+        $imgStmt->close();
+
+        if ($imgRow) {
+            // Xóa từ database
+            $delStmt = $mysqli->prepare("DELETE FROM roomtype_images WHERE id = ?");
+            $delStmt->bind_param("i", $imageId);
+            $delStmt->execute();
+            $delStmt->close();
+
+            echo json_encode(['success' => true, 'message' => 'Xóa ảnh thành công']);
+            exit;
+        }
+    }
+
     if (isset($_POST['add_room_type']) && $canCreateRoomType) {
         $room_type_name = trim($_POST['room_type_name']);
         $description = trim($_POST['description'] ?? '');
@@ -160,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
+
 
     if (isset($_POST['update_room_type']) && $canEditRoomType) {
         $room_type_id = intval($_POST['room_type_id']);
@@ -212,7 +237,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
         $stmt->close();
     }
-
 }
 
 // Lấy thông tin loại phòng để edit
@@ -330,22 +354,28 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" name="search" placeholder="Tìm kiếm" value="<?php echo h($search); ?>">
+                        <input type="text" id="searchInput" name="search" placeholder="Tìm kiếm"
+                            value="<?php echo h($search); ?>">
                     </div>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="status">
                         <option value="">Tất cả trạng thái</option>
-                        <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang Hoạt Động</option>
-                        <option value="maintenance" <?php echo $status_filter == 'maintenance' ? 'selected' : ''; ?>>Đang bảo trì</option>
-                        <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>Dừng Hoạt Động</option>
+                        <option value="active" <?php echo $status_filter == 'active' ? 'selected' : ''; ?>>Đang Hoạt
+                            Động</option>
+                        <option value="maintenance" <?php echo $status_filter == 'maintenance' ? 'selected' : ''; ?>>
+                            Đang bảo trì</option>
+                        <option value="inactive" <?php echo $status_filter == 'inactive' ? 'selected' : ''; ?>>Dừng Hoạt
+                            Động</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="sort">
                         <option value="">Sắp xếp mặc định</option>
-                        <option value="area_asc" <?php echo $sort == 'area_asc' ? 'selected' : ''; ?>>Diện Tích Tăng Dần</option>
-                        <option value="area_desc" <?php echo $sort == 'area_desc' ? 'selected' : ''; ?>>Diện tích Giảm Dần</option>
+                        <option value="area_asc" <?php echo $sort == 'area_asc' ? 'selected' : ''; ?>>Diện Tích Tăng Dần
+                        </option>
+                        <option value="area_desc" <?php echo $sort == 'area_desc' ? 'selected' : ''; ?>>Diện tích Giảm
+                            Dần</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -364,8 +394,6 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     <th>Tên Loại</th>
                     <th>Giá/Đêm</th>
                     <th>Diện Tích</th>
-                    <th>Sức Chứa</th>
-                    <th>Tiện Nghi</th>
                     <th>Số Phòng</th>
                     <th>Trạng Thái</th>
                     <th>Hành Động</th>
@@ -383,8 +411,6 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <td><strong><?php echo h($rt['room_type_name']); ?></strong></td>
                             <td><?php echo formatCurrency($rt['base_price'] ?? 0); ?></td>
                             <td><?php echo $rt['area'] ? number_format($rt['area'], 1) . ' m²' : '-'; ?></td>
-                            <td><?php echo $rt['capacity'] ?? '-'; ?> người</td>
-                            <td><?php echo h($rt['amenities'] ?? '-'); ?></td>
                             <td><span class="badge bg-info"><?php echo $rt['room_count'] ?? 0; ?></span></td>
                             <td>
                                 <?php
@@ -437,7 +463,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                     </div>
                                     <div class="modal-body">
                                         <div class="row g-3">
-                                            <div class="col-md-6">
+                                            <div class="col-md-7">
                                                 <?php
                                                 // Ảnh loại phòng: lấy từ roomtype_images
                                                 $rtImages = [];
@@ -450,19 +476,37 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                                     $rtImages[] = $rowView['image_url'];
                                                 }
                                                 $imgStmtView->close();
-
                                                 if (!empty($rtImages)):
-                                                    foreach ($rtImages as $imgUrl):
-                                                        if (!empty($imgUrl)):
                                                 ?>
-                                                            <img src="<?php echo h($imgUrl); ?>" class="img-fluid rounded mb-2"
-                                                                alt="Room Type Image" style="max-width: 100%; max-height: 200px; object-fit: cover;">
-                                                    <?php
-                                                        endif;
-                                                    endforeach;
-                                                else:
-                                                    ?>
-                                                    <div class="d-flex align-items-center justify-content-center bg-light rounded" style="width: 100%; height: 200px;">
+                                                    <div class="image-section">
+                                                        <div class="main-image-slider">
+                                                            <div class="slider-track" id="sliderTrack">
+                                                                <?php foreach ($rtImages as $img): ?>
+                                                                    <div class="slide">
+                                                                        <img src="<?php echo $img; ?>" alt="Room Image">
+                                                                    </div>
+                                                                <?php endforeach; ?>
+                                                            </div>
+                                                            <button class="slider-btn slider-btn-prev"
+                                                                onclick="moveSlide(-1)">‹</button>
+                                                            <button class="slider-btn slider-btn-next"
+                                                                onclick="moveSlide(1)">›</button>
+                                                        </div>
+
+                                                        <div class="thumbnail-gallery" id="thumbnailGallery">
+                                                            <?php foreach ($rtImages as $index => $img): ?>
+                                                                <div class="gallery-item <?php echo $index === 0 ? 'active' : ''; ?>"
+                                                                    onclick="goToSlide(<?php echo $index; ?>)">
+                                                                    <img src="<?php echo $img; ?>"
+                                                                        alt="Thumb <?php echo $index + 1; ?>">
+                                                                </div>
+                                                            <?php endforeach; ?>
+                                                        </div>
+
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="d-flex align-items-center justify-content-center bg-light rounded"
+                                                        style="width: 100%; height: 200px;">
                                                         <div class="text-center text-muted">
                                                             <i class="fas fa-image fa-3x mb-2"></i>
                                                             <p class="mb-0">Chưa có ảnh</p>
@@ -470,17 +514,28 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
-                                            <div class="col-md-6">
-                                                <p><strong>Tên loại phòng:</strong> <?php echo h($rt['room_type_name'] ?? '-'); ?></p>
-                                                <p><strong>Mô tả:</strong> <?php echo nl2br(h($rt['description'] ?? '-')); ?></p>
-                                                <p><strong>Giá/đêm:</strong> <?php echo formatCurrency($rt['base_price'] ?? 0); ?></p>
-                                                <p><strong>Diện tích:</strong> <?php echo $rt['area'] ? number_format($rt['area'], 1) . 'm²' : '-'; ?></p>
+                                            <div class="col-md-5">
+                                                <p><strong>Tên loại phòng:</strong>
+                                                    <?php echo h($rt['room_type_name'] ?? '-'); ?></p>
+                                                <p><strong>Giá/đêm:</strong>
+                                                    <span class="fw-bold"
+                                                        style="color: #b69854;"><?php echo formatCurrency($rt['base_price'] ?? 0); ?></span>
+                                                </p>
+                                                <p><strong>Diện tích:</strong>
+                                                    <?php echo $rt['area'] ? number_format($rt['area'], 1) . 'm²' : '-'; ?></p>
                                                 <p><strong>Sức chứa:</strong> <?php echo $rt['capacity'] ?? '-'; ?> người</p>
-                                                <p><strong>Số phòng:</strong> <span class="badge bg-info"><?php echo $rt['room_count'] ?? 0; ?></span></p>
-                                                <p><strong>Trạng thái:</strong> <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span></p>
-                                                <?php if ($rt['amenities']): ?>
-                                                    <p><strong>Tiện nghi:</strong> <?php echo h($rt['amenities']); ?></p>
-                                                <?php endif; ?>
+                                                <p><strong>Số phòng:</strong> <span
+                                                        class="badge bg-info"><?php echo $rt['room_count'] ?? 0; ?></span></p>
+                                                <p><strong>Trạng thái:</strong> <span
+                                                        class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                                </p>
+                                                <p><strong>Tiện ích:</strong></p>
+                                                <?php echo h($rt['amenities']); ?>
+                                                <p><strong>Mô tả:</strong>
+                                                <div class="p-3 desc">
+                                                    <?php echo nl2br(h($rt['description'] ?? 'Không có mô tả')); ?>
+                                                </div>
+                                                </p>
                                             </div>
                                         </div>
                                     </div>
@@ -527,7 +582,14 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
-                        <textarea class="form-control" name="description" rows="3"><?php echo h($editRoomTypes['description'] ?? ''); ?></textarea>
+                        <textarea class="form-control" name="description"
+                            rows="3"><?php echo h($editRoomTypes['description'] ?? ''); ?></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tiện ích: </label>
+                        <textarea class="form-control" name="amenities" rows="3">
+                             <?php echo h($editRoomTypes['amenities'] ?? ''); ?>
+                       </textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -548,22 +610,19 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                 value="<?php echo h($editRoomTypes['area'] ?? ''); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Tiện nghi</label>
-                            <input type="text" class="form-control" name="amenities"
-                                placeholder="VD: WiFi, TV, Điều hòa..."
-                                value="<?php echo h($editRoomTypes['amenities'] ?? ''); ?>">
+                            <label class="form-label">Trạng thái *</label>
+                            <select class="form-select" name="status" required>
+                                <option value="active"
+                                    <?php echo ($editRoomTypes['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>
+                                    Đang hoạt động</option>
+                                <option value="inactive"
+                                    <?php echo ($editRoomTypes['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>
+                                    Dừng hoạt động</option>
+                                <option value="maintenance"
+                                    <?php echo ($editRoomTypes['status'] ?? '') == 'maintenance' ? 'selected' : ''; ?>>
+                                    Bảo trì</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Trạng thái *</label>
-                        <select class="form-select" name="status" required>
-                            <option value="active" <?php echo ($editRoomTypes['status'] ?? 'active') == 'active' ? 'selected' : ''; ?>>
-                                Đang hoạt động</option>
-                            <option value="inactive" <?php echo ($editRoomTypes['status'] ?? '') == 'inactive' ? 'selected' : ''; ?>>
-                                Dừng hoạt động</option>
-                            <option value="maintenance" <?php echo ($editRoomTypes['status'] ?? '') == 'maintenance' ? 'selected' : ''; ?>>
-                                Bảo trì</option>
-                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Ảnh Loại Phòng (4 - 6 ảnh, lấy từ Cloudinary)</label>
@@ -573,11 +632,7 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <p class="text-muted mb-0">Click để chọn ảnh (có thể chọn nhiều)</p>
                             <small class="text-muted">hoặc kéo thả ảnh vào đây (tối đa 6 ảnh)</small>
                         </div>
-                        <input type="file"
-                            id="roomTypeImagesInput"
-                            name="room_type_images[]"
-                            accept="image/*"
-                            multiple
+                        <input type="file" id="roomTypeImagesInput" name="room_type_images[]" accept="image/*" multiple
                             style="opacity: 0; position: absolute; width: 1px; height: 1px; top: -100px;" />
                         <div id="roomTypePreviewContainer" class="mt-3 d-flex flex-wrap gap-2">
                             <?php if ($editRoomTypes): ?>
@@ -601,11 +656,12 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                                 foreach ($rtImages as $img) :
                                     if (!empty($img['image_url'])) :
                                 ?>
-                                        <div class="image-preview-item position-relative me-2 mb-2" data-img-id="<?php echo $img['id']; ?>">
+                                        <div class="image-preview-item position-relative me-2 mb-2"
+                                            data-img-id="<?php echo $img['id']; ?>">
                                             <img src="<?php echo h($img['image_url']); ?>"
                                                 style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;" />
                                             <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
-                                                onclick="this.parentElement.remove()">×</button>
+                                                onclick="deleteImage(<?php echo $img['id']; ?>, this)" title="Xóa ảnh">×</button>
                                         </div>
                                 <?php
                                     endif;
@@ -614,13 +670,15 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                             <?php endif; ?>
                         </div>
                         <div class="mt-2">
-                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB mỗi ảnh. Tối đa 6 ảnh / loại phòng.</small>
+                            <small class="text-muted">Định dạng: JPG, PNG, GIF, WEBP. Kích thước tối đa: 5MB mỗi ảnh.
+                                Tối đa 6 ảnh / loại phòng.</small>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary" name="<?php echo $editRoomTypes ? 'update_room_type' : 'add_room_type'; ?>">
+                    <button type="submit" class="btn btn-primary"
+                        name="<?php echo $editRoomTypes ? 'update_room_type' : 'add_room_type'; ?>">
                         <?php echo $editRoomTypes ? 'Cập nhật' : 'Thêm'; ?> Loại Phòng
                     </button>
                 </div>
@@ -629,8 +687,14 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     </div>
 </div>
 
+<?php if ($editRoomTypes): ?>
+    <script id="editRoomTypeData" type="application/json">
+        <?php echo json_encode($editRoomTypes); ?>
+    </script>
+<?php endif; ?>
+
 <script>
-    // Preview multiple images (client-side)
+    // Preview multiple images
     function previewMultipleImages(input, containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -638,7 +702,6 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
         const files = input.files;
         if (!files || !files.length) return;
 
-        // Xóa preview tạm trước (giữ ảnh cũ từ DB)
         container.querySelectorAll('.image-preview-temp').forEach(el => el.remove());
 
         const maxPreview = 6;
@@ -655,70 +718,137 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
                 const wrapper = document.createElement('div');
                 wrapper.className = 'image-preview-item image-preview-temp position-relative me-2 mb-2';
                 wrapper.innerHTML = `
-                    <img src="${e.target.result}"
-                         style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;" />
-                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1" 
-                            onclick="this.parentElement.remove()">×</button>
-                `;
+                <img src="${e.target.result}" style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd;" />
+                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1" onclick="this.parentElement.remove()">×</button>
+            `;
                 container.appendChild(wrapper);
             };
             reader.readAsDataURL(file);
         }
     }
 
-    // Fix trigger upload ảnh
-    document.addEventListener('DOMContentLoaded', function() {
-        const trigger = document.getElementById('triggerRoomTypeUpload');
-        const fileInput = document.getElementById('roomTypeImagesInput');
-
-        if (trigger && fileInput) {
-            trigger.addEventListener('click', () => fileInput.click());
-            fileInput.addEventListener('change', () => previewMultipleImages(fileInput, 'roomTypePreviewContainer'));
-            trigger.addEventListener('mouseenter', () => trigger.style.borderColor = '#007bff');
-            trigger.addEventListener('mouseleave', () => trigger.style.borderColor = '#ccc');
-        }
-
-        // Đảm bảo form luôn có enctype
-        const form = document.getElementById('roomTypeForm');
-        if (form && form.getAttribute('enctype') !== 'multipart/form-data') {
-            form.setAttribute('enctype', 'multipart/form-data');
-            form.encoding = 'multipart/form-data';
-        }
-    });
-
     function resetRoomTypeForm() {
+
+        const form = document.getElementById('roomTypeForm');
+        if (!form) {
+            return;
+        }
+
+        // ✅ CÁCH CHÍNH: Dùng form.reset() - reset tất cả input về giá trị ban đầu
+        form.reset();
+
+        // Xóa query string edit
         const url = new URL(window.location);
         url.searchParams.delete('action');
         url.searchParams.delete('id');
         window.history.replaceState({}, '', url);
 
-        const form = document.getElementById('roomTypeForm');
-        if (!form) return;
 
+        // Xóa hidden input room_type_id nếu có
         const roomTypeIdInput = form.querySelector('input[name="room_type_id"]');
-        if (roomTypeIdInput) roomTypeIdInput.remove();
+        if (roomTypeIdInput) {
+            roomTypeIdInput.remove();
+        }
 
-        form.reset();
+        // Xóa preview images
+        const container = document.getElementById('roomTypePreviewContainer');
+        if (container) {
+            container.innerHTML = '';
+        }
 
-        // Reset fields
-        form.querySelector('input[name="room_type_name"]').value = '';
-        form.querySelector('textarea[name="description"]').value = '';
-        form.querySelector('input[name="base_price"]').value = '';
-        form.querySelector('input[name="capacity"]').value = '';
-        form.querySelector('input[name="area"]').value = '';
-        form.querySelector('input[name="amenities"]').value = '';
-        const statusSelect = form.querySelector('select[name="status"]');
-        statusSelect.value = 'active';
-        statusSelect.querySelector('option[value="active"]').selected = true;
+        // Update modal title
+        const modalTitle = document.querySelector('#addRoomTypeModal .modal-title');
+        if (modalTitle) {
+            modalTitle.textContent = 'Thêm Loại Phòng';
+        }
 
-        // Clear preview (giữ ảnh cũ nếu cần, nhưng reset thì xóa tạm)
-        document.getElementById('roomTypePreviewContainer').innerHTML = '';
-
-        // Reset title & button
-        document.querySelector('#addRoomTypeModal .modal-title').textContent = 'Thêm Loại Phòng';
+        // Update submit button
         const submitBtn = form.querySelector('button[type="submit"]');
-        submitBtn.name = 'add_room_type';
-        submitBtn.textContent = 'Thêm Loại Phòng';
+        if (submitBtn) {
+            submitBtn.name = 'add_room_type';
+            submitBtn.textContent = 'Thêm Loại Phòng';
+        }
+
+    }
+
+    // ✅ LOAD DỮ LIỆU EDIT VÀO FORM
+    function loadEditData() {
+        const isEditMode = window.location.search.includes('action=edit');
+
+        if (!isEditMode) return;
+
+        const editDataElem = document.getElementById('editRoomTypeData');
+        if (!editDataElem) return;
+
+        try {
+            const editData = JSON.parse(editDataElem.textContent);
+            const form = document.getElementById('roomTypeForm');
+
+            if (!form) return;
+
+            // Điền dữ liệu vào form
+            form.querySelector('input[name="room_type_name"]').value = editData.room_type_name || '';
+            form.querySelector('textarea[name="description"]').value = editData.description || '';
+            form.querySelector('input[name="base_price"]').value = editData.base_price || '';
+            form.querySelector('input[name="capacity"]').value = editData.capacity || '';
+            form.querySelector('input[name="area"]').value = editData.area || '';
+            form.querySelector('textarea[name="amenities"]').value = editData.amenities || '';
+            form.querySelector('select[name="status"]').value = editData.status || 'active';
+
+            // Tạo/update input hidden room_type_id
+            let roomTypeIdInput = form.querySelector('input[name="room_type_id"]');
+            if (!roomTypeIdInput) {
+                roomTypeIdInput = document.createElement('input');
+                roomTypeIdInput.type = 'hidden';
+                roomTypeIdInput.name = 'room_type_id';
+                form.appendChild(roomTypeIdInput);
+            }
+            roomTypeIdInput.value = editData.room_type_id;
+
+            // Update modal title & button
+            const modalTitle = document.querySelector('#addRoomTypeModal .modal-title');
+            const submitBtn = form.querySelector('button[type="submit"]');
+
+            if (modalTitle) modalTitle.textContent = 'Sửa Loại Phòng';
+            if (submitBtn) {
+                submitBtn.name = 'update_room_type';
+                submitBtn.textContent = 'Cập nhật Loại Phòng';
+            }
+
+            // Mở modal
+            setTimeout(() => {
+                const modalEl = document.getElementById('addRoomTypeModal');
+                if (modalEl && window.bootstrap) {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                }
+            }, 100);
+
+        } catch (e) {
+        }
+    }
+
+    function deleteImage(imageId, element) {
+        if (!confirm('Bạn chắc chắn muốn xóa ảnh này?')) return;
+
+        const formData = new FormData();
+        formData.append('delete_image_id', imageId);
+
+        fetch(window.location.href, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    element.closest('.image-preview-item').remove();
+                } else {
+                    alert('❌ Lỗi: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('❌ Lỗi kết nối');
+            });
     }
 
     function editRoomTypes(id) {
@@ -731,62 +861,228 @@ if ($sort) $baseUrl .= "&sort=" . urlencode($sort);
     function editRoomTypeFromView(id) {
         if (window.bootstrap) {
             const modalEl = document.getElementById("viewRoomTypeModal" + id);
-            const modalInstance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
-            if (modalInstance) {
-                modalInstance.hide();
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
             }
         }
         editRoomTypes(id);
     }
 
     function deleteRoomTypes(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa loại phòng này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="room_type_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_room_type" value="1">';
-            document.body.appendChild(form);
-            form.submit();
-        }
+        deleteRoomType(id);
     }
 
-    // Auto reset khi mở/thêm/sửa
+    function deleteRoomType(roomTypeId) {
+        showDeleteConfirmation(function() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'room_type_id';
+            input.value = roomTypeId;
+            form.appendChild(input);
+
+            const deleteInput = document.createElement('input');
+            deleteInput.type = 'hidden';
+            deleteInput.name = 'delete_room_type';
+            deleteInput.value = '1';
+            form.appendChild(deleteInput);
+
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    function initRoomTypeSlider(modalId) {
+        const modal = document.getElementById(modalId);
+        if (!modal) return;
+
+        const sliderTrack = modal.querySelector('.slider-track');
+        const thumbnails = modal.querySelectorAll('.gallery-item');
+        const thumbnailGallery = modal.querySelector('.thumbnail-gallery');
+
+        if (!sliderTrack || !thumbnails.length) return;
+
+        let currentSlide = 0;
+        const totalSlides = thumbnails.length;
+
+        function updateSlider() {
+            sliderTrack.style.transform = `translateX(-${currentSlide * 100}%)`;
+
+            thumbnails.forEach((thumb, index) => {
+                thumb.classList.toggle('active', index === currentSlide);
+            });
+
+            if (thumbnailGallery && thumbnails[currentSlide]) {
+                const activeThumb = thumbnails[currentSlide];
+                const thumbnailWidth = activeThumb.offsetWidth + 10;
+                const galleryWidth = thumbnailGallery.offsetWidth;
+                const scrollPosition = currentSlide * thumbnailWidth - galleryWidth / 2 + thumbnailWidth / 2;
+                thumbnailGallery.scrollTo({
+                    left: scrollPosition,
+                    behavior: 'smooth',
+                });
+            }
+        }
+
+        const prevBtn = modal.querySelector('.slider-btn-prev');
+        const nextBtn = modal.querySelector('.slider-btn-next');
+
+        if (prevBtn) {
+            prevBtn.onclick = () => {
+                currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+                updateSlider();
+            };
+        }
+
+        if (nextBtn) {
+            nextBtn.onclick = () => {
+                currentSlide = (currentSlide + 1) % totalSlides;
+                updateSlider();
+            };
+        }
+
+        thumbnails.forEach((thumb, index) => {
+            thumb.onclick = () => {
+                currentSlide = index;
+                updateSlider();
+            };
+        });
+
+        modal.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+                updateSlider();
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight') {
+                currentSlide = (currentSlide + 1) % totalSlides;
+                updateSlider();
+                e.preventDefault();
+            }
+        });
+
+        updateSlider();
+    }
+
+    // ✅ TỔNG HỢP TẤT CẢ VÀO 1 DOMContentLoaded DUY NHẤT
     document.addEventListener('DOMContentLoaded', function() {
+
+        // === Upload ảnh ===
+        const trigger = document.getElementById('triggerRoomTypeUpload');
+        const fileInput = document.getElementById('roomTypeImagesInput');
+
+        if (trigger && fileInput) {
+            trigger.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => previewMultipleImages(fileInput, 'roomTypePreviewContainer'));
+            trigger.addEventListener('mouseenter', () => trigger.style.borderColor = '#007bff');
+            trigger.addEventListener('mouseleave', () => trigger.style.borderColor = '#ccc');
+        }
+
+        const form = document.getElementById('roomTypeForm');
+        if (form && form.getAttribute('enctype') !== 'multipart/form-data') {
+            form.setAttribute('enctype', 'multipart/form-data');
+            form.encoding = 'multipart/form-data';
+        }
+
+        // === Modal & Reset ===
         const modal = document.getElementById('addRoomTypeModal');
         if (modal) {
-            modal.addEventListener('hidden.bs.modal', () => setTimeout(resetRoomTypeForm, 100));
-            const addBtn = document.querySelector('[data-bs-target="#addRoomTypeModal"]');
-            if (addBtn) addBtn.addEventListener('click', () => setTimeout(resetRoomTypeForm, 50));
+            // ✅ KHI CLICK NÚT "THÊM LOẠI PHÒNG" MỚI -> RESET FORM NGAY LẬP TỨC
+            // ✅ Khi modal sắp hiển thị -> reset form
+            modal.addEventListener('show.bs.modal', function(e) {
+                // Chỉ reset nếu không phải edit mode
+                if (!window.location.search.includes('action=edit')) {
+                    resetRoomTypeForm();
+                }
+            });
+
+            // ✅ Khi modal đóng -> reset form
+            modal.addEventListener('hidden.bs.modal', function(e) {
+                // Xóa query string edit
+                const url = new URL(window.location);
+                url.searchParams.delete('action');
+                url.searchParams.delete('id');
+                // window.history.replaceState({}, '', url.toString());
+
+                // resetRoomTypeForm();
+                window.location.href = url.toString();
+            });
+
+            // Khi modal đóng -> reset form
+            modal.addEventListener('hidden.bs.modal', () => {
+                setTimeout(resetRoomTypeForm, 50);
+            });
+
+            // Khi modal sắp mở (nếu không phải edit mode)
             modal.addEventListener('show.bs.modal', () => {
                 if (!window.location.search.includes('action=edit')) {
                     setTimeout(resetRoomTypeForm, 50);
                 }
             });
         }
-    });
 
-    <?php if ($editRoomTypes): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('roomTypeForm');
-            if (form) {
-                form.querySelector('input[name="room_type_name"]').value = '<?php echo addslashes(h($editRoomTypes['room_type_name'])); ?>';
-                form.querySelector('textarea[name="description"]').value = '<?php echo addslashes(h($editRoomTypes['description'] ?? '')); ?>';
-                form.querySelector('input[name="base_price"]').value = '<?php echo $editRoomTypes['base_price']; ?>';
-                form.querySelector('input[name="capacity"]').value = '<?php echo $editRoomTypes['capacity']; ?>';
-                form.querySelector('input[name="area"]').value = '<?php echo $editRoomTypes['area'] ?? ''; ?>';
-                form.querySelector('input[name="amenities"]').value = '<?php echo addslashes(h($editRoomTypes['amenities'] ?? '')); ?>';
-                form.querySelector('select[name="status"]').value = '<?php echo $editRoomTypes['status']; ?>';
-
-                document.querySelector('#addRoomTypeModal .modal-title').textContent = 'Sửa Loại Phòng';
-                const submitBtn = form.querySelector('button[type="submit"]');
-                submitBtn.name = 'update_room_type';
-                submitBtn.textContent = 'Cập nhật Loại Phòng';
-            }
-
-            setTimeout(() => {
-                const modalEl = document.getElementById('addRoomTypeModal');
-                if (modalEl && bootstrap) bootstrap.Modal.getOrCreateInstance(modalEl).show();
-            }, 100);
+        // === Slider ===
+        document.querySelectorAll('.modal').forEach(m => {
+            m.addEventListener('shown.bs.modal', function() {
+                const modalId = this.id;
+                if (modalId.startsWith('viewRoomTypeModal')) {
+                    initRoomTypeSlider(modalId);
+                }
+            });
         });
-    <?php endif; ?>
+
+        // === Delete Modal ===
+        const confirmDeleteModal = document.getElementById('confirmDeleteModal');
+        if (!confirmDeleteModal) {
+            const modalDiv = document.createElement('div');
+            modalDiv.innerHTML = `
+        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Xác nhận xóa</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <p class="mt-3 mb-0">Bạn có chắc muốn xóa loại phòng này không?<br>Hành động này không thể hoàn tác.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
+                            <i class="fas fa-trash-alt me-2"></i>Xác nhận xóa
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+            document.body.appendChild(modalDiv);
+        }
+
+        // === Xử lý delete ===
+        let currentDeleteHandler = null;
+
+        window.showDeleteConfirmation = function(handler) {
+            currentDeleteHandler = handler;
+            const deleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+            deleteModal.show();
+        };
+
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'confirmDeleteBtn') {
+                if (typeof currentDeleteHandler === 'function') {
+                    currentDeleteHandler();
+                }
+                const deleteModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+                if (deleteModal) {
+                    deleteModal.hide();
+                }
+            }
+        });
+
+        // ✅ LOAD EDIT DATA NGAY KHI DOM READY
+        loadEditData();
+    });
 </script>

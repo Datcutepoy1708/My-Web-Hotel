@@ -288,10 +288,14 @@ $isEditMode = ($action == 'edit' && isset($_GET['id']));
 if ($isEditMode) {
     $id = intval($_GET['id']);
     $stmt = $mysqli->prepare(
-        "SELECT b.*, c.phone, c.full_name, c.email, 
+        "SELECT b.*, 
+                COALESCE(c.phone, w.phone) as phone,
+                COALESCE(c.full_name, w.full_name) as full_name,
+                COALESCE(c.email, w.email) as email,
                 r.room_number, rt.room_type_name
          FROM booking b
          LEFT JOIN customer c ON b.customer_id = c.customer_id
+         LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
          LEFT JOIN room r ON b.room_id = r.room_id
          LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
          WHERE b.booking_id=? AND b.deleted IS NULL"
@@ -337,7 +341,7 @@ $params = [];
 $types = '';
 
 if ($search) {
-    $where .= " AND (b.booking_id LIKE ? OR c.full_name LIKE ? OR r.room_number LIKE ?)";
+    $where .= " AND (b.booking_id LIKE ? OR COALESCE(c.full_name, w.full_name) LIKE ? OR r.room_number LIKE ?)";
     $searchParam = "%$search%";
     $params = array_merge($params, [$searchParam, $searchParam, $searchParam]);
     $types .= 'sss';
@@ -358,6 +362,7 @@ if ($type_filter) {
 $countSql = "SELECT COUNT(*) as total 
              FROM booking b
              LEFT JOIN customer c ON b.customer_id = c.customer_id
+             LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
              LEFT JOIN room r ON b.room_id = r.room_id
              LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
              $where";
@@ -380,10 +385,13 @@ $sql = "SELECT
     b.quantity,
     b.special_request,
     b.status,
-    c.customer_id,
-    c.full_name,
-    c.phone,
-    c.email,
+    b.deposit,
+    b.booking_method,
+    COALESCE(c.customer_id, 0) as customer_id,
+    COALESCE(c.full_name, w.full_name) as full_name,
+    COALESCE(c.phone, w.phone) as phone,
+    COALESCE(c.email, w.email) as email,
+    CASE WHEN b.walk_in_guest_id IS NOT NULL THEN 'Walk-in' ELSE 'Registered' END as guest_type,
     r.room_id,
     r.room_number,
     rt.room_type_id,
@@ -391,6 +399,7 @@ $sql = "SELECT
     rt.base_price
 FROM booking b
 LEFT JOIN customer c ON b.customer_id = c.customer_id
+LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
 LEFT JOIN room r ON b.room_id = r.room_id
 LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
 $where
@@ -425,15 +434,15 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
     <div class="card-header-custom">
         <h3 class="card-title">Danh Sách Booking Phòng</h3>
         <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#addRoomBookingModal">
-            <i class="fas fa-plus"></i> Thêm Booking Phòng
+            <i class="fas fa-plus"></i> Thêm Booking
         </button>
     </div>
 
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo h($message); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <?php endif; ?>
 
     <!-- Filter -->
@@ -445,26 +454,31 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                 <div class="col-md-4">
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="searchInput" value="<?php echo h($search); ?>" name="search" placeholder="Tìm tên khách hoặc phòng..." />
+                        <input type="text" id="searchInput" value="<?php echo h($search); ?>" name="search"
+                            placeholder="Tìm tên khách hoặc phòng..." />
                     </div>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="status" id="statusFilter">
                         <option value="">Tất cả tình trạng</option>
-                        <option value="Confirmed" <?php echo $status_filter == 'Confirmed' ? 'selected' : ''; ?>>Đã xác nhận</option>
-                        <option value="Pending" <?php echo $status_filter == 'Pending' ? 'selected' : ''; ?>>Chưa thanh toán</option>
-                        <option value="Completed" <?php echo $status_filter == 'Completed' ? 'selected' : ''; ?>>Đã hoàn thành</option>
-                        <option value="Cancelled" <?php echo $status_filter == 'Cancelled' ? 'selected' : ''; ?>>Đã hủy</option>
+                        <option value="Confirmed" <?php echo $status_filter == 'Confirmed' ? 'selected' : ''; ?>>Đã xác
+                            nhận</option>
+                        <option value="Pending" <?php echo $status_filter == 'Pending' ? 'selected' : ''; ?>>Chưa thanh
+                            toán</option>
+                        <option value="Completed" <?php echo $status_filter == 'Completed' ? 'selected' : ''; ?>>Đã hoàn
+                            thành</option>
+                        <option value="Cancelled" <?php echo $status_filter == 'Cancelled' ? 'selected' : ''; ?>>Đã hủy
+                        </option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <select class="form-select" name="type" id="typeFilter">
                         <option value="0">Tất cả loại phòng</option>
                         <?php foreach ($roomTypes as $rt): ?>
-                            <option value="<?php echo $rt['room_type_id']; ?>"
-                                <?php echo $type_filter == $rt['room_type_id'] ? 'selected' : ''; ?>>
-                                <?php echo h($rt['room_type_name']); ?>
-                            </option>
+                        <option value="<?php echo $rt['room_type_id']; ?>"
+                            <?php echo $type_filter == $rt['room_type_id'] ? 'selected' : ''; ?>>
+                            <?php echo h($rt['room_type_name']); ?>
+                        </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -485,123 +499,228 @@ if ($type_filter) $baseUrl .= "&type=" . $type_filter;
                     <th>Phòng</th>
                     <th>Check-in</th>
                     <th>Check-out</th>
-                    <th>Số Khách</th>
-                    <th>Ghi chú</th>
                     <th>Trạng Thái</th>
                     <th>Hành Động</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($bookings)): ?>
-                    <tr>
-                        <td colspan="9" class="text-center">Không có dữ liệu</td>
-                    </tr>
+                <tr>
+                    <td colspan="9" class="text-center">Không có dữ liệu</td>
+                </tr>
                 <?php else: ?>
-                    <?php foreach ($bookings as $booking): ?>
-                        <tr>
-                            <td><?php echo h($booking['booking_id']); ?></td>
-                            <td>
-                                <strong><?php echo h($booking['full_name']); ?></strong><br>
-                                <small><?php echo h($booking['phone']); ?></small>
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary">
-                                    <?php echo h($booking['room_number']); ?> - <?php echo h($booking['room_type_name']); ?>
-                                </span>
-                            </td>
-                            <td><?php echo h($booking['check_in_date']); ?></td>
-                            <td><?php echo h($booking['check_out_date']); ?></td>
-                            <td><?php echo h($booking['quantity']); ?> người</td>
-                            <td><?php echo h($booking['special_request']); ?></td>
-                            <td>
-                                <?php
-                                $statusClass = 'bg-secondary';
-                                $statusText = $booking['status'];
-                                switch ($booking['status']) {
-                                    case 'Confirmed':
-                                        $statusClass = 'bg-primary';
-                                        $statusText = 'Đã xác nhận';
-                                        break;
-                                    case 'Completed':
-                                        $statusClass = 'bg-success';
-                                        $statusText = 'Đã hoàn thành';
-                                        break;
-                                    case 'Pending':
-                                        $statusClass = 'bg-warning';
-                                        $statusText = 'Chưa thanh toán';
-                                        break;
-                                    case 'Cancelled':
-                                        $statusClass = 'bg-danger';
-                                        $statusText = 'Đã hủy';
-                                        break;
-                                }
-                                ?>
-                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-info"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#viewBookingModal<?php echo $booking['booking_id']; ?>"
-                                    title="Xem chi tiết">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editRoomBooking(<?php echo $booking['booking_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deleteRoomBooking(<?php echo $booking['booking_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
+                <?php foreach ($bookings as $booking): ?>
+                <tr>
+                    <td><?php echo h($booking['booking_id']); ?></td>
+                    <td>
+                        <strong><?php echo h($booking['full_name']); ?></strong><br>
+                        <small><?php echo h($booking['phone']); ?></small>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">
+                            <?php echo h($booking['room_number']); ?> - <?php echo h($booking['room_type_name']); ?>
+                        </span>
+                    </td>
+                    <td><?php echo h($booking['check_in_date']); ?></td>
+                    <td><?php echo h($booking['check_out_date']); ?></td>
+                    <td>
+                        <?php
+                        $status = strtolower(trim($booking['status']));
+                        $statusClass = 'bg-secondary';
+                        $statusText = $booking['status'];
+                        switch ($status) {
+                            case 'confirmed':
+                                $statusClass = 'bg-primary';
+                                $statusText = 'Đã xác nhận';
+                                break;
+                            case 'pending':
+                                $statusClass = 'bg-warning';
+                                $statusText = 'Chờ xử lý';
+                                break;
+                            case 'checked-in':
+                                $statusClass = 'bg-info';
+                                $statusText = 'Đã nhận phòng';
+                                break;
+                            case 'occupied':
+                                $statusClass = 'bg-primary';
+                                $statusText = 'Đang ở';
+                                break;
+                            case 'completed':
+                                $statusClass = 'bg-success';
+                                $statusText = 'Đã hoàn thành';
+                                break;
+                            case 'cancelled':
+                                $statusClass = 'bg-danger';
+                                $statusText = 'Đã hủy';
+                                break;
+                        }
+                        ?>
+                        <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                            data-bs-target="#viewBookingModal<?php echo $booking['booking_id']; ?>"
+                            title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editRoomBooking(<?php echo $booking['booking_id']; ?>)" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                            onclick="deleteRoomBooking(<?php echo $booking['booking_id']; ?>)" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
 
-                        <!-- View Detail Modal -->
-                        <div class="modal fade" id="viewBookingModal<?php echo $booking['booking_id']; ?>" tabindex="-1">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Chi tiết booking #<?php echo $booking['booking_id']; ?></h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- View Detail Modal -->
+                <div class="modal fade" id="viewBookingModal<?php echo $booking['booking_id']; ?>" tabindex="-1"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content border-0 shadow-lg">
+                            <!-- Helper / Status Header -->
+                            <div class="modal-header">
+                                <h5 class="modal-title">Chi tiết Booking #<?php echo h($booking['booking_id']); ?></h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+
+                            <div class="modal-body pt-2 px-4 pb-4">
+                                <!-- Status Badge & Date -->
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div class="text-muted small">
+                                        Ngày đặt: <?php echo date('d/m/Y H:i', strtotime($booking['booking_date'])); ?>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Mã Booking:</strong> <?php echo h($booking['booking_id']); ?></div>
-                                            <div class="col-md-6"><strong>Ngày tạo:</strong> <?php echo h($booking['booking_date']); ?></div>
+                                    <span class="badge rounded-pill <?php echo $statusClass; ?> px-3 py-2 fs-6">
+                                        <?php echo $statusText; ?>
+                                    </span>
+                                </div>
+
+                                <!-- Highlight: Stay Duration -->
+                                <div class="bg-light rounded-3 p-4 mb-4 text-center">
+                                    <div class="row align-items-center">
+                                        <div class="col-5">
+                                            <div class="text-uppercase text-muted small fw-bold mb-1">Check-in</div>
+                                            <div class="fs-4 fw-bold text-success">
+                                                <?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?>
+                                            </div>
                                         </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Tên khách hàng:</strong> <?php echo h($booking['full_name']); ?></div>
-                                            <div class="col-md-6"><strong>Số điện thoại:</strong> <?php echo h($booking['phone']); ?></div>
+                                        <div class="col-2 text-muted">
+                                            <i class="fas fa-arrow-right fs-5"></i>
                                         </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Check-in:</strong> <?php echo h($booking['check_in_date']); ?></div>
-                                            <div class="col-md-6"><strong>Check-out:</strong> <?php echo h($booking['check_out_date']); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6"><strong>Số lượng:</strong> <?php echo h($booking['quantity']); ?> người</div>
-                                            <div class="col-md-6"><strong>Phòng:</strong> <?php echo h($booking['room_number']); ?> - <?php echo h($booking['room_type_name']); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-12"><strong>Yêu cầu đặc biệt:</strong> <?php echo h($booking['special_request']); ?></div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <strong>Trạng thái:</strong>
-                                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                                        <div class="col-5">
+                                            <div class="text-uppercase text-muted small fw-bold mb-1">Check-out</div>
+                                            <div class="fs-4 fw-bold text-danger">
+                                                <?php echo date('d/m/Y', strtotime($booking['check_out_date'])); ?>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
-                                        <a href="index.php?page=booking-manager&panel=roomBooking-panel&action=edit&id=<?php echo $booking['booking_id']; ?>"
-                                            class="btn btn-primary">
-                                            Chỉnh sửa
-                                        </a>
+                                </div>
+
+                                <div class="row g-4 mb-4">
+                                    <!-- Customer Info -->
+                                    <div class="col-md-6 border-end-md">
+                                        <h6 class="text-uppercase text-secondary fw-bold mb-3 small">
+                                            <i class="fas fa-user me-2"></i>Khách hàng
+                                        </h6>
+                                        <div class="ms-1">
+                                            <div class="fs-5 fw-bold text-dark mb-1">
+                                                <?php echo h($booking['full_name']); ?></div>
+                                            <div class="d-flex align-items-center text-muted mb-1">
+                                                <i class="fas fa-phone-alt me-2 fa-fw small"></i>
+                                                <?php echo h($booking['phone']); ?>
+                                            </div>
+                                            <div class="d-flex align-items-center text-muted">
+                                                <i class="fas fa-envelope me-2 fa-fw small"></i>
+                                                <?php echo !empty($booking['email']) ? h($booking['email']) : 'Không có email'; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Room Info -->
+                                    <div class="col-md-6 ps-md-4">
+                                        <h6 class="text-uppercase text-secondary fw-bold mb-3 small">
+                                            <i class="fas fa-bed me-2"></i>Phòng nghỉ
+                                        </h6>
+                                        <div class="ms-1">
+                                            <div class="d-flex align-items-baseline mb-2">
+                                                <span class="fs-5 fw-bold text-dark me-2">Phòng
+                                                    <?php echo h($booking['room_number']); ?></span>
+                                                <span
+                                                    class="badge bg-secondary"><?php echo h($booking['room_type_name']); ?></span>
+                                            </div>
+                                            <div class="mb-1 text-muted">
+                                                <span class="fw-bold text-dark">Số khách:</span>
+                                                <?php echo h($booking['quantity']); ?> người
+                                            </div>
+                                            <div class="text-muted">
+                                                <span class="fw-bold text-dark">Giá gốc:</span>
+                                                <span
+                                                    class="text-success fw-bold"><?php echo number_format($booking['base_price'], 0, ',', '.'); ?>đ</span>
+                                                / đêm
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+
+                                <hr class="my-4 text-muted opacity-25">
+
+                                <!-- Payment & Additional Info -->
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="p-3 border rounded bg-white h-100">
+                                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Đặt
+                                                cọc</label>
+                                            <div class="fs-5 fw-bold text-danger">
+                                                <?php echo !empty($booking['deposit']) ? number_format($booking['deposit'], 0, ',', '.') . 'đ' : '0đ'; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border rounded bg-white h-100">
+                                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Phương
+                                                thức đặt</label>
+                                            <div class="fs-6 fw-bold text-dark">
+                                                <?php echo !empty($booking['booking_method']) ? h($booking['booking_method']) : 'Website'; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <!-- Request (Short) or Placeholder -->
+                                        <div class="p-3 border rounded bg-white h-100">
+                                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Booking
+                                                ID</label>
+                                            <div class="fs-6 font-monospace text-dark">
+                                                #<?php echo h($booking['booking_id']); ?></div>
+                                        </div>
+                                    </div>
+
+                                    <?php if (!empty($booking['special_request'])): ?>
+                                    <div class="col-12 mt-3">
+                                        <label class="small text-muted text-uppercase fw-bold mb-2">
+                                            <i class="fas fa-comment-dots me-1"></i>Yêu cầu đặc biệt
+                                        </label>
+                                        <div class="p-3 bg-light border rounded text-dark fst-italic shadow-sm">
+                                            <?php echo nl2br(h($booking['special_request'])); ?>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="modal-footer border-top-0 pt-0 pb-4 px-4 justify-content-end">
+                                <button type="button" class="btn bg-secondary text-light px-4"
+                                    data-bs-dismiss="modal">Đóng</button>
+                                <a href="index.php?page=booking-manager&panel=roomBooking-panel&action=edit&id=<?php echo $booking['booking_id']; ?>"
+                                    class="btn btn-primary px-4 shadow-sm">
+                                    <i class="fas fa-edit me-2"></i>Chỉnh sửa
+                                </a>
                             </div>
                         </div>
-                    <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
@@ -629,13 +748,18 @@ function editRoomBooking(id) {
 }
 
 function deleteRoomBooking(id) {
-    if (confirm('Bạn có chắc chắn muốn xóa booking này?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="booking_id" value="' + id + '">' +
-            '<input type="hidden" name="delete_booking_room" value="1">';
-        document.body.appendChild(form);
-        form.submit();
+    if (typeof showDeleteModal === 'function') {
+        showDeleteModal(id, 'room');
+    } else {
+        // Fallback if modal function is not available
+        if (confirm('Bạn có chắc chắn muốn xóa booking phòng này?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.innerHTML = '<input type="hidden" name="booking_id" value="' + id + '">' +
+                '<input type="hidden" name="delete_booking_room" value="1">';
+            document.body.appendChild(form);
+            form.submit();
+        }
     }
 }
 </script>

@@ -221,12 +221,12 @@
 }
 
 .modal-header {
-  background-color: #deb666;
-  color: #fff;
+  background-color: #fffcf0;
+  color: #121212;
 }
 
 .modal-header .btn-close {
-  filter: brightness(0) invert(1);
+  /* filter: brightness(0) invert(1); Removed to make visible on light bg */
 }
 
 .form-label {

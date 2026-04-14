@@ -19,7 +19,6 @@ body {
   border-radius: 15px;
   backdrop-filter: blur(7px);
   padding: 40px;
-  height: 500px;
   width: 450px;
   text-align: center;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
@@ -155,40 +154,5 @@ body {
 }
 
 .options a:hover {
-  color: #deb666;
-}
-
-.social-login {
-  margin-top: 10px;
-}
-
-.social-login p {
-  color: #fff;
-  margin-bottom: 15px;
-  font-size: 14px;
-}
-
-.social-icons {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-}
-
-.social-icons a i {
-  font-size: 28px;
-  color: #fff;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.social-icons a:hover i.fa-google {
-  color: #deb666;
-}
-
-.social-icons a:hover i.fa-facebook {
-  color: #deb666;
-}
-
-.social-icons a:hover i.fa-twitter {
   color: #deb666;
 }

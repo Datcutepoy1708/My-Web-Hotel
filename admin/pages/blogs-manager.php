@@ -360,27 +360,3 @@ $stats = $statsResult->fetch_assoc();
     </div>
 </div>
 
-
-<script>
-    function editBlog(id) {
-        window.location.href = 'index.php?page=blogs-manager&action=edit&id=' + id;
-    }
-
-    function deleteBlog(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="blog_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_blog" value="1">';
-            document.body.appendChild(form);
-            form.submit();
-        }
-    }
-
-    <?php if ($editBlog): ?>
-        document.addEventListener('DOMContentLoaded', function() {
-            const modal = new bootstrap.Modal(document.getElementById('addBlogModal'));
-            modal.show();
-        });
-    <?php endif; ?>
-</script>

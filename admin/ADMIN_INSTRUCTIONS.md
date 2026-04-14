@@ -880,15 +880,3 @@ Confirm → Soft delete (UPDATE deleted = NOW()) → Success message
    - Kiểm tra quyền trong database
    - Kiểm tra `canAccessSection()` function
 
----
-
-## Tài Liệu Tham Khảo
-
-- [Cloudinary PHP SDK Documentation](https://cloudinary.com/documentation/php_integration)
-- [PHP Manual - Prepared Statements](https://www.php.net/manual/en/mysqli.quickstart.prepared-statements.php)
-- [Bootstrap 5 Documentation](https://getbootstrap.com/docs/5.0/)
-- [Chart.js Documentation](https://www.chartjs.org/docs/latest/)
-
----
-
-

@@ -4,7 +4,7 @@ require_once 'includes/connect.php';
 $page = isset($_GET['page']) ? trim($_GET['page']) : 'home';
 include 'controller/auth.php';
 include 'includes/header.php';
-include 'includes/loading.php';
+// include 'includes/loading.php';
 $allowed = [
     'home' => 'pages/home.php',
     'room' => 'pages/room.php',
@@ -13,6 +13,7 @@ $allowed = [
     'booking' => 'pages/booking.php',
     'service-booking' => 'pages/service-booking.php',
     'blog' => 'pages/blog.php',
+    'blog-detail' => 'pages/blog-detail.php',
     'danhGia' => 'pages/danhGia.php',
     'spa' => 'pages/spa.php',
     'giaiTri' => 'pages/giaiTri.php',

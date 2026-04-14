@@ -21,6 +21,28 @@ $useMVC = true; // Set to false to use old pages structure
 
 if ($useMVC && file_exists(__DIR__ . '/core/Router.php')) {
     require_once __DIR__ . '/core/Router.php';
+    
+    // Kiểm tra xem có phải quản lý không
+    $chuc_vu = $_SESSION['chuc_vu'] ?? '';
+    $isManager = false;
+    if (!empty($chuc_vu)) {
+        $isManager = (
+            stripos($chuc_vu, 'Quản lý') !== false ||
+            stripos($chuc_vu, 'Manager') !== false ||
+            stripos($chuc_vu, 'Admin') !== false ||
+            stripos($chuc_vu, 'Giám đốc') !== false ||
+            stripos($chuc_vu, 'Director') !== false
+        );
+    }
+    
+    // Nếu không có page và là nhân viên (không phải quản lý), redirect đến my-tasks
+    if (!isset($_GET['page']) || trim($_GET['page']) === '') {
+        if (!$isManager) {
+            header("Location: index.php?page=my-tasks");
+            exit;
+        }
+    }
+    
     $router = new Router($mysqli);
     
     // Define $page for footer.php compatibility
@@ -41,6 +63,7 @@ if ($useMVC && file_exists(__DIR__ . '/core/Router.php')) {
         'services-manager' => 'pages/services-manager.php',
         'invoices-manager' => 'pages/invoices-manager.php',
         'booking-manager' => 'pages/booking-manager.php',
+        'calendar-booking' => 'pages/calendar-booking.php',
         'customers-manager' => 'pages/customers-manager.php',
         'staff-manager' => 'pages/staff-manager.php',
         'task-manager' => 'pages/task-manager.php',

@@ -1,5 +1,7 @@
+// ============================================================
+// AUTO-FILL BOOKING DATA FROM SESSION STORAGE
+// ============================================================
 (function autoFillBookingData() {
-  // Chỉ chạy sau khi DOM load xong
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", fillBookingForm);
   } else {
@@ -8,8 +10,7 @@
 
   function fillBookingForm() {
     const bookingDataStr = sessionStorage.getItem("bookingData");
-
-    if (!bookingDataStr) return; // Không có dữ liệu từ trang chi tiết
+    if (!bookingDataStr) return;
 
     try {
       const bookingData = JSON.parse(bookingDataStr);
@@ -25,19 +26,10 @@
 
       if (roomNameInput && bookingData.roomName) {
         roomNameInput.value = bookingData.roomName;
-        roomNameInput.readOnly = true;
-        roomNameInput.style.backgroundColor = "#f5f5f5";
       }
 
       if (roomTypeSelect && bookingData.roomType) {
-        for (let i = 0; i < roomTypeSelect.options.length; i++) {
-          if (roomTypeSelect.options[i].value === bookingData.roomType) {
-            roomTypeSelect.selectedIndex = i;
-            roomTypeSelect.disabled = true;
-            roomTypeSelect.style.backgroundColor = "#f5f5f5";
-            break;
-          }
-        }
+        roomTypeSelect.value = bookingData.roomType;
       }
 
       if (guestCountInput && bookingData.adults) {
@@ -49,87 +41,49 @@
       }
 
       if (checkinInput && bookingData.checkin) {
-        checkinInput.value = bookingData.checkin + "T14:00";
+        checkinInput.value = bookingData.checkin;
       }
 
       if (checkoutInput && bookingData.checkout) {
-        checkoutInput.value = bookingData.checkout + "T12:00";
+        checkoutInput.value = bookingData.checkout;
       }
 
       if (roomPriceInput && bookingData.roomPrice) {
         roomPriceInput.value = bookingData.roomPrice;
-        roomPriceInput.readOnly = true;
-        roomPriceInput.style.backgroundColor = "#f5f5f5";
       }
 
-      // Lưu roomId để sử dụng khi submit
       const form = document.getElementById("roomBookingForm");
       if (form && bookingData.roomId) {
         form.dataset.roomId = bookingData.roomId;
       }
 
-      // Xóa dữ liệu khỏi sessionStorage sau khi đã sử dụng
-      sessionStorage.removeItem("bookingData");
-
-      // Trigger update summary sau khi điền xong
       setTimeout(() => {
         updateSummary();
-      }, 100);
-    } catch (error) {
-      console.error("❌ Lỗi khi parse booking data:", error);
-    }
+        // Chỉ load voucher khi đã đăng nhập
+        if (
+          window.IS_LOGGED_IN &&
+          typeof loadAvailableVouchers === "function"
+        ) {
+          setTimeout(() => loadAvailableVouchers(), 300);
+        }
+      }, 200);
+    } catch (error) {}
   }
 })();
 
-// Lưu hóa đơn thành file PDF (dạng đơn giản: lưu HTML thành file)
-function saveInvoice() {
-  const invoice = document.getElementById("invoiceContainer");
-  const opt = {
-    margin: 0.5,
-    filename: "hoa-don-dat-phong.pdf",
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-  };
-  if (window.html2pdf) {
-    window.html2pdf().from(invoice).set(opt).save();
-  } else {
-    alert(
-      "Chức năng lưu hóa đơn cần thư viện html2pdf. Vui lòng thêm html2pdf vào trang!"
-    );
-  }
-}
-
-// Dữ liệu mã khuyến mãi
-const promoCodes = {
-  SUMMER2025: {
-    discount: 500000,
-    description: "Giảm 500,000đ - Khuyến mãi mùa hè 2025",
-  },
-  VIP20: {
-    discount: 20,
-    description: "Giảm 20% cho khách VIP",
-    isPercent: true,
-  },
-  NEWYEAR: {
-    discount: 1000000,
-    description: "Giảm 1,000,000đ - Chào năm mới",
-  },
-  WEEKEND: {
-    discount: 15,
-    description: "Giảm 15% cuối tuần",
-    isPercent: true,
-  },
-  FAMILY: {
-    discount: 300000,
-    description: "Giảm 300,000đ - Ưu đãi gia đình",
-  },
-};
-
+// ============================================================
+// GLOBAL VARIABLES
+// ============================================================
 let currentDiscount = 0;
 let appliedPromoCode = "";
+let selectedVoucherId = null;
+let selectedVoucher = null;
+let availableVouchers = [];
+let currentBookingData = null;
 
-// Hàm định dạng tiền tệ
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
 function formatCurrency(amount) {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -137,7 +91,6 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-// Hàm định dạng ngày giờ
 function formatDateTime(dateString) {
   const date = new Date(dateString);
   return date.toLocaleString("vi-VN", {
@@ -149,7 +102,6 @@ function formatDateTime(dateString) {
   });
 }
 
-// Hàm tính số đêm
 function calculateNights(checkin, checkout) {
   const start = new Date(checkin);
   const end = new Date(checkout);
@@ -158,19 +110,9 @@ function calculateNights(checkin, checkout) {
   return diffDays;
 }
 
-// Hàm tạo mã booking
-function generateBookingCode() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `BK${year}${month}${day}${random}`;
-}
-
-// Hàm tính tổng giá dịch vụ
+// ============================================================
+// CALCULATION FUNCTIONS
+// ============================================================
 function calculateServiceTotal() {
   const checkboxes = document.querySelectorAll(
     'input[name="services"]:checked'
@@ -182,9 +124,14 @@ function calculateServiceTotal() {
 
   checkboxes.forEach((cb) => {
     const price = parseInt(cb.dataset.price);
-    const serviceValue = cb.value;
-    // Buffet sáng và minibar tính theo số đêm
-    if (serviceValue === "breakfast" || serviceValue === "minibar") {
+    const serviceName = cb.value;
+
+    // Dịch vụ theo đêm
+    if (
+      serviceName.toLowerCase().includes("breakfast") ||
+      serviceName.toLowerCase().includes("minibar") ||
+      serviceName.toLowerCase().includes("bữa sáng")
+    ) {
       total += price * nights;
     } else {
       total += price;
@@ -194,7 +141,6 @@ function calculateServiceTotal() {
   return total;
 }
 
-// Hàm cập nhật tổng kết
 function updateSummary() {
   const roomPriceInput = document.getElementById("roomPrice");
   const checkinInput = document.getElementById("checkinTime");
@@ -204,11 +150,9 @@ function updateSummary() {
 
   const roomPricePerNight =
     parseInt(roomPriceInput.value.replace(/[^\d]/g, "")) || 0;
-
   const checkin = checkinInput.value;
   const checkout = checkoutInput.value;
 
-  // Tính số đêm
   let nights = 1;
   let totalRoomPrice = roomPricePerNight;
 
@@ -216,7 +160,6 @@ function updateSummary() {
     nights = calculateNights(checkin, checkout);
     totalRoomPrice = roomPricePerNight * nights;
 
-    // Hiển thị số đêm nếu có element
     const nightCountDisplay = document.getElementById("nightCountDisplay");
     if (nightCountDisplay) {
       nightCountDisplay.textContent = nights;
@@ -225,100 +168,379 @@ function updateSummary() {
 
   const serviceTotal = calculateServiceTotal();
   const discount = currentDiscount || 0;
-  const subtotal = totalRoomPrice + serviceTotal;
-  const total = Math.max(0, subtotal - discount);
+  // Calculate VAT based on amount after discount
+  const subtotalBeforeVat = Math.max(
+    0,
+    totalRoomPrice + serviceTotal - discount
+  );
+  const vat = Math.round(subtotalBeforeVat * 0.1);
+  const total = subtotalBeforeVat + vat;
   const deposit = Math.round(total * 0.3);
 
-  // Cập nhật giao diện
   document.getElementById("summaryRoomPrice").textContent =
     formatCurrency(totalRoomPrice);
   document.getElementById("summaryServicePrice").textContent =
     formatCurrency(serviceTotal);
   document.getElementById("summaryDiscount").textContent =
     discount > 0 ? "- " + formatCurrency(discount) : "0 ₫";
+
+  const vatDisplay = document.getElementById("summaryVat");
+  if (vatDisplay) vatDisplay.textContent = formatCurrency(vat);
+
   document.getElementById("summaryTotal").textContent = formatCurrency(total);
   document.getElementById("summaryDeposit").textContent =
     formatCurrency(deposit);
 }
 
-// Áp dụng mã khuyến mãi
+// ============================================================
+// VOUCHER FUNCTIONS
+// ============================================================
+function loadAvailableVouchers() {
+  // Chỉ load voucher khi đã đăng nhập
+  if (!window.IS_LOGGED_IN) {
+    const container = document.getElementById("voucherListContainer");
+    if (container) container.style.display = "none";
+    return;
+  }
+
+  const checkinInput = document.getElementById("checkinTime");
+  const checkoutInput = document.getElementById("checkoutTime");
+  const roomPriceInput = document.getElementById("roomPrice");
+
+  if (!checkinInput || !checkoutInput || !roomPriceInput) {
+    return;
+  }
+
+  const checkin = checkinInput.value;
+  const checkout = checkoutInput.value;
+
+  if (!checkin || !checkout) {
+    const container = document.getElementById("voucherListContainer");
+    if (container) container.style.display = "none";
+    return;
+  }
+
+  const roomPricePerNight =
+    parseInt(roomPriceInput.value.replace(/[^\d]/g, "")) || 0;
+  const nights = calculateNights(checkin, checkout);
+  const totalRoomPrice = roomPricePerNight * nights;
+  const serviceTotal = calculateServiceTotal();
+  const totalAmount = totalRoomPrice + serviceTotal;
+
+  const form = document.getElementById("roomBookingForm");
+  const roomId = form?.dataset?.roomId || null;
+
+  const selectedServices = Array.from(
+    document.querySelectorAll('input[name="services"]:checked')
+  )
+    .map((cb) => cb.dataset.serviceId)
+    .filter(Boolean);
+
+  const params = new URLSearchParams({
+    apply_to: "room",
+    total_amount: totalAmount,
+    nights: nights,
+    num_rooms: 1,
+  });
+
+  if (roomId) params.append("room_id", roomId);
+  if (selectedServices.length > 0)
+    params.append("service_ids", selectedServices.join(","));
+
+  fetch(`/My-Web-Hotel/client/controller/get-vouchers.php?${params}`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success && data.vouchers && data.vouchers.length > 0) {
+        availableVouchers = data.vouchers;
+        renderVoucherList(data.vouchers);
+        document.getElementById("voucherListContainer").style.display = "block";
+      } else {
+        document.getElementById("voucherListContainer").style.display = "none";
+      }
+    })
+    .catch((error) => {
+      document.getElementById("voucherListContainer").style.display = "none";
+    });
+}
+
+function renderVoucherList(vouchers) {
+  const voucherList = document.getElementById("voucherList");
+  if (!voucherList) return;
+
+  voucherList.innerHTML = "";
+
+  vouchers.forEach((voucher) => {
+    const voucherItem = document.createElement("div");
+    voucherItem.className = "voucher-item";
+    voucherItem.style.cssText = `
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border: 1px solid #deb666;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #fffcf0;
+    `;
+
+    const discountText =
+      voucher.discount_type === "percent"
+        ? `Giảm ${voucher.discount_value}%`
+        : `Giảm ${formatCurrency(voucher.discount_value)}`;
+
+    const maxDiscountText = voucher.max_discount
+      ? ` (tối đa ${formatCurrency(voucher.max_discount)})`
+      : "";
+
+    voucherItem.innerHTML = `
+      <input type="radio" name="voucher" value="${voucher.voucher_id}" 
+             id="voucher_${voucher.voucher_id}" 
+             style="margin-right: 12px; cursor: pointer; width: 18px; height: 18px; flex-shrink: 0;"
+             onchange="selectVoucher(${voucher.voucher_id})">
+      <label for="voucher_${
+        voucher.voucher_id
+      }" style="flex: 1; cursor: pointer; margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="font-weight: 700; color: #4caf50; font-size: 16px; min-width: 120px; font-family: 'Courier New', monospace; letter-spacing: 0.5px;">
+          ${voucher.code}
+        </span>
+        <span style="font-size: 15px; color: #333; flex: 1; min-width: 150px;">
+          ${voucher.name}${
+      voucher.is_featured
+        ? '<span style="color: #ff6b6b; margin-left: 5px;">⭐</span>'
+        : ""
+    }
+        </span>
+        <span style="font-size: 15px; color: #4caf50; font-weight: 600; white-space: nowrap;">
+          ${discountText}${maxDiscountText}
+        </span>
+      </label>
+    `;
+
+    voucherItem.addEventListener("mouseenter", function () {
+      if (!this.querySelector('input[type="radio"]').checked) {
+        this.style.borderColor = "#b69854";
+        this.style.backgroundColor = "#fff8dc";
+      }
+    });
+
+    voucherItem.addEventListener("mouseleave", function () {
+      const radio = this.querySelector('input[type="radio"]');
+      if (!radio || !radio.checked) {
+        this.style.borderColor = "#deb666";
+        this.style.backgroundColor = "#fffcf0";
+      }
+    });
+
+    voucherItem.addEventListener("click", function (e) {
+      if (e.target.type !== "radio") {
+        const radio = this.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          selectVoucher(parseInt(radio.value));
+        }
+      }
+    });
+
+    voucherList.appendChild(voucherItem);
+  });
+}
+
+function selectVoucher(voucherId) {
+  selectedVoucherId = voucherId;
+  selectedVoucher = availableVouchers.find((v) => v.voucher_id === voucherId);
+
+  if (selectedVoucher) {
+    document.getElementById("promoCode").value = selectedVoucher.code;
+    calculateVoucherDiscount();
+
+    // Highlight voucher được chọn
+    document.querySelectorAll(".voucher-item").forEach((item) => {
+      const radio = item.querySelector('input[type="radio"]');
+      if (radio && parseInt(radio.value) === voucherId) {
+        item.style.borderColor = "#b69854";
+        item.style.backgroundColor = "#ffefd5";
+        item.style.boxShadow = "0 2px 6px rgba(76, 175, 80, 0.15)";
+      } else {
+        item.style.borderColor = "#deb666";
+        item.style.backgroundColor = "#fffcf0";
+        item.style.boxShadow = "none";
+      }
+    });
+  }
+}
+
+function calculateVoucherDiscount() {
+  if (!selectedVoucher) {
+    currentDiscount = 0;
+    updateSummary();
+    return;
+  }
+
+  const roomPriceInput = document.getElementById("roomPrice");
+  const checkinInput = document.getElementById("checkinTime");
+  const checkoutInput = document.getElementById("checkoutTime");
+
+  if (!roomPriceInput || !checkinInput || !checkoutInput) return;
+
+  const roomPricePerNight =
+    parseInt(roomPriceInput.value.replace(/[^\d]/g, "")) || 0;
+  const nights =
+    checkinInput.value && checkoutInput.value
+      ? calculateNights(checkinInput.value, checkoutInput.value)
+      : 1;
+  const totalRoomPrice = roomPricePerNight * nights;
+  const serviceTotal = calculateServiceTotal();
+
+  let subtotal = 0;
+  if (selectedVoucher.apply_to === "room") {
+    subtotal = totalRoomPrice;
+  } else if (selectedVoucher.apply_to === "service") {
+    subtotal = serviceTotal;
+  } else {
+    subtotal = totalRoomPrice + serviceTotal;
+  }
+
+  if (subtotal < selectedVoucher.min_order) {
+    alert(
+      `Voucher yêu cầu đơn hàng tối thiểu ${formatCurrency(
+        selectedVoucher.min_order
+      )}`
+    );
+    document.getElementById(`voucher_${selectedVoucherId}`).checked = false;
+    selectedVoucherId = null;
+    selectedVoucher = null;
+    currentDiscount = 0;
+    updateSummary();
+    return;
+  }
+
+  if (selectedVoucher.discount_type === "percent") {
+    currentDiscount = Math.round(
+      (subtotal * selectedVoucher.discount_value) / 100
+    );
+    if (
+      selectedVoucher.max_discount &&
+      currentDiscount > selectedVoucher.max_discount
+    ) {
+      currentDiscount = selectedVoucher.max_discount;
+    }
+  } else {
+    currentDiscount = selectedVoucher.discount_value;
+  }
+
+  document.getElementById("discountAmount").textContent =
+    formatCurrency(currentDiscount);
+  document.getElementById("discountDisplay").classList.add("active");
+  appliedPromoCode = selectedVoucher.code;
+  updateSummary();
+}
+
 function applyPromoCode() {
   const promoInput = document.getElementById("promoCode");
   const code = promoInput.value.trim().toUpperCase();
-  const discountDisplay = document.getElementById("discountDisplay");
-  const discountAmount = document.getElementById("discountAmount");
 
   if (!code) {
     alert("Vui lòng nhập mã khuyến mãi!");
     return;
   }
 
-  if (promoCodes[code]) {
-    const promo = promoCodes[code];
-    const roomPriceInput = document.getElementById("roomPrice");
-    const checkinInput = document.getElementById("checkinTime");
-    const checkoutInput = document.getElementById("checkoutTime");
+  const voucher = availableVouchers.find((v) => v.code.toUpperCase() === code);
 
-    const roomPricePerNight = parseInt(roomPriceInput.value) || 0;
-    const nights =
-      checkinInput.value && checkoutInput.value
-        ? calculateNights(checkinInput.value, checkoutInput.value)
-        : 1;
-    const totalRoomPrice = roomPricePerNight * nights;
-    const serviceTotal = calculateServiceTotal();
-    const subtotal = totalRoomPrice + serviceTotal;
-
-    if (promo.isPercent) {
-      currentDiscount = Math.round((subtotal * promo.discount) / 100);
+  if (voucher) {
+    const radio = document.getElementById(`voucher_${voucher.voucher_id}`);
+    if (radio) {
+      radio.checked = true;
+      selectVoucher(voucher.voucher_id);
+      alert(`✅ Áp dụng thành công!\n${voucher.name}`);
     } else {
-      currentDiscount = promo.discount;
+      alert("❌ Voucher không khả dụng!");
     }
-
-    appliedPromoCode = code;
-    discountAmount.textContent = formatCurrency(currentDiscount);
-    discountDisplay.classList.add("active");
-    updateSummary();
-    alert(`✅ Áp dụng thành công!\n${promo.description}`);
   } else {
     alert("❌ Mã khuyến mãi không hợp lệ!");
     currentDiscount = 0;
     appliedPromoCode = "";
-    discountDisplay.classList.remove("active");
+    selectedVoucherId = null;
+    selectedVoucher = null;
+    document.getElementById("discountDisplay").classList.remove("active");
     updateSummary();
   }
 }
+function initCloseVoucherBtn() {
+  const closeBtn = document.querySelector("#discountDisplay .btn-close");
+  if (!closeBtn) return;
 
-// Lắng nghe sự kiện thay đổi
-document.addEventListener("DOMContentLoaded", function () {
-  const roomPriceInput = document.getElementById("roomPrice");
-  const checkinInput = document.getElementById("checkinTime");
-  const checkoutInput = document.getElementById("checkoutTime");
-  const serviceCheckboxes = document.querySelectorAll('input[name="services"]');
+  closeBtn.addEventListener("click", function () {
+    // Reset các biến liên quan đến voucher
+    currentDiscount = 0;
+    appliedPromoCode = "";
+    selectedVoucherId = null;
+    selectedVoucher = null;
 
-  if (roomPriceInput) {
-    roomPriceInput.addEventListener("input", updateSummary);
-  }
+    // Reset giao diện hiển thị giảm giá
+    const discountAmount = document.getElementById("discountAmount");
+    if (discountAmount) discountAmount.textContent = "0 ₫";
 
-  if (checkinInput) {
-    checkinInput.addEventListener("change", updateSummary);
-  }
+    const discountDisplay = document.getElementById("discountDisplay");
+    if (discountDisplay) discountDisplay.classList.remove("active");
 
-  if (checkoutInput) {
-    checkoutInput.addEventListener("change", updateSummary);
-  }
+    // Xóa text trong ô nhập mã khuyến mãi
+    const promoInput = document.getElementById("promoCode");
+    if (promoInput) promoInput.value = "";
 
-  serviceCheckboxes.forEach((cb) => {
-    cb.addEventListener("change", () => {
-      updateSummary();
-      // Tính lại discount nếu đã áp dụng mã %
-      if (appliedPromoCode && promoCodes[appliedPromoCode].isPercent) {
-        applyPromoCode();
-      }
+    // Bỏ chọn radio voucher nếu có
+    document.querySelectorAll('input[name="voucher"]').forEach((radio) => {
+      radio.checked = false;
     });
-  });
-});
 
-// Xử lý submit form
+    // Cập nhật lại tổng kết
+    updateSummary();
+  });
+}
+
+// Gọi hàm này sau khi render xong voucher list hoặc khi trang load
+document.addEventListener("DOMContentLoaded", initCloseVoucherBtn);
+
+// ============================================================
+// VALIDATION
+// ============================================================
+function validateGuestCount() {
+  const form = document.getElementById("roomBookingForm");
+  const guestCountInput = document.getElementById("guestCount");
+  const childCountInput = document.getElementById("childCount");
+
+  if (!form || !guestCountInput || !childCountInput) return true;
+
+  const capacity = parseInt(form.dataset.capacity) || 10;
+  const guests = parseInt(guestCountInput.value) || 0;
+  const children = parseInt(childCountInput.value) || 0;
+  const total = guests + children;
+
+  if (total <= 0) {
+    alert("❌ Tổng số khách phải lớn hơn 0!");
+    guestCountInput.value = 1;
+    childCountInput.value = 0;
+    updateSummary();
+    return false;
+  }
+
+  if (total > capacity) {
+    alert(
+      `❌ Tổng số khách (${total} người) vượt quá sức chứa (${capacity} người)!`
+    );
+    guestCountInput.value = Math.max(1, capacity);
+    childCountInput.value = 0;
+    updateSummary();
+    return false;
+  }
+
+  return true;
+}
+
+// ============================================================
+// FORM SUBMISSION
+// ============================================================
+// Thêm vào đầu hàm submit
 document.addEventListener("DOMContentLoaded", function () {
   const form = document.getElementById("roomBookingForm");
 
@@ -326,29 +548,29 @@ document.addEventListener("DOMContentLoaded", function () {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
 
-      // ========  Lấy dữ liệu cơ bản ========
+      if (!validateGuestCount()) return;
+
       const roomPriceInput = document.getElementById("roomPrice");
       const checkinInput = document.getElementById("checkinTime");
       const checkoutInput = document.getElementById("checkoutTime");
 
-      // Ép kiểu từ chuỗi → số (bỏ ký tự ₫, dấu phẩy,...)
       const roomPricePerNight =
         parseInt(String(roomPriceInput.value).replace(/[^\d]/g, "")) || 0;
-
       const checkin = checkinInput.value;
       const checkout = checkoutInput.value;
 
-      // ========  Tính toán thời gian và giá ========
       const nights = calculateNights(checkin, checkout);
       const totalRoomPrice = roomPricePerNight * nights;
-
       const serviceTotal = calculateServiceTotal();
       const discount = currentDiscount || 0;
-      const subtotal = totalRoomPrice + serviceTotal;
-      const total = Math.max(0, subtotal - discount);
+      const subtotalBeforeVat = Math.max(
+        0,
+        totalRoomPrice + serviceTotal - discount
+      );
+      const vat = Math.round(subtotalBeforeVat * 0.1);
+      const total = subtotalBeforeVat + vat;
       const deposit = Math.round(total * 0.3);
 
-      // ========  Lấy danh sách dịch vụ đã chọn ========
       const selectedServices = [];
       document
         .querySelectorAll('input[name="services"]:checked')
@@ -359,20 +581,28 @@ document.addEventListener("DOMContentLoaded", function () {
             .textContent.trim();
           const servicePrice =
             parseInt(String(cb.dataset.price).replace(/[^\d]/g, "")) || 0;
-          const serviceValue = cb.value;
+          const serviceId = parseInt(cb.dataset.serviceId) || 0;
 
           let finalPrice = servicePrice;
-          if (serviceValue === "breakfast" || serviceValue === "minibar") {
+          if (
+            serviceName.toLowerCase().includes("breakfast") ||
+            serviceName.toLowerCase().includes("minibar") ||
+            serviceName.toLowerCase().includes("bữa sáng")
+          ) {
             finalPrice = servicePrice * nights;
           }
 
           selectedServices.push({
+            serviceId: serviceId,
             name: serviceName,
             price: finalPrice,
           });
         });
 
-      // ========  Gom dữ liệu để hiển thị hoá đơn ========
+      // Kiểm tra xem có form khách vãng lai không
+      const walkInFullNameEl = document.getElementById("walkInFullName");
+      const isWalkIn = walkInFullNameEl !== null;
+
       const formData = {
         roomId: form.dataset.roomId || null,
         roomName: document.getElementById("roomName").value,
@@ -381,41 +611,149 @@ document.addEventListener("DOMContentLoaded", function () {
         childCount: parseInt(document.getElementById("childCount").value) || 0,
         checkinTime: checkin,
         checkoutTime: checkout,
-        roomPrice: totalRoomPrice, // Tổng giá phòng (đã nhân số đêm)
-        roomPricePerNight: roomPricePerNight, // Giá/đêm
+        roomPrice: totalRoomPrice,
+        roomPricePerNight: roomPricePerNight,
         serviceTotal: serviceTotal,
         services: selectedServices,
         discount: discount,
+        vat: vat,
         promoCode: appliedPromoCode,
-        promoDescription: appliedPromoCode
-          ? promoCodes[appliedPromoCode].description
-          : "",
+        voucherId: selectedVoucherId,
+        promoDescription: selectedVoucher ? selectedVoucher.name : "",
         deposit: deposit,
         total: total,
         paymentMethod: document.getElementById("paymentMethod").value,
         notes: document.getElementById("notes").value,
-        bookingCode: generateBookingCode(),
       };
 
-      // ========  Kiểm tra ngày hợp lệ ========
+      // Thêm thông tin khách vãng lai nếu có
+      if (isWalkIn) {
+        // Validate thông tin khách vãng lai
+        const walkInFullName = walkInFullNameEl.value.trim();
+        const walkInPhone = document.getElementById("walkInPhone").value.trim();
+        const walkInEmail = document.getElementById("walkInEmail").value.trim();
+        const walkInIdNumber = document
+          .getElementById("walkInIdNumber")
+          .value.trim();
+
+        // Validation
+        if (!walkInFullName || walkInFullName.length < 2) {
+          alert("Vui lòng nhập họ và tên (tối thiểu 2 ký tự)");
+          walkInFullNameEl.focus();
+          return;
+        }
+
+        if (!/^[A-Za-zÀ-ỹ\s]{2,50}$/.test(walkInFullName)) {
+          alert("Họ và tên chỉ được chứa chữ cái và khoảng trắng");
+          walkInFullNameEl.focus();
+          return;
+        }
+
+        if (!walkInPhone || !/^[0-9]{10,11}$/.test(walkInPhone)) {
+          alert("Vui lòng nhập số điện thoại hợp lệ (10-11 chữ số)");
+          document.getElementById("walkInPhone").focus();
+          return;
+        }
+
+        if (!walkInEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(walkInEmail)) {
+          alert("Vui lòng nhập email hợp lệ");
+          document.getElementById("walkInEmail").focus();
+          return;
+        }
+
+        if (!walkInIdNumber || !/^[0-9]{9,12}$/.test(walkInIdNumber)) {
+          alert("Vui lòng nhập số CMND/CCCD hợp lệ (9-12 chữ số)");
+          document.getElementById("walkInIdNumber").focus();
+          return;
+        }
+
+        formData.walkInFullName = walkInFullName;
+        formData.walkInPhone = walkInPhone;
+        formData.walkInEmail = walkInEmail;
+        formData.walkInIdNumber = walkInIdNumber;
+        formData.walkInAddress =
+          document.getElementById("walkInAddress").value || "";
+        formData.isWalkIn = true;
+
+        // Khách vãng lai không được dùng voucher
+        formData.voucherId = null;
+        formData.discount = 0;
+        formData.promoCode = "";
+        selectedVoucherId = null;
+        selectedVoucher = null;
+        currentDiscount = 0;
+        appliedPromoCode = "";
+      } else {
+        formData.isWalkIn = false;
+      }
+
       if (new Date(formData.checkoutTime) <= new Date(formData.checkinTime)) {
         alert("Ngày check-out phải sau ngày check-in!");
         return;
       }
 
-      // ========  Hiển thị hóa đơn ========
       showInvoice(formData);
+    });
+  }
+
+  // Event listeners
+  const roomPriceInput = document.getElementById("roomPrice");
+  const checkinInput = document.getElementById("checkinTime");
+  const checkoutInput = document.getElementById("checkoutTime");
+  const serviceCheckboxes = document.querySelectorAll('input[name="services"]');
+  const guestCountInput = document.getElementById("guestCount");
+  const childCountInput = document.getElementById("childCount");
+
+  if (roomPriceInput) roomPriceInput.addEventListener("input", updateSummary);
+
+  if (checkinInput) {
+    checkinInput.addEventListener("change", () => {
+      updateSummary();
+      loadAvailableVouchers();
+    });
+  }
+
+  if (checkoutInput) {
+    checkoutInput.addEventListener("change", () => {
+      updateSummary();
+      loadAvailableVouchers();
+    });
+  }
+
+  serviceCheckboxes.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      updateSummary();
+      loadAvailableVouchers();
+      if (selectedVoucher) calculateVoucherDiscount();
+    });
+  });
+
+  if (guestCountInput) {
+    guestCountInput.addEventListener("change", () => {
+      validateGuestCount();
+      updateSummary();
+    });
+  }
+
+  if (childCountInput) {
+    childCountInput.addEventListener("change", () => {
+      validateGuestCount();
+      updateSummary();
     });
   }
 });
 
-// Hiển thị hóa đơn
+// ============================================================
+// INVOICE FUNCTIONS
+// ============================================================
 function showInvoice(data) {
-  // Ẩn form, hiện hóa đơn
+  currentBookingData = data;
+
   document.getElementById("bookingForm").style.display = "none";
   document.getElementById("invoiceContainer").classList.add("active");
+  document.getElementById("invoiceContainer").style.display = "block";
 
-  // Điền dữ liệu vào hóa đơn
+  // Điền dữ liệu hiển thị
   document.getElementById("invoiceRoomName").textContent = data.roomName;
   document.getElementById("invoiceRoomType").textContent = data.roomType;
   document.getElementById("invoiceGuestCount").textContent =
@@ -432,7 +770,6 @@ function showInvoice(data) {
   const nights = calculateNights(data.checkinTime, data.checkoutTime);
   document.getElementById("invoiceNightCount").textContent = nights + " đêm";
 
-  // Dịch vụ
   if (data.services.length > 0) {
     document.getElementById("invoiceServicesSection").style.display = "block";
     const servicesList = document.getElementById("invoiceServicesList");
@@ -441,18 +778,17 @@ function showInvoice(data) {
       const item = document.createElement("div");
       item.className = "service-list-item";
       item.innerHTML = `
-                        <span>${service.name}</span>
-                        <span style="font-weight: 600;">${formatCurrency(
-                          service.price
-                        )}</span>
-                    `;
+        <span>${service.name}</span>
+        <span style="font-weight: 600;">${formatCurrency(
+          service.price / 100
+        )}</span>
+      `;
       servicesList.appendChild(item);
     });
   } else {
     document.getElementById("invoiceServicesSection").style.display = "none";
   }
 
-  // Khuyến mãi
   if (data.promoCode) {
     document.getElementById("invoicePromotionSection").style.display = "block";
     document.getElementById(
@@ -462,7 +798,6 @@ function showInvoice(data) {
     document.getElementById("invoicePromotionSection").style.display = "none";
   }
 
-  // Ghi chú
   if (data.notes) {
     document.getElementById("invoiceNotesSection").style.display = "block";
     document.getElementById("invoiceNotes").textContent = data.notes;
@@ -470,7 +805,6 @@ function showInvoice(data) {
     document.getElementById("invoiceNotesSection").style.display = "none";
   }
 
-  // Thanh toán
   document.getElementById("invoiceRoomPrice").textContent = formatCurrency(
     data.roomPrice
   );
@@ -492,6 +826,8 @@ function showInvoice(data) {
     document.getElementById("invoiceDiscountRow").style.display = "none";
   }
 
+  document.getElementById("invoiceVat").textContent = formatCurrency(data.vat);
+
   document.getElementById("invoiceTotalAmount").textContent = formatCurrency(
     data.total
   );
@@ -500,47 +836,108 @@ function showInvoice(data) {
   );
   document.getElementById("invoicePaymentMethod").textContent =
     data.paymentMethod;
-  document.getElementById("bookingCode").textContent = data.bookingCode;
 
-  // Cuộn lên đầu trang
+  // Hiển thị thông tin khách vãng lai nếu có
+  if (data.walkInFullName) {
+    const invoiceWalkInName = document.getElementById("invoiceWalkInName");
+    const invoiceWalkInEmail = document.getElementById("invoiceWalkInEmail");
+    const invoiceWalkInPhone = document.getElementById("invoiceWalkInPhone");
+    const invoiceWalkInIdNumber = document.getElementById(
+      "invoiceWalkInIdNumber"
+    );
+
+    if (invoiceWalkInName) invoiceWalkInName.textContent = data.walkInFullName;
+    if (invoiceWalkInEmail)
+      invoiceWalkInEmail.textContent = data.walkInEmail || "-";
+    if (invoiceWalkInPhone) invoiceWalkInPhone.textContent = data.walkInPhone;
+    if (invoiceWalkInIdNumber)
+      invoiceWalkInIdNumber.textContent = data.walkInIdNumber;
+  }
+
+  // Điền dữ liệu vào hidden inputs
+  document.getElementById("hiddenRoomId").value = data.roomId || "";
+  document.getElementById("hiddenCheckinTime").value = data.checkinTime;
+  document.getElementById("hiddenCheckoutTime").value = data.checkoutTime;
+  document.getElementById("hiddenNotes").value = data.notes || "";
+  document.getElementById("hiddenDeposit").value = data.deposit;
+  document.getElementById("hiddenRoomPrice").value = data.roomPrice;
+  document.getElementById("hiddenServiceTotal").value = data.serviceTotal;
+  document.getElementById("hiddenDiscount").value = data.discount;
+  document.getElementById("hiddenVat").value = data.vat;
+  document.getElementById("hiddenTotal").value = data.total;
+  document.getElementById("hiddenVoucherId").value = data.voucherId || "";
+  document.getElementById("hiddenPaymentMethod").value = data.paymentMethod;
+  document.getElementById("hiddenGuestCount").value = data.guestCount;
+  document.getElementById("hiddenChildCount").value = data.childCount;
+
+  // Điền thông tin khách vãng lai vào hidden inputs nếu có
+  if (data.walkInFullName) {
+    const hiddenWalkInFullName = document.getElementById(
+      "hiddenWalkInFullName"
+    );
+    const hiddenWalkInPhone = document.getElementById("hiddenWalkInPhone");
+    const hiddenWalkInEmail = document.getElementById("hiddenWalkInEmail");
+    const hiddenWalkInIdNumber = document.getElementById(
+      "hiddenWalkInIdNumber"
+    );
+    const hiddenWalkInAddress = document.getElementById("hiddenWalkInAddress");
+
+    if (hiddenWalkInFullName)
+      hiddenWalkInFullName.value = data.walkInFullName || "";
+    if (hiddenWalkInPhone) hiddenWalkInPhone.value = data.walkInPhone || "";
+    if (hiddenWalkInEmail) hiddenWalkInEmail.value = data.walkInEmail || "";
+    if (hiddenWalkInIdNumber)
+      hiddenWalkInIdNumber.value = data.walkInIdNumber || "";
+    if (hiddenWalkInAddress)
+      hiddenWalkInAddress.value = data.walkInAddress || "";
+  }
+
+  // Điền services dưới dạng JSON string
+  if (data.services && data.services.length > 0) {
+    document.getElementById("hiddenServices").value = JSON.stringify(
+      data.services
+    );
+  } else {
+    document.getElementById("hiddenServices").value = "";
+  }
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// Quay lại chỉnh sửa
 function editBooking() {
   document.getElementById("bookingForm").style.display = "block";
   document.getElementById("invoiceContainer").classList.remove("active");
+  document.getElementById("invoiceContainer").style.display = "none";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// Xác nhận thanh toán
-function confirmPayment() {
-  const bookingCode = document.getElementById("bookingCode").textContent;
-  alert(
-    `Thanh toán thành công!\n\nMã đặt phòng: ${bookingCode}\n\nCảm ơn quý khách đã sử dụng dịch vụ.`
-  );
-
-  // Reset form và quay lại trang đặt phòng
-  document.getElementById("roomBookingForm").reset();
-  currentDiscount = 0;
-  appliedPromoCode = "";
-  document.getElementById("discountDisplay").classList.remove("active");
-  updateSummary();
-  editBooking();
+function saveInvoice() {
+  const invoice = document.getElementById("invoiceContainer");
+  const opt = {
+    margin: 0.5,
+    filename: "hoa-don-dat-phong.pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+  };
+  if (window.html2pdf) {
+    window.html2pdf().from(invoice).set(opt).save();
+  } else {
+    alert("Chức năng lưu hóa đơn cần thư viện html2pdf!");
+  }
 }
 
-// Set giá trị mặc định cho datetime (chỉ khi KHÔNG có dữ liệu từ trang chi tiết)
+// ============================================================
+// INITIALIZE
+// ============================================================
 window.addEventListener("DOMContentLoaded", function () {
-  // Kiểm tra xem có dữ liệu booking từ trang chi tiết không
   const hasBookingData = sessionStorage.getItem("bookingData");
 
   if (!hasBookingData) {
-    // Chỉ set giá trị mặc định khi không có dữ liệu từ trang chi tiết
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Set checkin là ngày mai lúc 14:00
     const checkinDate = new Date(tomorrow);
     checkinDate.setHours(14, 0, 0);
     const checkinInput = document.getElementById("checkinTime");
@@ -548,7 +945,6 @@ window.addEventListener("DOMContentLoaded", function () {
       checkinInput.value = checkinDate.toISOString().slice(0, 16);
     }
 
-    // Set checkout là ngày kia lúc 12:00
     const checkoutDate = new Date(tomorrow);
     checkoutDate.setDate(checkoutDate.getDate() + 1);
     checkoutDate.setHours(12, 0, 0);
@@ -558,6 +954,18 @@ window.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // Cập nhật tổng kết ban đầu
   updateSummary();
+
+  setTimeout(() => {
+    const checkinInput = document.getElementById("checkinTime");
+    const checkoutInput = document.getElementById("checkoutTime");
+    if (
+      checkinInput &&
+      checkoutInput &&
+      checkinInput.value &&
+      checkoutInput.value
+    ) {
+      loadAvailableVouchers();
+    }
+  }, 500);
 });

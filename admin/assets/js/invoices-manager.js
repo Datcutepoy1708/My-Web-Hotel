@@ -1,20 +1,35 @@
 // JavaScript functions for invoice management
 function editInvoice(invoiceId) {
   // Logic to edit invoice
-  console.log("Edit invoice:", invoiceId);
   window.location.href = 'index.php?page=invoices-manager&action=edit&id=' + invoiceId;
 }
 
-function deleteInvoice(invoiceId) {
-  if (confirm("Bạn có chắc chắn muốn xóa hóa đơn này?")) {
-    // Logic to delete invoice
-    console.log("Delete invoice:", invoiceId);
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.innerHTML = '<input type="hidden" name="invoice_id" value="' + invoiceId + '">' +
-                   '<input type="hidden" name="delete_invoice" value="1">';
-    document.body.appendChild(form);
-    form.submit();
+function deleteInvoice(id) {
+  const modalInput = document.getElementById('delete_invoice_id_input');
+  if (modalInput) {
+    modalInput.value = id;
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteInvoiceModal'));
+    modal.show();
+  } else {
+    // Fallback if modal elements are missing
+    if (confirm("Bạn có chắc chắn muốn xóa hóa đơn này?")) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.innerHTML = '<input type="hidden" name="invoice_id" value="' + id + '">' +
+                     '<input type="hidden" name="delete_invoice" value="1">';
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }
+}
+
+function calculateRemaining() {
+  const total = parseFloat(document.getElementById('total_amount')?.value) || 0;
+  const deposit = parseFloat(document.getElementById('deposit_amount')?.value) || 0;
+  const remaining = total - deposit;
+  const remainingField = document.getElementById('remaining_amount');
+  if (remainingField) {
+    remainingField.value = Math.max(0, remaining).toFixed(2);
   }
 }
 
@@ -23,7 +38,6 @@ function viewInvoice(invoiceId) {
   const row = document.querySelector(`tr[data-invoice-id="${invoiceId}"]`);
   
   if (!row) {
-    console.error("Không tìm thấy hóa đơn:", invoiceId);
     return;
   }
 
@@ -65,7 +79,6 @@ function viewInvoice(invoiceId) {
 
 function saveInvoice() {
   // Logic to save invoice
-  console.log("Save invoice");
   const addModal = bootstrap.Modal.getInstance(
     document.getElementById("addInvoiceModal")
   );
@@ -105,6 +118,10 @@ function resetInvoiceForm() {
     document.getElementById("modalTitle").textContent = 'Thêm Hóa Đơn';
     document.getElementById("submitBtn").textContent = 'Thêm Hóa Đơn';
     document.getElementById("submitBtn").name = 'add_invoice';
+    // Reset Select2
+    if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+      jQuery('#booking_id').val(null).trigger('change');
+    }
   }
 }
 
@@ -209,10 +226,72 @@ function calculateTotal() {
   const totalField = document.getElementById('total_amount');
   if (totalField) {
     totalField.value = total.toFixed(2);
+    calculateRemaining();
   }
 }
 
-// Gán sự kiện tính toán khi thay đổi các trường
+function exportInvoiceToWord(invoiceId) {
+  if (!invoiceId) {
+    alert('Không tìm thấy mã hóa đơn');
+    return;
+  }
+
+  // Mở link xuất Word trong tab mới
+  window.open(`api/export-invoice.php?id=${invoiceId}`, '_blank');
+}
+
+// Hàm khởi tạo Select2 cho booking
+function initBookingSelect2() {
+  if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+    return false;
+  }
+
+  const $bookingSelect = jQuery('#booking_id');
+  if (!$bookingSelect.length) {
+    return false;
+  }
+
+  // Destroy nếu đã khởi tạo trước đó
+  if ($bookingSelect.hasClass('select2-hidden-accessible')) {
+    $bookingSelect.select2('destroy');
+  }
+
+  // Lấy modal để set dropdownParent
+  const $modal = jQuery('#addInvoiceModal');
+  const dropdownParent = $modal.length ? $modal : jQuery('body');
+
+  $bookingSelect.select2({
+    theme: 'bootstrap-5',
+    placeholder: '-- Chọn booking chưa có hóa đơn --',
+    allowClear: true,
+    minimumInputLength: 0,
+    width: '100%',
+    dropdownParent: dropdownParent,
+    language: {
+      noResults: function () {
+        return "Không tìm thấy booking";
+      },
+      searching: function () {
+        return "Đang tìm kiếm...";
+      }
+    }
+  });
+
+  // Đảm bảo input tìm kiếm có thể gõ được
+  $bookingSelect.on('select2:open', function () {
+    setTimeout(function () {
+      const $searchField = jQuery('.select2-search__field');
+      $searchField.attr('placeholder', 'Gõ để tìm kiếm...');
+      $searchField.prop('readonly', false);
+      $searchField.prop('disabled', false);
+      $searchField.focus();
+    }, 100);
+  });
+
+  return true;
+}
+
+// Gán sự kiện cho invoices-manager
 document.addEventListener('DOMContentLoaded', function() {
   const roomChargeField = document.getElementById('room_charge');
   const serviceChargeField = document.getElementById('service_charge');
@@ -223,4 +302,20 @@ document.addEventListener('DOMContentLoaded', function() {
   if (serviceChargeField) serviceChargeField.addEventListener('change', calculateTotal);
   if (vatField) vatField.addEventListener('change', calculateTotal);
   if (otherFeesField) otherFeesField.addEventListener('change', calculateTotal);
+
+  // Khởi tạo Select2 cho addInvoiceModal
+  const addModal = document.getElementById('addInvoiceModal');
+  if (addModal) {
+    addModal.addEventListener('shown.bs.modal', function() {
+      setTimeout(initBookingSelect2, 200);
+    });
+  }
+
+  // Khởi tạo lần đầu nếu không trong modal
+  if (typeof jQuery !== 'undefined') {
+    jQuery(document).ready(function() {
+      setTimeout(initBookingSelect2, 300);
+    });
+  }
 });
+

@@ -1,12 +1,16 @@
 <?php
-// Lấy 3 bài viết featured cho slider (bỏ điều kiện status và deleted)
+// Lấy search term và category filter từ URL
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$category_filter = isset($_GET['category']) ? trim($_GET['category']) : '';
+
+// Lấy 3 bài viết featured cho slider
 $sql_featured = "SELECT * FROM blog ORDER BY view_count DESC LIMIT 3";
 $result_featured = $mysqli->query($sql_featured);
 $featured_blogs = [];
 if ($result_featured && $result_featured->num_rows > 0) {
-while ($row = $result_featured->fetch_assoc()) {
-$featured_blogs[] = $row;
-}
+    while ($row = $result_featured->fetch_assoc()) {
+        $featured_blogs[] = $row;
+    }
 }
 
 // Debug: Kiểm tra có bao nhiêu bài viết
@@ -14,13 +18,41 @@ $count_query = "SELECT COUNT(*) as total FROM blog";
 $count_result = $mysqli->query($count_query);
 $total_blogs = 0;
 if ($count_result) {
-$count_row = $count_result->fetch_assoc();
-$total_blogs = $count_row['total'];
+    $count_row = $count_result->fetch_assoc();
+    $total_blogs = $count_row['total'];
 }
 
-// Lấy bài viết gần đây (bỏ điều kiện lọc)
-$sql_recent = "SELECT * FROM blog ORDER BY created_at DESC LIMIT 6";
-$result_recent = $mysqli->query($sql_recent);
+// Xây dựng query với search và filter
+$sql_recent = "SELECT * FROM blog WHERE deleted IS NULL";
+$params = [];
+$types = "";
+
+if (!empty($search)) {
+    $sql_recent .= " AND (title LIKE ? OR description LIKE ? OR content LIKE ?)";
+    $search_param = "%{$search}%";
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $params[] = $search_param;
+    $types .= "sss";
+}
+
+if (!empty($category_filter)) {
+    $sql_recent .= " AND category = ?";
+    $params[] = $category_filter;
+    $types .= "s";
+}
+
+$sql_recent .= " ORDER BY created_at DESC LIMIT 6";
+
+// Execute query với prepared statement nếu có params
+if (!empty($params)) {
+    $stmt_recent = $mysqli->prepare($sql_recent);
+    $stmt_recent->bind_param($types, ...$params);
+    $stmt_recent->execute();
+    $result_recent = $stmt_recent->get_result();
+} else {
+    $result_recent = $mysqli->query($sql_recent);
+}
 
 
 
@@ -85,6 +117,22 @@ $result_categories = $mysqli->query($sql_categories);
                     <div class="divider"></div>
                 </div>
 
+                <?php if (!empty($search) || !empty($category_filter)): ?>
+                <div class="alert alert-info mb-5">
+                    <i class="fas fa-filter me-2"></i>
+                    <?php if (!empty($search)): ?>
+                    Kết quả tìm kiếm cho: <strong>"<?= htmlspecialchars($search) ?>"</strong>
+                    <?php endif; ?>
+                    <?php if (!empty($category_filter)): ?>
+                    <?= !empty($search) ? ' | ' : '' ?>Danh mục:
+                    <strong><?= htmlspecialchars($category_filter) ?></strong>
+                    <?php endif; ?>
+                    <button type="button" class="btn-close float-end "
+                        onclick="window.location.href='/My-Web-Hotel/client/index.php?page=blog'"
+                        aria-label="Đóng"></button>
+                </div>
+                <?php endif; ?>
+
                 <div class="row g-4">
                     <?php 
                     if($result_recent && $result_recent->num_rows > 0): 
@@ -101,7 +149,7 @@ $result_categories = $mysqli->query($sql_categories);
                             </div>
                             <div class="blog-card-body">
                                 <h5 class="blog-card-title">
-                                    <a href="pages/blog-detail.php?slug=<?= htmlspecialchars($blog['slug']) ?>"
+                                    <a href="/My-Web-Hotel/client/index.php?page=blog-detail&slug=<?= htmlspecialchars($blog['slug']) ?>"
                                         class="text-decoration-none">
                                         <?= htmlspecialchars($blog['title']) ?>
                                     </a>
@@ -120,7 +168,7 @@ $result_categories = $mysqli->query($sql_categories);
                                     <?= htmlspecialchars($blog['description']) ?>
                                 </p>
 
-                                <a href="pages/blog-detail.php?slug=<?= htmlspecialchars($blog['slug']) ?>"
+                                <a href="/My-Web-Hotel/client/index.php?page=blog-detail&slug=<?= htmlspecialchars($blog['slug']) ?>"
                                     class="btn btn-read-more">
                                     Đọc thêm <i class="fas fa-arrow-right ms-2"></i>
                                 </a>
@@ -133,7 +181,11 @@ $result_categories = $mysqli->query($sql_categories);
                         <div class="alert alert-warning text-center">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             <strong>Không tìm thấy bài viết!</strong><br>
+                            <?php if (!empty($search) || !empty($category_filter)): ?>
+                            <small>Thử thay đổi từ khóa tìm kiếm hoặc bộ lọc</small>
+                            <?php else: ?>
                             <small>Có thể do: chưa có dữ liệu trong database hoặc có lỗi kết nối</small>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -148,7 +200,11 @@ $result_categories = $mysqli->query($sql_categories);
                         <h5 class="sidebar-title">
                             <i class="fas fa-search me-2"></i>Tìm Kiếm
                         </h5>
-                        <form method="GET" class="search-box">
+                        <form method="GET" action="/My-Web-Hotel/client/index.php" class="search-box">
+                            <input type="hidden" name="page" value="blog">
+                            <?php if (!empty($category_filter)): ?>
+                            <input type="hidden" name="category" value="<?= htmlspecialchars($category_filter) ?>">
+                            <?php endif; ?>
                             <input type="text" name="search" placeholder="Tìm kiếm bài viết..."
                                 value="<?= htmlspecialchars($_GET['search'] ?? '') ?>">
                             <button type="submit">
@@ -168,8 +224,11 @@ $result_categories = $mysqli->query($sql_categories);
                                 while($cat = $result_categories->fetch_assoc()): 
                             ?>
                             <li class="category-item">
-                                <i class="fas fa-angle-right"></i>
-                                <?= htmlspecialchars($cat['category']) ?>
+                                <a href="/My-Web-Hotel/client/index.php?page=blog&category=<?= urlencode($cat['category']) ?>"
+                                    class="text-decoration-none text-dark d-block">
+                                    <i class="fas fa-angle-right"></i>
+                                    <?= htmlspecialchars($cat['category']) ?>
+                                </a>
                             </li>
                             <?php 
                                 endwhile;
@@ -200,7 +259,7 @@ $result_categories = $mysqli->query($sql_categories);
                                 alt="<?= htmlspecialchars($popular['title']) ?>" class="popular-post-img">
                             <div class="popular-post-content">
                                 <h6>
-                                    <a href="blog-detail.php?slug=<?= htmlspecialchars($popular['slug']) ?>"
+                                    <a href="/My-Web-Hotel/client/index.php?page=blog-detail&slug=<?= htmlspecialchars($popular['slug']) ?>"
                                         class="text-decoration-none text-dark">
                                         <?= htmlspecialchars($popular['title']) ?>
                                     </a>

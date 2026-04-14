@@ -244,7 +244,8 @@
 }
 
 .price {
-  font-size: 2rem;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 2.4rem;
   color: #deb666;
   font-weight: bold;
   margin-bottom: 5px;
@@ -402,7 +403,8 @@
 }
 
 .suggestion-price .price {
-  font-size: 2rem;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 2.4rem;
   color: #deb666;
 }
 
@@ -428,6 +430,7 @@
 .modal-header {
   background: var(--bg-cream);
   border-bottom: 1px solid var(--border-color);
+  border-radius: 12px 12px 0 0;
 }
 .modal-header .modal-title {
   font-size: 2rem;
@@ -443,6 +446,7 @@
 .btn {
   border: none;
 }
+
 @media (max-width: 1024px) {
   .hero-gallery {
     grid-template-columns: 1fr 1fr;

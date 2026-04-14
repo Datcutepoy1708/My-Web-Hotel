@@ -1,252 +1,65 @@
-// Danh sách dịch vụ
-const services = {
-  spa: {
-    name: "Spa & Massage",
-    basePrice: 500000,
-    description:
-      "Thư giãn toàn thân với các liệu pháp massage chuyên nghiệp, sử dụng tinh dầu thiên nhiên cao cấp",
-    details: `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Loại massage <span class="required">*</span></label>
-                            <select class="form-select" id="spaType" onchange="updateTotal()">
-                                <option value="Swedish Massage">Swedish Massage (60 phút)</option>
-                                <option value="Thai Massage">Thai Massage (90 phút)</option>
-                                <option value="Hot Stone">Hot Stone (90 phút)</option>
-                                <option value="Aromatherapy">Aromatherapy (60 phút)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Số người <span class="required">*</span></label>
-                            <input type="number" class="form-control" id="spaGuests" min="1" max="4" value="1" onchange="updateTotal()">
-                        </div>
-                    </div>
-                `,
-  },
-  restaurant: {
-    name: "Nhà Hàng & Bar",
-    basePrice: 800000,
-    description:
-      "Thưởng thức các món ăn hải sản tươi sống và các loại cocktail đặc biệt tại nhà hàng sang trọng bên bờ biển",
-    details: `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Loại bữa ăn <span class="required">*</span></label>
-                            <select class="form-select" id="mealType" onchange="updateTotal()">
-                                <option value="Buffet sáng">🌅 Buffet sáng (6:00 - 10:00)</option>
-                                <option value="Set lunch">🌤️ Set lunch (11:30 - 14:00)</option>
-                                <option value="Set dinner">🌙 Set dinner (18:00 - 22:00)</option>
-                                <option value="À la carte">📋 À la carte</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Số người <span class="required">*</span></label>
-                            <input type="number" class="form-control" id="restaurantGuests" min="1" max="20" value="2" onchange="updateTotal()">
-                        </div>
-                    </div>
-                `,
-  },
-  airport: {
-    name: "Đưa Đón Sân Bay",
-    basePrice: 300000,
-    description:
-      "Dịch vụ đưa đón tận nơi với xe hạng sang, tài xế chuyên nghiệp, đảm bảo an toàn và đúng giờ",
-    details: `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Loại xe <span class="required">*</span></label>
-                            <select class="form-select" id="carType" onchange="updateTotal()">
-                                <option value="Sedan 4 chỗ">🚗 Sedan 4 chỗ</option>
-                                <option value="SUV 7 chỗ">🚙 SUV 7 chỗ (+100,000 ₫)</option>
-                                <option value="Limousine">🚐 Limousine (+300,000 ₫)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Chiều <span class="required">*</span></label>
-                            <select class="form-select" id="direction" onchange="updateTotal()">
-                                <option value="Đón từ sân bay">✈️ Đón từ sân bay</option>
-                                <option value="Đưa ra sân bay">🛫 Đưa ra sân bay</option>
-                                <option value="Cả đi và về">🔄 Cả đi và về (x2 giá)</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Số chuyến bay</label>
-                            <input type="text" class="form-control" id="flightNumber" placeholder="VD: VN123">
-                        </div>
-                    </div>
-                `,
-  },
-  meeting: {
-    name: "Phòng Hội Nghị",
-    basePrice: 2000000,
-    description:
-      "Phòng họp hiện đại với đầy đủ thiết bị: máy chiếu, âm thanh, wifi tốc độ cao, phục vụ trà nước",
-    details: `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Loại phòng <span class="required">*</span></label>
-                            <select class="form-select" id="meetingType" onchange="updateTotal()">
-                                <option value="Phòng nhỏ (10-20 người)">👥 Phòng nhỏ (10-20 người)</option>
-                                <option value="Phòng trung (30-50 người)">👨‍👩‍👧‍👦 Phòng trung (30-50 người) (+500,000 ₫)</option>
-                                <option value="Hội trường (100+ người)">🏛️ Hội trường (100+ người) (+1,500,000 ₫)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Thời gian <span class="required">*</span></label>
-                            <select class="form-select" id="meetingDuration" onchange="updateTotal()">
-                                <option value="Nửa ngày (4 giờ)">⏰ Nửa ngày (4 giờ)</option>
-                                <option value="Cả ngày (8 giờ)">🕐 Cả ngày (8 giờ) (+50%)</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Số người dự kiến <span class="required">*</span></label>
-                            <input type="number" class="form-control" id="meetingGuests" min="5" max="200" value="10" onchange="updateTotal()">
-                        </div>
-                    </div>
-                `,
-  },
-  beach: {
-    name: "Beach Club & Thể thao nước",
-    basePrice: 400000,
-    description:
-      "Trải nghiệm các hoạt động thể thao nước: lặn biển, lướt ván, kayak, khu vực ghế bãi biển riêng",
-    details: `
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Gói dịch vụ <span class="required">*</span></label>
-                            <select class="form-select" id="beachPackage" onchange="updateTotal()">
-                                <option value="Cơ bản">🏖️ Cơ bản (ghế + dù)</option>
-                                <option value="Thể thao nước">🏄 Thể thao nước (+200,000 ₫)</option>
-                                <option value="VIP Cabana">⭐ VIP Cabana (+500,000 ₫)</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Số người <span class="required">*</span></label>
-                            <input type="number" class="form-control" id="beachGuests" min="1" max="10" value="2" onchange="updateTotal()">
-                        </div>
-                    </div>
-                `,
-  },
-  laundry: {
-    name: "Giặt Là & Làm Đẹp",
-    basePrice: 150000,
-    description:
-      "Dịch vụ giặt là chuyên nghiệp, làm tóc, làm nail tại salon tiêu chuẩn 5 sao",
-    details: `
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label">Loại dịch vụ <span class="required">*</span></label>
-                            <select class="form-select" id="laundryType" onchange="updateTotal()">
-                                <option value="Giặt là thường">👔 Giặt là thường</option>
-                                <option value="Giặt hấp cao cấp">✨ Giặt hấp cao cấp (+50,000 ₫)</option>
-                                <option value="Làm tóc">💇 Làm tóc (+300,000 ₫)</option>
-                                <option value="Làm nail">💅 Làm nail (+200,000 ₫)</option>
-                            </select>
-                        </div>
-                    </div>
-                `,
-  },
-};
-
-let currentService = null;
-
-// Khởi tạo trang
-function initPage() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const serviceId = urlParams.get("service") || "spa";
-
-  currentService = services[serviceId];
-
-  if (currentService) {
-    document.getElementById("serviceName").textContent = currentService.name;
-    document.getElementById("servicePrice").textContent = formatCurrency(
-      currentService.basePrice
-    );
-    document.getElementById("serviceDescription").textContent =
-      currentService.description;
-    document.getElementById("serviceDetailsContent").innerHTML =
-      currentService.details;
-    updateTotal();
+// ============================================================
+// AUTO-FILL SERVICE BOOKING DATA FROM SESSION STORAGE
+// ============================================================
+(function autoFillServiceBookingData() {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", fillServiceBookingForm);
+  } else {
+    fillServiceBookingForm();
   }
 
-  document.getElementById("serviceDate").min = new Date()
-    .toISOString()
-    .split("T")[0];
-}
+  function fillServiceBookingForm() {
+    const bookingDataStr = sessionStorage.getItem("serviceBookingData");
+    if (!bookingDataStr) return;
 
-// Tính toán giá dịch vụ
-function calculateServicePrice() {
-  if (!currentService) return 0;
+    try {
+      const bookingData = JSON.parse(bookingDataStr);
 
-  let price = currentService.basePrice;
-  const serviceId = Object.keys(services).find(
-    (key) => services[key].name === currentService.name
-  );
+      const dateInput = document.getElementById("serviceDate");
+      const timeInput = document.getElementById("serviceTime");
+      const quantityInput = document.getElementById("numberOfPeople");
 
-  switch (serviceId) {
-    case "spa":
-      const spaGuests =
-        parseInt(document.getElementById("spaGuests")?.value) || 1;
-      price *= spaGuests;
-      break;
+      if (dateInput && bookingData.date) {
+        dateInput.value = bookingData.date;
+      }
 
-    case "restaurant":
-      const restaurantGuests =
-        parseInt(document.getElementById("restaurantGuests")?.value) || 2;
-      price *= restaurantGuests;
-      break;
+      if (timeInput && bookingData.time) {
+        timeInput.value = bookingData.time;
+      }
 
-    case "airport":
-      const carType = document.getElementById("carType")?.value || "";
-      if (carType === "SUV 7 chỗ") price += 100000;
-      if (carType === "Limousine") price += 300000;
+      if (quantityInput && bookingData.guests) {
+        quantityInput.value = bookingData.guests;
+      }
 
-      const direction = document.getElementById("direction")?.value || "";
-      if (direction === "Cả đi và về") price *= 2;
-      break;
+      setTimeout(() => {
+        updateSummary();
+        if (
+          window.IS_LOGGED_IN &&
+          typeof loadAvailableVouchers === "function"
+        ) {
+          setTimeout(() => loadAvailableVouchers(), 300);
+        }
+      }, 200);
 
-    case "meeting":
-      const meetingType = document.getElementById("meetingType")?.value || "";
-      if (meetingType === "Phòng trung (30-50 người)") price += 500000;
-      if (meetingType === "Hội trường (100+ người)") price += 1500000;
-
-      const duration = document.getElementById("meetingDuration")?.value || "";
-      if (duration === "Cả ngày (8 giờ)") price *= 1.5;
-      break;
-
-    case "beach":
-      const beachPackage = document.getElementById("beachPackage")?.value || "";
-      if (beachPackage === "Thể thao nước") price += 200000;
-      if (beachPackage === "VIP Cabana") price += 500000;
-
-      const beachGuests =
-        parseInt(document.getElementById("beachGuests")?.value) || 2;
-      price *= beachGuests;
-      break;
-
-    case "laundry":
-      const laundryType = document.getElementById("laundryType")?.value || "";
-      if (laundryType === "Giặt hấp cao cấp") price += 50000;
-      if (laundryType === "Làm tóc") price += 300000;
-      if (laundryType === "Làm nail") price += 200000;
-      break;
+      // Clear after use
+      sessionStorage.removeItem("serviceBookingData");
+    } catch (error) {}
   }
+})();
 
-  return price;
-}
+// ============================================================
+// GLOBAL VARIABLES
+// ============================================================
+let currentDiscount = 0;
+let appliedPromoCode = "";
+let selectedVoucherId = null;
+let selectedVoucher = null;
+let availableVouchers = [];
+let currentBookingData = null;
 
-// Cập nhật tổng tiền
-function updateTotal() {
-  const subtotal = calculateServicePrice();
-  const vat = subtotal * 0.1;
-  const total = subtotal + vat;
-
-  document.getElementById("totalPrice").textContent = formatCurrency(subtotal);
-  document.getElementById("vatAmount").textContent = formatCurrency(vat);
-  document.getElementById("finalTotal").textContent = formatCurrency(total);
-}
-
-// Format tiền tệ
+// ============================================================
+// UTILITY FUNCTIONS
+// ============================================================
 function formatCurrency(amount) {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
@@ -254,175 +67,727 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-// Lấy chi tiết dịch vụ đã chọn
-function getServiceDetails() {
-  const serviceId = Object.keys(services).find(
-    (key) => services[key].name === currentService.name
-  );
-  let details = [];
-
-  switch (serviceId) {
-    case "spa":
-      details.push({
-        label: "Loại massage",
-        value: document.getElementById("spaType")?.value || "-",
-      });
-      details.push({
-        label: "Số người",
-        value: document.getElementById("spaGuests")?.value || "1",
-      });
-      break;
-
-    case "restaurant":
-      details.push({
-        label: "Loại bữa ăn",
-        value: document.getElementById("mealType")?.value || "-",
-      });
-      details.push({
-        label: "Số người",
-        value: document.getElementById("restaurantGuests")?.value || "2",
-      });
-      break;
-
-    case "airport":
-      details.push({
-        label: "Loại xe",
-        value: document.getElementById("carType")?.value || "-",
-      });
-      details.push({
-        label: "Chiều",
-        value: document.getElementById("direction")?.value || "-",
-      });
-      const flightNum = document.getElementById("flightNumber")?.value;
-      if (flightNum) {
-        details.push({
-          label: "Số chuyến bay",
-          value: flightNum,
-        });
-      }
-      break;
-
-    case "meeting":
-      details.push({
-        label: "Loại phòng",
-        value: document.getElementById("meetingType")?.value || "-",
-      });
-      details.push({
-        label: "Thời gian",
-        value: document.getElementById("meetingDuration")?.value || "-",
-      });
-      details.push({
-        label: "Số người",
-        value: document.getElementById("meetingGuests")?.value || "10",
-      });
-      break;
-
-    case "beach":
-      details.push({
-        label: "Gói dịch vụ",
-        value: document.getElementById("beachPackage")?.value || "-",
-      });
-      details.push({
-        label: "Số người",
-        value: document.getElementById("beachGuests")?.value || "2",
-      });
-      break;
-
-    case "laundry":
-      details.push({
-        label: "Loại dịch vụ",
-        value: document.getElementById("laundryType")?.value || "-",
-      });
-      break;
-  }
-
-  return details;
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("vi-VN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
-// Tạo booking
-function createBooking() {
-  const name = document.getElementById("customerName").value;
-  const phone = document.getElementById("customerPhone").value;
-  const email = document.getElementById("customerEmail").value;
-  const date = document.getElementById("serviceDate").value;
-  const time = document.getElementById("serviceTime").value;
-  const payment = document.getElementById("paymentMethod").value;
+function formatTime(timeString) {
+  return timeString;
+}
 
-  if (!name || !phone || !email || !date || !time || !payment) {
-    alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
+function generateBookingCode() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+  return `SV${year}${month}${day}${random}`;
+}
+
+// ============================================================
+// CALCULATION FUNCTIONS
+// ============================================================
+function calculateServicePrice() {
+  if (!SERVER_DATA || !SERVER_DATA.service) return 0;
+
+  const basePrice = parseFloat(SERVER_DATA.service.price) || 0;
+  const quantity =
+    parseInt(document.getElementById("numberOfPeople")?.value) || 1;
+
+  return basePrice * quantity;
+}
+
+function updateSummary() {
+  const serviceTotal = calculateServicePrice();
+  const discount = currentDiscount || 0;
+  // FIXED: VAT phải tính sau khi trừ giảm giá
+  const afterDiscount = Math.max(0, serviceTotal - discount);
+  const vat = Math.round(afterDiscount * 0.1);
+  const total = afterDiscount + vat;
+
+  // Update summary display
+  const totalPriceEl = document.getElementById("totalPrice");
+  const vatAmountEl = document.getElementById("vatAmount");
+  const summaryDiscountEl = document.getElementById("summaryDiscount");
+  const finalTotalEl = document.getElementById("finalTotal");
+
+  if (totalPriceEl) totalPriceEl.textContent = formatCurrency(serviceTotal);
+  if (vatAmountEl) vatAmountEl.textContent = formatCurrency(vat);
+  if (summaryDiscountEl)
+    summaryDiscountEl.textContent =
+      discount > 0 ? "- " + formatCurrency(discount) : "0 ₫";
+  if (finalTotalEl) finalTotalEl.textContent = formatCurrency(total);
+}
+
+// ============================================================
+// VOUCHER FUNCTIONS
+// ============================================================
+function loadAvailableVouchers() {
+  // Chỉ load voucher khi đã đăng nhập
+  if (!window.IS_LOGGED_IN) {
+    const container = document.getElementById("voucherListContainer");
+    if (container) container.style.display = "none";
     return;
   }
 
-  const bookingCode = "SV" + Date.now().toString().slice(-8);
-  const subtotal = calculateServicePrice();
-  const vat = subtotal * 0.1;
-  const total = subtotal + vat;
+  const dateInput = document.getElementById("serviceDate");
+  const timeInput = document.getElementById("serviceTime");
 
-  document.getElementById("invoiceCode").textContent = bookingCode;
-  document.getElementById("invoiceServiceName").textContent =
-    currentService.name;
-  document.getElementById("invoiceName").textContent = name;
-  document.getElementById("invoicePhone").textContent = phone;
-  document.getElementById("invoiceEmail").textContent = email;
-  document.getElementById("invoiceDate").textContent = new Date(
-    date
-  ).toLocaleDateString("vi-VN");
-  document.getElementById("invoiceTime").textContent = time;
-  document.getElementById("invoiceSubtotal").textContent =
-    formatCurrency(subtotal);
-  document.getElementById("invoiceVAT").textContent = formatCurrency(vat);
-  document.getElementById("invoiceTotal").textContent = formatCurrency(total);
-  document.getElementById("invoicePayment").textContent = payment;
+  if (!dateInput || !timeInput) {
+    return;
+  }
 
-  const serviceDetails = getServiceDetails();
-  let detailsHTML = "";
-  serviceDetails.forEach((detail) => {
-    detailsHTML += `
-                    <div class="invoice-row">
-                        <span class="invoice-label">${detail.label}:</span>
-                        <span class="invoice-value">${detail.value}</span>
-                    </div>
-                `;
+  const date = dateInput.value;
+  const time = timeInput.value;
+
+  if (!date || !time) {
+    const container = document.getElementById("voucherListContainer");
+    if (container) container.style.display = "none";
+    return;
+  }
+
+  const serviceTotal = calculateServicePrice();
+  const vat = Math.round(serviceTotal * 0.1);
+  const totalAmount = serviceTotal + vat;
+
+  let serviceId = null;
+  if (typeof SERVER_DATA !== "undefined" && SERVER_DATA.service) {
+    serviceId = SERVER_DATA.service.service_id;
+  }
+
+  const params = new URLSearchParams({
+    apply_to: "service",
+    total_amount: totalAmount,
   });
+
+  if (serviceId) {
+    params.append("service_id", serviceId);
+  }
+
+  fetch(`/My-Web-Hotel/client/controller/get-vouchers.php?${params}`)
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.success && data.vouchers && data.vouchers.length > 0) {
+        availableVouchers = data.vouchers;
+        renderVoucherList(data.vouchers);
+        document.getElementById("voucherListContainer").style.display = "block";
+      } else {
+        document.getElementById("voucherListContainer").style.display = "none";
+      }
+    })
+    .catch((error) => {
+      document.getElementById("voucherListContainer").style.display = "none";
+    });
+}
+
+function renderVoucherList(vouchers) {
+  const voucherList = document.getElementById("voucherList");
+  if (!voucherList) return;
+
+  voucherList.innerHTML = "";
+
+  vouchers.forEach((voucher) => {
+    const voucherItem = document.createElement("div");
+    voucherItem.className = "voucher-item";
+    voucherItem.style.cssText = `
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border: 1px solid #deb666;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: #fffcf0;
+    `;
+
+    const discountText =
+      voucher.discount_type === "percent"
+        ? `Giảm ${voucher.discount_value}%`
+        : `Giảm ${formatCurrency(voucher.discount_value)}`;
+
+    const maxDiscountText = voucher.max_discount
+      ? ` (tối đa ${formatCurrency(voucher.max_discount)})`
+      : "";
+
+    voucherItem.innerHTML = `
+      <input type="radio" name="voucher" value="${voucher.voucher_id}" 
+             id="voucher_${voucher.voucher_id}" 
+             style="margin-right: 12px; cursor: pointer; width: 18px; height: 18px; flex-shrink: 0;"
+             onchange="selectVoucher(${voucher.voucher_id})">
+      <label for="voucher_${
+        voucher.voucher_id
+      }" style="flex: 1; cursor: pointer; margin: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <span style="font-weight: 700; color: #4caf50; font-size: 16px; min-width: 120px; font-family: 'Courier New', monospace; letter-spacing: 0.5px;">
+          ${voucher.code}
+        </span>
+        <span style="font-size: 15px; color: #333; flex: 1; min-width: 150px;">
+          ${voucher.name}${
+      voucher.is_featured
+        ? '<span style="color: #ff6b6b; margin-left: 5px;">⭐</span>'
+        : ""
+    }
+        </span>
+        <span style="font-size: 15px; color: #4caf50; font-weight: 600; white-space: nowrap;">
+          ${discountText}${maxDiscountText}
+        </span>
+      </label>
+    `;
+
+    voucherItem.addEventListener("mouseenter", function () {
+      if (!this.querySelector('input[type="radio"]').checked) {
+        this.style.borderColor = "#b69854";
+        this.style.backgroundColor = "#fff8dc";
+      }
+    });
+
+    voucherItem.addEventListener("mouseleave", function () {
+      const radio = this.querySelector('input[type="radio"]');
+      if (!radio || !radio.checked) {
+        this.style.borderColor = "#deb666";
+        this.style.backgroundColor = "#fffcf0";
+      }
+    });
+
+    voucherItem.addEventListener("click", function (e) {
+      if (e.target.type !== "radio") {
+        const radio = this.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          selectVoucher(parseInt(radio.value));
+        }
+      }
+    });
+
+    voucherList.appendChild(voucherItem);
+  });
+}
+
+function selectVoucher(voucherId) {
+  selectedVoucherId = voucherId;
+  selectedVoucher = availableVouchers.find((v) => v.voucher_id === voucherId);
+
+  if (selectedVoucher) {
+    document.getElementById("promoCode").value = selectedVoucher.code;
+    calculateVoucherDiscount();
+
+    // Highlight voucher được chọn
+    document.querySelectorAll(".voucher-item").forEach((item) => {
+      const radio = item.querySelector('input[type="radio"]');
+      if (radio && parseInt(radio.value) === voucherId) {
+        item.style.borderColor = "#b69854";
+        item.style.backgroundColor = "#ffefd5";
+        item.style.boxShadow = "0 2px 6px rgba(76, 175, 80, 0.15)";
+      } else {
+        item.style.borderColor = "#deb666";
+        item.style.backgroundColor = "#fffcf0";
+        item.style.boxShadow = "none";
+      }
+    });
+  }
+}
+
+function calculateVoucherDiscount() {
+  if (!selectedVoucher) {
+    currentDiscount = 0;
+    updateSummary();
+    return;
+  }
+
+  const serviceTotal = calculateServicePrice();
+  const vat = Math.round(serviceTotal * 0.1);
+  const totalBeforeDiscount = serviceTotal + vat;
+
+  let subtotal = serviceTotal;
+
+  // Kiểm tra apply_to
+  if (selectedVoucher.apply_to === "room") {
+    alert("Voucher này chỉ áp dụng cho đặt phòng!");
+    document.getElementById(`voucher_${selectedVoucherId}`).checked = false;
+    selectedVoucherId = null;
+    selectedVoucher = null;
+    currentDiscount = 0;
+    updateSummary();
+    return;
+  }
+
+  if (subtotal < selectedVoucher.min_order) {
+    alert(
+      `Voucher yêu cầu đơn hàng tối thiểu ${formatCurrency(
+        selectedVoucher.min_order
+      )}`
+    );
+    document.getElementById(`voucher_${selectedVoucherId}`).checked = false;
+    selectedVoucherId = null;
+    selectedVoucher = null;
+    currentDiscount = 0;
+    updateSummary();
+    return;
+  }
+
+  if (selectedVoucher.discount_type === "percent") {
+    currentDiscount = Math.round(
+      (subtotal * selectedVoucher.discount_value) / 100
+    );
+    if (
+      selectedVoucher.max_discount &&
+      currentDiscount > selectedVoucher.max_discount
+    ) {
+      currentDiscount = selectedVoucher.max_discount;
+    }
+  } else {
+    currentDiscount = selectedVoucher.discount_value;
+  }
+
+  document.getElementById("discountAmount").textContent =
+    formatCurrency(currentDiscount);
+  document.getElementById("discountDisplay").style.display = "block";
+  appliedPromoCode = selectedVoucher.code;
+  updateSummary();
+}
+
+function applyPromoCode() {
+  // Chỉ cho phép áp dụng voucher khi đã đăng nhập
+  if (!window.IS_LOGGED_IN) {
+    alert("Vui lòng đăng nhập để sử dụng voucher.");
+    const promoInput = document.getElementById("promoCode");
+    if (promoInput) promoInput.value = "";
+    return;
+  }
+
+  const promoInput = document.getElementById("promoCode");
+  const code = promoInput.value.trim().toUpperCase();
+
+  if (!code) {
+    alert("Vui lòng nhập mã khuyến mãi!");
+    return;
+  }
+
+  const voucher = availableVouchers.find((v) => v.code.toUpperCase() === code);
+
+  if (voucher) {
+    const radio = document.getElementById(`voucher_${voucher.voucher_id}`);
+    if (radio) {
+      radio.checked = true;
+      selectVoucher(voucher.voucher_id);
+      alert(`✅ Áp dụng thành công!\n${voucher.name}`);
+    } else {
+      alert("❌ Voucher không khả dụng!");
+    }
+  } else {
+    alert("❌ Mã khuyến mãi không hợp lệ!");
+    currentDiscount = 0;
+    appliedPromoCode = "";
+    selectedVoucherId = null;
+    selectedVoucher = null;
+    document.getElementById("discountDisplay").style.display = "none";
+    updateSummary();
+  }
+}
+function initCloseVoucherBtn() {
+  const closeBtn = document.querySelector("#discountDisplay .btn-close");
+  if (!closeBtn) return;
+
+  closeBtn.addEventListener("click", function () {
+    // Reset các biến liên quan đến voucher
+    currentDiscount = 0;
+    appliedPromoCode = "";
+    selectedVoucherId = null;
+    selectedVoucher = null;
+
+    // Reset giao diện hiển thị giảm giá
+    const discountAmount = document.getElementById("discountAmount");
+    if (discountAmount) discountAmount.textContent = "0 ₫";
+
+    const discountDisplay = document.getElementById("discountDisplay");
+    if (discountDisplay) {
+      discountDisplay.classList.remove("active");
+      discountDisplay.style.display = "none"; // Ẩn khối giảm giá
+    }
+
+    // Xóa text trong ô nhập mã khuyến mãi
+    const promoInput = document.getElementById("promoCode");
+    if (promoInput) promoInput.value = "";
+
+    // Bỏ chọn radio voucher nếu có
+    document.querySelectorAll('input[name="voucher"]').forEach((radio) => {
+      radio.checked = false;
+    });
+
+    // Cập nhật lại tổng kết
+    updateSummary();
+  });
+}
+
+// Gọi hàm này sau khi render xong voucher list hoặc khi trang load
+document.addEventListener("DOMContentLoaded", initCloseVoucherBtn);
+// ============================================================
+// FORM SUBMISSION
+// ============================================================
+document.addEventListener("DOMContentLoaded", function () {
+  const form = document.getElementById("serviceBookingForm");
+
+  // Event listeners
+  const quantityInput = document.getElementById("numberOfPeople");
+  const dateInput = document.getElementById("serviceDate");
+  const timeInput = document.getElementById("serviceTime");
+
+  function validateDateTime() {
+    const dateVal = dateInput.value;
+    const timeVal = timeInput.value;
+
+    if (!dateVal || !timeVal) return true; // Let submit handle empty check
+
+    const selectedDateTime = new Date(`${dateVal}T${timeVal}`);
+    const now = new Date();
+
+    if (selectedDateTime < now) {
+      showPaymentModal_Notification(
+        "Vui lòng chọn thời gian trong tương lai! Ngày giờ đã được reset."
+      );
+
+      // Reset logic - maybe set to tomorrow same time or clear?
+      // For now, just clear
+      dateInput.value = "";
+      timeInput.value = "";
+      return false;
+    }
+    return true;
+  }
+
+  // Helper to show modal (reusing logic from showPaymentModal but simpler)
+  function showPaymentModal_Notification(msg) {
+    const msgEl = document.getElementById("notificationMessage");
+    if (msgEl) msgEl.innerHTML = msg;
+
+    const modalEl = document.getElementById("notificationModal");
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+
+      // Reset buttons to default state just in case
+      const footer = modalEl.querySelector(".modal-footer");
+      // Hide confirm button since this is just info
+      const confirmBtn = document.getElementById("confirmPaymentBtn");
+      if (confirmBtn) confirmBtn.style.display = "none";
+
+      // Restore when hidden
+      modalEl.addEventListener(
+        "hidden.bs.modal",
+        function () {
+          if (confirmBtn) confirmBtn.style.display = "block";
+        },
+        { once: true }
+      );
+    } else {
+      alert(msg);
+    }
+  }
+
+  if (dateInput) {
+    dateInput.addEventListener("change", validateDateTime);
+  }
+  if (timeInput) {
+    timeInput.addEventListener("change", validateDateTime);
+  }
+
+  // Hook into existing listeners if any
+  // ...
+
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const serviceDate = document.getElementById("serviceDate").value;
+      const serviceTime = document.getElementById("serviceTime").value;
+      const quantity =
+        parseInt(document.getElementById("numberOfPeople").value) || 1;
+      const paymentMethod = document.getElementById("paymentMethod").value;
+      const notes = document.getElementById("notes").value;
+
+      if (!serviceDate || !serviceTime) {
+        alert("Vui lòng chọn ngày và giờ sử dụng dịch vụ!");
+        return;
+      }
+
+      if (!paymentMethod) {
+        alert("Vui lòng chọn phương thức thanh toán!");
+        return;
+      }
+
+      // Validate thời gian phải ở tương lai
+      const selectedDateTime = new Date(`${serviceDate}T${serviceTime}`);
+      const now = new Date();
+      if (selectedDateTime <= now) {
+        alert("Thời gian sử dụng phải ở tương lai!");
+        return;
+      }
+
+      const serviceTotal = calculateServicePrice();
+      const discount = currentDiscount || 0;
+      const vat = Math.round(Math.max(0, serviceTotal - discount) * 0.1);
+      const total = Math.max(0, serviceTotal - discount + vat);
+
+      // Kiểm tra xem có form khách vãng lai không
+      const walkInFullNameEl = document.getElementById("walkInFullName");
+      const isWalkIn = walkInFullNameEl !== null;
+
+      // Khách vãng lai không được sử dụng voucher
+      const voucherIdToSubmit =
+        isWalkIn || !window.IS_LOGGED_IN ? null : selectedVoucherId;
+
+      const formData = {
+        serviceId: form.dataset.serviceId || null,
+        serviceName: SERVER_DATA?.service?.service_name || "",
+        serviceDate: serviceDate,
+        serviceTime: serviceTime,
+        quantity: quantity,
+        servicePrice: serviceTotal,
+        vat: vat,
+        discount: isWalkIn ? 0 : discount, // Khách vãng lai không có discount từ voucher
+        total: isWalkIn ? serviceTotal + vat : total,
+        promoCode: isWalkIn ? "" : appliedPromoCode,
+        voucherId: voucherIdToSubmit,
+        promoDescription: isWalkIn
+          ? ""
+          : selectedVoucher
+          ? selectedVoucher.name
+          : "",
+        paymentMethod: paymentMethod,
+        notes: notes,
+        bookingCode: generateBookingCode(),
+      };
+
+      // Thêm thông tin khách vãng lai nếu có
+      if (isWalkIn) {
+        formData.walkInFullName = walkInFullNameEl.value || "";
+        formData.walkInPhone =
+          document.getElementById("walkInPhone").value || "";
+        formData.walkInEmail =
+          document.getElementById("walkInEmail").value || "";
+        formData.walkInIdNumber =
+          document.getElementById("walkInIdNumber").value || "";
+        formData.walkInAddress =
+          document.getElementById("walkInAddress").value || "";
+      }
+
+      showInvoice(formData);
+    });
+  }
+
+  // Event listeners - using variables defined above
+
+  if (quantityInput) {
+    quantityInput.addEventListener("input", () => {
+      updateSummary();
+      if (window.IS_LOGGED_IN) {
+        loadAvailableVouchers();
+      }
+      if (selectedVoucher) calculateVoucherDiscount();
+    });
+    quantityInput.addEventListener("change", () => {
+      updateSummary();
+      if (window.IS_LOGGED_IN) {
+        loadAvailableVouchers();
+      }
+      if (selectedVoucher) calculateVoucherDiscount();
+    });
+  }
+
+  if (dateInput) {
+    dateInput.addEventListener("change", () => {
+      updateSummary();
+      if (window.IS_LOGGED_IN) {
+        loadAvailableVouchers();
+      }
+    });
+  }
+
+  if (timeInput) {
+    timeInput.addEventListener("change", () => {
+      updateSummary();
+      if (window.IS_LOGGED_IN) {
+        loadAvailableVouchers();
+      }
+    });
+  }
+
+  // Set min date
+  const today = new Date().toISOString().split("T")[0];
+  if (dateInput) {
+    dateInput.min = today;
+    if (!dateInput.value) {
+      dateInput.value = today;
+    }
+  }
+});
+
+// ============================================================
+// INVOICE FUNCTIONS
+// ============================================================
+function showInvoice(data) {
+  currentBookingData = data;
+
+  document.getElementById("bookingForm").style.display = "none";
+  document.getElementById("invoiceContainer").style.display = "block";
+
+  // Hiển thị thông tin khách vãng lai nếu có
+  if (data.walkInFullName) {
+    const invoiceWalkInName = document.getElementById("invoiceWalkInName");
+    const invoiceWalkInEmail = document.getElementById("invoiceWalkInEmail");
+    const invoiceWalkInPhone = document.getElementById("invoiceWalkInPhone");
+    const invoiceWalkInIdNumber = document.getElementById(
+      "invoiceWalkInIdNumber"
+    );
+
+    if (invoiceWalkInName) invoiceWalkInName.textContent = data.walkInFullName;
+    if (invoiceWalkInEmail)
+      invoiceWalkInEmail.textContent = data.walkInEmail || "-";
+    if (invoiceWalkInPhone) invoiceWalkInPhone.textContent = data.walkInPhone;
+    if (invoiceWalkInIdNumber)
+      invoiceWalkInIdNumber.textContent = data.walkInIdNumber;
+  }
+
+  // Điền dữ liệu hiển thị vào invoice
+  document.getElementById("invoiceServiceName").textContent = data.serviceName;
+
+  // Thông tin chi tiết dịch vụ
+  const detailsHTML = `
+    <div class="invoice-row">
+      <span class="invoice-label">Số người:</span>
+      <span class="invoice-value">${data.quantity} người</span>
+    </div>
+  `;
   document.getElementById("invoiceServiceDetails").innerHTML = detailsHTML;
 
-  const notes = document.getElementById("notes").value;
-  if (notes) {
+  // Thời gian
+  document.getElementById("invoiceDate").textContent = formatDate(
+    data.serviceDate
+  );
+  document.getElementById("invoiceTime").textContent = data.serviceTime;
+  document.getElementById("invoiceQuantity").textContent =
+    data.quantity + " người";
+
+  // Khuyến mãi
+  if (data.promoCode) {
+    document.getElementById("invoicePromotionSection").style.display = "block";
+    document.getElementById(
+      "invoicePromotion"
+    ).textContent = `${data.promoCode} - ${data.promoDescription}`;
+  } else {
+    document.getElementById("invoicePromotionSection").style.display = "none";
+  }
+
+  // Ghi chú
+  if (data.notes) {
     document.getElementById("invoiceNotesSection").style.display = "block";
-    document.getElementById("invoiceNotes").textContent = notes;
+    document.getElementById("invoiceNotes").textContent = data.notes;
   } else {
     document.getElementById("invoiceNotesSection").style.display = "none";
   }
 
-  document.getElementById("bookingForm").style.display = "none";
-  document.getElementById("invoiceContainer").style.display = "block";
-  window.scrollTo(0, 0);
-}
-
-// Chỉnh sửa booking
-function editBooking() {
-  document.getElementById("invoiceContainer").style.display = "none";
-  document.getElementById("bookingForm").style.display = "block";
-  window.scrollTo(0, 0);
-}
-
-// Lưu hóa đơn
-function saveInvoice() {
-  alert(
-    "Hóa đơn đã được lưu! Chúng tôi đã gửi email xác nhận đến địa chỉ của bạn."
+  // Thanh toán
+  document.getElementById("invoiceSubtotal").textContent = formatCurrency(
+    data.servicePrice
   );
+  document.getElementById("invoiceVAT").textContent = formatCurrency(data.vat);
+
+  if (data.discount > 0) {
+    document.getElementById("invoiceDiscountRow").style.display = "flex";
+    document.getElementById("invoiceDiscount").textContent =
+      "- " + formatCurrency(data.discount);
+  } else {
+    document.getElementById("invoiceDiscountRow").style.display = "none";
+  }
+
+  document.getElementById("invoiceTotal").textContent = formatCurrency(
+    data.total
+  );
+  document.getElementById("invoicePayment").textContent = data.paymentMethod;
+
+  // Điền dữ liệu vào hidden inputs để submit
+  document.getElementById("hiddenServiceId").value = data.serviceId || "";
+  document.getElementById("hiddenServiceDate").value = data.serviceDate;
+  document.getElementById("hiddenServiceTime").value = data.serviceTime;
+  document.getElementById("hiddenQuantity").value = data.quantity;
+  document.getElementById("hiddenNotes").value = data.notes || "";
+  document.getElementById("hiddenServicePrice").value = data.servicePrice;
+  document.getElementById("hiddenVAT").value = data.vat;
+  document.getElementById("hiddenDiscount").value = data.discount;
+  document.getElementById("hiddenTotal").value = data.total;
+  // Chỉ set voucherId nếu đã đăng nhập
+  const isWalkIn = document.getElementById("walkInFullName") !== null;
+  document.getElementById("hiddenVoucherId").value =
+    isWalkIn || !window.IS_LOGGED_IN ? "" : data.voucherId || "";
+  document.getElementById("hiddenPaymentMethod").value = data.paymentMethod;
+
+  // Điền thông tin khách vãng lai vào hidden inputs nếu có
+  if (data.walkInFullName) {
+    const hiddenWalkInFullName = document.getElementById(
+      "hiddenWalkInFullName"
+    );
+    const hiddenWalkInPhone = document.getElementById("hiddenWalkInPhone");
+    const hiddenWalkInEmail = document.getElementById("hiddenWalkInEmail");
+    const hiddenWalkInIdNumber = document.getElementById(
+      "hiddenWalkInIdNumber"
+    );
+    const hiddenWalkInAddress = document.getElementById("hiddenWalkInAddress");
+
+    if (hiddenWalkInFullName)
+      hiddenWalkInFullName.value = data.walkInFullName || "";
+    if (hiddenWalkInPhone) hiddenWalkInPhone.value = data.walkInPhone || "";
+    if (hiddenWalkInEmail) hiddenWalkInEmail.value = data.walkInEmail || "";
+    if (hiddenWalkInIdNumber)
+      hiddenWalkInIdNumber.value = data.walkInIdNumber || "";
+    if (hiddenWalkInAddress)
+      hiddenWalkInAddress.value = data.walkInAddress || "";
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// Xác nhận thanh toán
-function confirmPayment() {
-  const payment = document.getElementById("invoicePayment").textContent;
-  if (payment === "Thanh toán tại khách sạn") {
-    alert(
-      "Đặt dịch vụ thành công! Vui lòng thanh toán tại quầy lễ tân khi sử dụng dịch vụ."
-    );
+function editBooking() {
+  document.getElementById("bookingForm").style.display = "block";
+  document.getElementById("invoiceContainer").style.display = "none";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function saveInvoice() {
+  const invoice = document.getElementById("invoiceContainer");
+  const opt = {
+    margin: 0.5,
+    filename: "hoa-don-dich-vu.pdf",
+    image: { type: "jpeg", quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+  };
+  if (window.html2pdf) {
+    window.html2pdf().from(invoice).set(opt).save();
   } else {
-    alert("Đang chuyển đến cổng thanh toán...");
+    alert("Chức năng lưu hóa đơn cần thư viện html2pdf!");
   }
 }
 
-window.addEventListener("DOMContentLoaded", initPage);
+// ============================================================
+// INITIALIZE
+// ============================================================
+window.addEventListener("DOMContentLoaded", function () {
+  updateSummary();
+
+  setTimeout(() => {
+    const dateInput = document.getElementById("serviceDate");
+    const timeInput = document.getElementById("serviceTime");
+    if (dateInput && timeInput && dateInput.value && timeInput.value) {
+      if (window.IS_LOGGED_IN) {
+        loadAvailableVouchers();
+      }
+    }
+  }, 500);
+});

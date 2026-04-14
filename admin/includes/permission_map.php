@@ -69,5 +69,25 @@ return [
         ['type' => 'prefix', 'value' => 'Quản lý voucher'],
         ['type' => 'prefix', 'value' => 'voucher.'],
     ],
+    'calendar-booking' => [
+        ['type' => 'exact', 'value' => 'service.calendar.view'],
+        ['type' => 'prefix', 'value' => 'service.calendar.'],
+        ['type' => 'prefix', 'value' => 'calendar.'],
+        ['type' => 'prefix', 'value' => 'Lịch Đặt Phòng'],
+        ['type' => 'prefix', 'value' => 'Lịch đặt phòng'],
+        ['type' => 'prefix', 'value' => 'Quản Lý Booking'], // Fallback
+        ['type' => 'prefix', 'value' => 'Quản lý booking'], // Fallback
+        ['type' => 'prefix', 'value' => 'booking.'], // Fallback
+    ],
+    'calendar-booking-panel' => [
+        ['type' => 'exact', 'value' => 'service.calendar.view'],
+        ['type' => 'prefix', 'value' => 'service.calendar.'],
+        ['type' => 'prefix', 'value' => 'calendar.'],
+        ['type' => 'prefix', 'value' => 'Lịch Đặt Phòng'],
+        ['type' => 'prefix', 'value' => 'Lịch đặt phòng'],
+        ['type' => 'prefix', 'value' => 'Quản Lý Booking'], // Fallback
+        ['type' => 'prefix', 'value' => 'Quản lý booking'], // Fallback
+        ['type' => 'prefix', 'value' => 'booking.'], // Fallback
+    ],
 ];
 

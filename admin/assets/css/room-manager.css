@@ -176,14 +176,15 @@
 }
 
 .modal-content {
+  width: 60vw;
   border-radius: 15px;
   border: none;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
 }
 
 .modal-header {
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
+  background: #fffcf0;
+  border-bottom: 1px solid #eee;
   border-radius: 15px 15px 0 0;
 }
 
@@ -197,9 +198,13 @@
   color: #495057;
   margin-bottom: 8px;
 }
-
+.modal-body .desc {
+  background: #eee;
+  border-radius: 10px;
+}
 .form-control,
 .form-select {
+  height: 46px;
   border-radius: 8px;
   border: 1px solid #ddd;
   padding: 10px 15px;
@@ -532,4 +537,327 @@ body.dark .table tbody tr {
   .table-responsive {
     font-size: 0.9em;
   }
+}
+/* Image Gallery Styles */
+.image-section {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.main-image-slider {
+  width: 100%;
+  height: 280px;
+  border-radius: 15px;
+  overflow: hidden;
+  position: relative;
+}
+
+.slider-track {
+  display: flex;
+  transition: transform 0.5s ease;
+  height: 100%;
+}
+
+.slide {
+  min-width: 100%;
+  height: 100%;
+}
+
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slider-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #333;
+  z-index: 9;
+  transition: all 0.3s;
+}
+
+.slider-btn:hover {
+  background: white;
+  transform: translateY(-50%) scale(1.1);
+}
+
+.slider-btn-prev {
+  left: 20px;
+}
+
+.slider-btn-next {
+  right: 20px;
+}
+
+.thumbnail-gallery {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  padding: 5px 0;
+}
+
+.thumbnail-gallery::-webkit-scrollbar {
+  height: 6px;
+}
+
+.thumbnail-gallery::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.thumbnail-gallery::-webkit-scrollbar-thumb {
+  background: #deb666;
+  border-radius: 10px;
+}
+
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 8px;
+  min-width: 150px;
+  height: 100px;
+  border: 3px solid transparent;
+  flex-shrink: 0;
+}
+
+.gallery-item.active {
+  border-color: #deb666;
+}
+
+.gallery-item:hover {
+  transform: scale(1.05);
+  opacity: 0.8;
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.05);
+}
+
+.view-all-photos {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.view-all-photos:hover {
+  background: #deb666;
+  color: white;
+}
+
+.detail-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 10px;
+}
+
+/* --- Grid View & View Toggle Styles --- */
+.view-toggle-buttons {
+  display: flex;
+  background: #f0f0f0;
+  padding: 4px;
+  border-radius: 8px;
+  margin-left: 15px;
+}
+
+.btn-view-toggle {
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  border-radius: 6px;
+  color: #666;
+  cursor: pointer;
+}
+
+.btn-view-toggle.active {
+  background: #fff;
+  color: #deb666;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Floor Grouping */
+.floor-section {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid #eee;
+  padding: 20px 0;
+}
+
+.floor-title {
+  min-width: 80px;
+  font-weight: bold;
+  color: #666;
+  padding-top: 10px;
+}
+
+.floor-title h5 {
+  border-left: 4px solid #deb666;
+  padding-left: 10px;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.floor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 15px;
+  flex: 1;
+}
+
+/* Room Card */
+.room-card {
+  aspect-ratio: 1/1;
+  border: 2px solid #ddd;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+  transition: 0.3s;
+  overflow: hidden;
+  background: #fff;
+}
+
+.room-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.room-number {
+  color: #333;
+}
+
+/* Status Colors */
+.status-available { border-color: #28a745; color: #28a745; }
+.status-booked { border-color: #ffc107; color: #ffc107; }
+.status-occupied { border-color: #dc3545; color: #dc3545; }
+.status-maintenance { border-color: #343a40; color: #343a40; }
+.status-cleaning { border-color: #17a2b8; color: #17a2b8; }
+
+/* Room Actions Area */
+.room-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  gap: 0px;
+  padding: 8px 0;
+  opacity: 0;
+  transition: 0.3s;
+  backdrop-filter: blur(4px);
+}
+
+.room-card:hover .room-actions {
+  opacity: 1;
+}
+
+/* Fine-tune Bootstrap buttons for dark overlay */
+.room-actions .btn {
+  padding: 4px 6px;
+  font-size: 0.75rem;
+}
+
+.room-actions .btn-outline-info { color: #0dcaf0; border-color: #0dcaf0; }
+.room-actions .btn-outline-warning { color: #ffc107; border-color: #ffc107; }
+.room-actions .btn-outline-danger { color: #ea868f; border-color: #ea868f; }
+
+.room-actions .btn:hover {
+  color: #fff !important;
+  transform: scale(1.1);
+}
+
+/* Status Legend */
+.status-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  padding: 12px 20px;
+  background: transparent;
+  margin-bottom: 25px;
+  font-size: 0.95rem;
+  color: #555;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+}
+
+/* Dark Mode Overrides */
+body.dark .view-toggle-buttons {
+  background: #2a2a3e;
+}
+
+body.dark .btn-view-toggle.active {
+  background: #fff;
+  color: #deb666;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+body.dark .room-card {
+  background: #1e1e2f;
+}
+
+body.dark .floor-section {
+  border-bottom-color: #333;
+}
+
+body.dark .floor-title h5 {
+  color: #ccc;
+}
+
+body.dark .status-legend {
+  background: transparent;
+  border-color: #333;
+  color: #aaa;
+}
+
+body.dark .room-number {
+  color: #eee;
 }

@@ -375,7 +375,7 @@ if ($trang_thai_filter) $baseUrl .= "&trang_thai=" . urlencode($trang_thai_filte
                         <?php endif; ?>
                         <?php if ($canDeleteStaff): ?>
                         <button class="btn btn-sm btn-outline-danger"
-                            onclick="deleteEmployee(<?php echo $nv['id_nhan_vien']; ?>)" title="Xóa">
+                            onclick="confirmDeleteStaff(<?php echo $nv['id_nhan_vien']; ?>)" title="Xóa">
                             <i class="fas fa-trash"></i>
                         </button>
                         <?php endif; ?>
@@ -586,6 +586,26 @@ if ($trang_thai_filter) $baseUrl .= "&trang_thai=" . urlencode($trang_thai_filte
     </div>
 </div>
 
+<!-- Modal Xác nhận xóa nhân viên -->
+<div class="modal fade" id="confirmDeleteStaffModal" tabindex="-1" aria-labelledby="confirmDeleteStaffModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteStaffModalLabel">Xác nhận xóa</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mt-3 mb-0">Bạn có chắc muốn xóa nhân viên này?<br>Hành động này không thể hoàn tác.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">Hủy</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDeleteStaff" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-trash-alt me-2"></i>Xác nhận xóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function editEmployee(id) {
     window.location.href = 'index.php?page=staff-manager&panel=staff-panel&action=edit&id=' + id;
@@ -709,16 +729,35 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function deleteEmployee(id) {
-    if (confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.innerHTML = '<input type="hidden" name="id_nhan_vien" value="' + id + '">' +
-            '<input type="hidden" name="delete_nhan_vien" value="1">';
-        document.body.appendChild(form);
-        form.submit();
-    }
+// Biến lưu ID nhân viên cần xóa
+let staffIdToDelete = null;
+
+// Rename function to avoid conflict with old cached versions
+function confirmDeleteStaff(id) {
+    staffIdToDelete = id;
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteStaffModal'));
+    modal.show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btnConfirmDelete = document.getElementById('btnConfirmDeleteStaff');
+    if (btnConfirmDelete) {
+        // Remove existing listeners to avoid duplicates if any (though cloneNode is cleaner, a simple check suffices here)
+        btnConfirmDelete.replaceWith(btnConfirmDelete.cloneNode(true));
+        
+        // Re-select after replacement
+        document.getElementById('btnConfirmDeleteStaff').addEventListener('click', function() {
+            if (staffIdToDelete) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = '<input type="hidden" name="id_nhan_vien" value="' + staffIdToDelete + '">' +
+                    '<input type="hidden" name="delete_nhan_vien" value="1">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+});
 
 function viewEmployee(id) {
     fetch(`api/staff-api.php?action=view&id=${id}`)
@@ -756,7 +795,6 @@ function viewEmployee(id) {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             alert('Có lỗi xảy ra khi tải thông tin nhân viên');
         });
 }
@@ -773,7 +811,6 @@ function openPermissionModal(id) {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             alert('Có lỗi xảy ra khi tải quyền');
         });
 }
@@ -799,7 +836,6 @@ function savePermissions() {
             }
         })
         .catch(error => {
-            console.error('Error:', error);
             alert('Có lỗi xảy ra khi lưu quyền');
         });
 }

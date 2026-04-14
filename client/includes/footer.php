@@ -81,6 +81,8 @@
  <script>
 AOS.init();
  </script>
+ <!-- Chatbot Widget -->
+ <?php include __DIR__ . '/chatbot-widget.php'; ?>
  <!-- js -->
  <script src="/My-Web-Hotel/client/database/data.js?v=<?php echo time(); ?>"></script>
  <!-- js loading -->
@@ -96,7 +98,7 @@ AOS.init();
         if ($page == 'places') echo '<script src="/My-Web-Hotel/client/assets/js/places.js"></script>';
         if ($page == 'gallery') echo '<script src="/My-Web-Hotel/client/assets/js/gallery.js"></script>';
         if ($page == 'room-detail') echo '<script src="/My-Web-Hotel/client/assets/js/room-detail.js"></script>';
-        if ($page == 'service-booking') echo '<script src="/My-Web-Hotel/client/assets/js/service-booking.js"></script>';
+        if ($page == 'service-booking') echo '<script src="/My-Web-Hotel/client/assets/js/service-booking.js?v=' . time() . '"></script>';
     ?>
  </body>
 

@@ -45,7 +45,6 @@ function submitGlobalTask() {
       }
     })
     .catch((error) => {
-      console.error("Error:", error);
       alert("Có lỗi xảy ra khi giao nhiệm vụ");
     });
 }
@@ -117,30 +116,24 @@ function viewTaskDetail(id) {
       }
     })
     .catch((error) => {
-      console.error("Error:", error);
       alert("Có lỗi xảy ra khi tải thông tin nhiệm vụ");
     });
 }
 
 function editTask(id) {
-  console.log("editTask called with id:", id); // Debug log
   fetch(`/My-Web-Hotel/admin/api/staff-api.php?action=view_task&id=${id}`)
     .then((response) => {
-      console.log("Response status:", response.status); // Debug log
       if (!response.ok) {
         throw new Error("Network response was not ok");
       }
       return response.json();
     })
     .then((data) => {
-      console.log("API Response:", data); // Debug log
       if (data.success && data.task) {
         const task = data.task;
-        console.log("Task data:", task); // Debug log
         const form = document.getElementById("editTaskForm");
         if (!form) {
           alert("Không tìm thấy form chỉnh sửa (editTaskForm)");
-          console.error("Form editTaskForm not found"); // Debug log
           return;
         }
 
@@ -162,44 +155,27 @@ function editTask(id) {
           'input[name="tien_do_hoan_thanh"]'
         );
 
-        console.log("Form fields found:", {
-          idNhiemVu: !!idNhiemVu,
-          idNhanVien: !!idNhanVien,
-          tenNhiemVu: !!tenNhiemVu,
-          moTaChiTiet: !!moTaChiTiet,
-          mucDoUuTien: !!mucDoUuTien,
-          ngayBatDau: !!ngayBatDau,
-          hanHoanThanh: !!hanHoanThanh,
-          ghiChu: !!ghiChu,
-          trangThai: !!trangThai,
-          tienDoHoanThanh: !!tienDoHoanThanh,
-        }); // Debug log
 
         // Set values - đảm bảo tất cả fields được populate
         // API trả về nv.* nên tất cả fields từ nhiem_vu sẽ có trong task object
         if (idNhiemVu && task.id_nhiem_vu) {
           idNhiemVu.value = String(task.id_nhiem_vu);
-          console.log("Set id_nhiem_vu:", idNhiemVu.value);
         }
         if (idNhanVien && task.id_nhan_vien_duoc_gan) {
           idNhanVien.value = String(task.id_nhan_vien_duoc_gan);
-          console.log("Set id_nhan_vien_duoc_gan:", idNhanVien.value);
         }
         if (tenNhiemVu && task.ten_nhiem_vu) {
           tenNhiemVu.value = String(task.ten_nhiem_vu);
-          console.log("Set ten_nhiem_vu:", tenNhiemVu.value);
         }
         if (moTaChiTiet) {
           moTaChiTiet.value = task.mo_ta_chi_tiet
             ? String(task.mo_ta_chi_tiet)
             : "";
-          console.log("Set mo_ta_chi_tiet:", moTaChiTiet.value);
         }
         if (mucDoUuTien) {
           mucDoUuTien.value = task.muc_do_uu_tien
             ? String(task.muc_do_uu_tien)
             : "Trung bình";
-          console.log("Set muc_do_uu_tien:", mucDoUuTien.value);
         }
         if (ngayBatDau && task.ngay_bat_dau) {
           // Format date (YYYY-MM-DD) - lấy phần date nếu có datetime
@@ -215,7 +191,6 @@ function editTask(id) {
             }
           }
           ngayBatDau.value = dateValue;
-          console.log("Set ngay_bat_dau:", ngayBatDau.value);
         }
         if (hanHoanThanh && task.han_hoan_thanh) {
           // Format date (YYYY-MM-DD) - lấy phần date nếu có datetime
@@ -231,17 +206,14 @@ function editTask(id) {
             }
           }
           hanHoanThanh.value = dateValue;
-          console.log("Set han_hoan_thanh:", hanHoanThanh.value);
         }
         if (ghiChu) {
           ghiChu.value = task.ghi_chu ? String(task.ghi_chu) : "";
-          console.log("Set ghi_chu:", ghiChu.value);
         }
         if (trangThai) {
           trangThai.value = task.trang_thai
             ? String(task.trang_thai)
             : "Chưa bắt đầu";
-          console.log("Set trang_thai:", trangThai.value);
         }
         if (tienDoHoanThanh) {
           tienDoHoanThanh.value =
@@ -249,7 +221,6 @@ function editTask(id) {
             task.tien_do_hoan_thanh !== null
               ? String(task.tien_do_hoan_thanh)
               : "0";
-          console.log("Set tien_do_hoan_thanh:", tienDoHoanThanh.value);
         }
 
         // Trigger change event để đảm bảo Select2 và các event listeners được cập nhật
@@ -267,7 +238,6 @@ function editTask(id) {
           if (modalEl) {
             const modal = new bootstrap.Modal(modalEl);
             modal.show();
-            console.log("Modal opened");
 
             // Sau khi modal đã mở, đảm bảo values được set lại (đôi khi modal.show() reset form)
             setTimeout(function () {
@@ -337,10 +307,8 @@ function editTask(id) {
                     ? String(task.tien_do_hoan_thanh)
                     : "0";
               }
-              console.log("Values re-set after modal opened");
             }, 300);
           } else {
-            console.error("Modal editTaskModal not found");
           }
         }, 100);
       } else {
@@ -348,12 +316,10 @@ function editTask(id) {
           "Không thể tải thông tin nhiệm vụ: " +
             (data.message || "Lỗi không xác định")
         );
-        console.error("API returned error:", data);
       }
     })
     .catch((error) => {
       alert("Có lỗi xảy ra khi tải thông tin nhiệm vụ: " + error.message);
-      console.error("Fetch error:", error);
     });
 }
 
@@ -449,35 +415,54 @@ function submitEditTask() {
       }
     })
     .catch((error) => {
-      console.error("Error:", error);
       alert("Có lỗi xảy ra khi cập nhật nhiệm vụ");
     });
 }
 
+// Biến lưu ID nhiệm vụ cần xóa
+let taskIdToDelete = null;
+
 function deleteTask(id) {
-  if (!confirm("Bạn có chắc chắn muốn xóa nhiệm vụ này?")) {
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("action", "delete_task");
-  formData.append("id_nhiem_vu", id);
-
-  fetch("/My-Web-Hotel/admin/api/staff-api.php", {
-    method: "POST",
-    body: formData,
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.success) {
-        alert("Xóa nhiệm vụ thành công!");
-        window.location.reload();
-      } else {
-        alert("Lỗi: " + data.message);
-      }
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-      alert("Có lỗi xảy ra khi xóa nhiệm vụ");
-    });
+    taskIdToDelete = id;
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteTaskModal'));
+    modal.show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btnConfirmDelete = document.getElementById('btnConfirmDeleteTask');
+    if (btnConfirmDelete) {
+        // Remove existing listeners to avoid duplicates
+        btnConfirmDelete.replaceWith(btnConfirmDelete.cloneNode(true));
+        
+        // Re-select after replacement and add listener
+        document.getElementById('btnConfirmDeleteTask').addEventListener('click', function() {
+            if (taskIdToDelete) {
+                const formData = new FormData();
+                formData.append("action", "delete_task");
+                formData.append("id_nhiem_vu", taskIdToDelete);
+
+                fetch("/My-Web-Hotel/admin/api/staff-api.php", {
+                    method: "POST",
+                    body: formData,
+                })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.success) {
+                        // Close modal manually if needed, though reload will handle it
+                        const modalEl = document.getElementById('confirmDeleteTaskModal');
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if(modal) modal.hide();
+                        
+                        alert("Xóa nhiệm vụ thành công!");
+                        window.location.reload();
+                    } else {
+                        alert("Lỗi: " + data.message);
+                    }
+                })
+                .catch((error) => {
+                    alert("Có lỗi xảy ra khi xóa nhiệm vụ");
+                });
+            }
+        });
+    }
+});

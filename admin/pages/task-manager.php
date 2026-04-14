@@ -409,3 +409,23 @@ if ($muc_do_filter) $baseUrl .= "&muc_do=" . urlencode($muc_do_filter);
     </div>
 </div>
 <?php endif; ?>
+
+<!-- Modal Xác nhận xóa nhiệm vụ -->
+<div class="modal fade" id="confirmDeleteTaskModal" tabindex="-1" aria-labelledby="confirmDeleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteTaskModalLabel">Xác nhận xóa</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mt-3 mb-0">Bạn có chắc muốn xóa nhiệm vụ này?<br>Hành động này không thể hoàn tác.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">Hủy</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDeleteTask" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-trash-alt me-2"></i>Xác nhận xóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

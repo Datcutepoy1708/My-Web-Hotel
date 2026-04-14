@@ -32,10 +32,8 @@ document.addEventListener('DOMContentLoaded', function() {
         })
             .then((editor) => {
                 blogEditorInstance = editor;
-                console.log("Blog Editor ready");
             })
             .catch((error) => {
-                console.error("Error initializing blog editor:", error);
             });
     }
 
@@ -94,7 +92,6 @@ function saveBlog() {
         // Submit form thông thường
         form.submit();
     } catch (error) {
-        console.error('Error saving blog:', error);
         alert('Lỗi khi lưu bài viết: ' + error.message);
     }
 }
@@ -104,7 +101,6 @@ function editBlog(id) {
     try {
         window.location.href = 'index.php?page=blogs-manager&action=edit&id=' + id;
     } catch (error) {
-        console.error('Error editing blog:', error);
     }
 }
 
@@ -122,7 +118,6 @@ function deleteBlog(id) {
             document.body.appendChild(form);
             form.submit();
         } catch (error) {
-            console.error('Error deleting blog:', error);
             alert('Lỗi khi xóa bài viết');
         }
     }
@@ -136,7 +131,6 @@ function loadBlogPreview(blogId) {
         const modal = new bootstrap.Modal(document.getElementById('viewBlogModal' + blogId));
         modal.show();
     } catch (error) {
-        console.error('Error loading preview:', error);
     }
 }
 

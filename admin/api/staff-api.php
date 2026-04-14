@@ -15,7 +15,7 @@ if ($action == 'view' && isset($_GET['id'])) {
     $result = $stmt->get_result();
     $nhanVien = $result->fetch_assoc();
     $stmt->close();
-    
+
     if ($nhanVien) {
         // URL ảnh từ database đã là Cloudinary URL, không cần xử lý
         echo json_encode(['success' => true, 'data' => $nhanVien]);
@@ -28,7 +28,7 @@ if ($action == 'view' && isset($_GET['id'])) {
 // Lấy danh sách quyền và quyền của nhân viên
 if ($action == 'permissions' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    
+
     // Lấy thông tin nhân viên
     $stmt = $mysqli->prepare("SELECT * FROM nhan_vien WHERE id_nhan_vien = ?");
     $stmt->bind_param("i", $id);
@@ -36,16 +36,16 @@ if ($action == 'permissions' && isset($_GET['id'])) {
     $result = $stmt->get_result();
     $staff = $result->fetch_assoc();
     $stmt->close();
-    
+
     if (!$staff) {
         echo json_encode(['success' => false, 'message' => 'Không tìm thấy nhân viên']);
         exit;
     }
-    
+
     // Lấy tất cả quyền
     $permissionsResult = $mysqli->query("SELECT * FROM quyen ORDER BY ten_quyen");
     $permissions = $permissionsResult->fetch_all(MYSQLI_ASSOC);
-    
+
     // Lấy quyền theo chức vụ
     $chucVu = $staff['chuc_vu'];
     $stmt = $mysqli->prepare("SELECT id_quyen FROM quyen_chuc_vu WHERE chuc_vu = ? AND trang_thai = 1");
@@ -72,7 +72,7 @@ if ($action == 'permissions' && isset($_GET['id'])) {
         $personalPermissions[] = intval($row['id_quyen']);
     }
     $stmt->close();
-    
+
     // URL ảnh từ database đã là Cloudinary URL, không cần xử lý
     echo json_encode([
         'success' => true,
@@ -88,13 +88,13 @@ if ($action == 'permissions' && isset($_GET['id'])) {
 if ($action == 'save_permissions' && isset($_POST['id_nhan_vien'])) {
     $id_nhan_vien = intval($_POST['id_nhan_vien']);
     $permissions = isset($_POST['permissions']) ? $_POST['permissions'] : [];
-    
+
     // Xóa toàn bộ quyền riêng cũ
     $stmt = $mysqli->prepare("DELETE FROM quyen_nhan_vien WHERE id_nhan_vien = ?");
     $stmt->bind_param("i", $id_nhan_vien);
     $stmt->execute();
     $stmt->close();
-    
+
     // Thêm quyền riêng mới
     if (!empty($permissions)) {
         $stmt = $mysqli->prepare("INSERT INTO quyen_nhan_vien (id_nhan_vien, id_quyen, trang_thai) VALUES (?, ?, 1)");
@@ -105,7 +105,7 @@ if ($action == 'save_permissions' && isset($_POST['id_nhan_vien'])) {
         }
         $stmt->close();
     }
-    
+
     echo json_encode(['success' => true, 'message' => 'Lưu quyền riêng cho nhân viên thành công']);
     exit;
 }
@@ -113,7 +113,7 @@ if ($action == 'save_permissions' && isset($_POST['id_nhan_vien'])) {
 // Lấy danh sách nhiệm vụ của nhân viên
 if ($action == 'tasks' && isset($_GET['id'])) {
     $id = intval($_GET['id']);
-    
+
     // Lấy thông tin nhân viên
     $stmt = $mysqli->prepare("SELECT * FROM nhan_vien WHERE id_nhan_vien = ?");
     $stmt->bind_param("i", $id);
@@ -121,12 +121,12 @@ if ($action == 'tasks' && isset($_GET['id'])) {
     $result = $stmt->get_result();
     $staff = $result->fetch_assoc();
     $stmt->close();
-    
+
     if (!$staff) {
         echo json_encode(['success' => false, 'message' => 'Không tìm thấy nhân viên']);
         exit;
     }
-    
+
     // Lấy nhiệm vụ của nhân viên
     $stmt = $mysqli->prepare("
         SELECT nv.*, 
@@ -141,7 +141,7 @@ if ($action == 'tasks' && isset($_GET['id'])) {
     $result = $stmt->get_result();
     $tasks = $result->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
-    
+
     // URL ảnh từ database đã là Cloudinary URL, không cần xử lý
     echo json_encode([
         'success' => true,
@@ -159,7 +159,7 @@ if ($action == 'assign_task' && isset($_POST['id_nhan_vien_duoc_gan'])) {
         echo json_encode(['success' => false, 'message' => 'Bạn không có quyền giao nhiệm vụ']);
         exit;
     }
-    
+
     $id_nhan_vien_duoc_gan = intval($_POST['id_nhan_vien_duoc_gan']);
     $id_nhan_vien_gan_phien = isset($_SESSION['id_nhan_vien']) ? intval($_SESSION['id_nhan_vien']) : null;
     $ten_nhiem_vu = trim($_POST['ten_nhiem_vu']);
@@ -168,25 +168,34 @@ if ($action == 'assign_task' && isset($_POST['id_nhan_vien_duoc_gan'])) {
     $ngay_bat_dau = $_POST['ngay_bat_dau'];
     $han_hoan_thanh = $_POST['han_hoan_thanh'];
     $ghi_chu = trim($_POST['ghi_chu'] ?? '');
-    
+
     if (empty($ten_nhiem_vu) || empty($ngay_bat_dau) || empty($han_hoan_thanh)) {
         echo json_encode(['success' => false, 'message' => 'Vui lòng điền đầy đủ thông tin']);
         exit;
     }
-    
+
     if (strtotime($han_hoan_thanh) < strtotime($ngay_bat_dau)) {
         echo json_encode(['success' => false, 'message' => 'Hạn hoàn thành phải sau ngày bắt đầu']);
         exit;
     }
-    
+
     $stmt = $mysqli->prepare("
         INSERT INTO nhiem_vu (ten_nhiem_vu, mo_ta_chi_tiet, id_nhan_vien_duoc_gan, id_nhan_vien_gan_phien, 
                              muc_do_uu_tien, ngay_bat_dau, han_hoan_thanh, ghi_chu, trang_thai)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Chưa bắt đầu')
     ");
-    $stmt->bind_param("ssiissss", $ten_nhiem_vu, $mo_ta_chi_tiet, $id_nhan_vien_duoc_gan, 
-                     $id_nhan_vien_gan_phien, $muc_do_uu_tien, $ngay_bat_dau, $han_hoan_thanh, $ghi_chu);
-    
+    $stmt->bind_param(
+        "ssiissss",
+        $ten_nhiem_vu,
+        $mo_ta_chi_tiet,
+        $id_nhan_vien_duoc_gan,
+        $id_nhan_vien_gan_phien,
+        $muc_do_uu_tien,
+        $ngay_bat_dau,
+        $han_hoan_thanh,
+        $ghi_chu
+    );
+
     if ($stmt->execute()) {
         // Ghi lịch sử
         $nhiem_vu_id = $stmt->insert_id;
@@ -199,7 +208,7 @@ if ($action == 'assign_task' && isset($_POST['id_nhan_vien_duoc_gan'])) {
         $historyStmt->bind_param("iissi", $id_nhan_vien_duoc_gan, $nhiem_vu_id, $loai_thay_doi, $noi_dung, $id_nhan_vien_gan_phien);
         $historyStmt->execute();
         $historyStmt->close();
-        
+
         echo json_encode(['success' => true, 'message' => 'Giao nhiệm vụ thành công']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $stmt->error]);
@@ -215,7 +224,7 @@ if ($action == 'view_task' && isset($_GET['id'])) {
         echo json_encode(['success' => false, 'message' => 'Bạn không có quyền xem chi tiết nhiệm vụ']);
         exit;
     }
-    
+
     $id = intval($_GET['id']);
     $stmt = $mysqli->prepare("
         SELECT nv.*, 
@@ -232,7 +241,7 @@ if ($action == 'view_task' && isset($_GET['id'])) {
     $result = $stmt->get_result();
     $task = $result->fetch_assoc();
     $stmt->close();
-    
+
     if ($task) {
         echo json_encode(['success' => true, 'task' => $task]);
     } else {
@@ -248,7 +257,7 @@ if ($action == 'update_task' && isset($_POST['id_nhiem_vu'])) {
         echo json_encode(['success' => false, 'message' => 'Bạn không có quyền sửa nhiệm vụ']);
         exit;
     }
-    
+
     $id_nhiem_vu = intval($_POST['id_nhiem_vu']);
     $id_nhan_vien_duoc_gan = intval($_POST['id_nhan_vien_duoc_gan']);
     $ten_nhiem_vu = trim($_POST['ten_nhiem_vu']);
@@ -259,17 +268,17 @@ if ($action == 'update_task' && isset($_POST['id_nhiem_vu'])) {
     $ghi_chu = trim($_POST['ghi_chu'] ?? '');
     $trang_thai = $_POST['trang_thai'] ?? 'Chưa bắt đầu';
     $tien_do_hoan_thanh = intval($_POST['tien_do_hoan_thanh'] ?? 0);
-    
+
     if (empty($ten_nhiem_vu) || empty($ngay_bat_dau) || empty($han_hoan_thanh)) {
         echo json_encode(['success' => false, 'message' => 'Vui lòng điền đầy đủ thông tin']);
         exit;
     }
-    
+
     if (strtotime($han_hoan_thanh) < strtotime($ngay_bat_dau)) {
         echo json_encode(['success' => false, 'message' => 'Hạn hoàn thành phải sau ngày bắt đầu']);
         exit;
     }
-    
+
     $stmt = $mysqli->prepare("
         UPDATE nhiem_vu 
         SET ten_nhiem_vu = ?, mo_ta_chi_tiet = ?, id_nhan_vien_duoc_gan = ?, 
@@ -277,10 +286,20 @@ if ($action == 'update_task' && isset($_POST['id_nhiem_vu'])) {
             ghi_chu = ?, trang_thai = ?, tien_do_hoan_thanh = ?
         WHERE id_nhiem_vu = ?
     ");
-    $stmt->bind_param("ssissssiii", $ten_nhiem_vu, $mo_ta_chi_tiet, $id_nhan_vien_duoc_gan, 
-                     $muc_do_uu_tien, $ngay_bat_dau, $han_hoan_thanh, $ghi_chu, 
-                     $trang_thai, $tien_do_hoan_thanh, $id_nhiem_vu);
-    
+    $stmt->bind_param(
+        "ssissssiii",
+        $ten_nhiem_vu,
+        $mo_ta_chi_tiet,
+        $id_nhan_vien_duoc_gan,
+        $muc_do_uu_tien,
+        $ngay_bat_dau,
+        $han_hoan_thanh,
+        $ghi_chu,
+        $trang_thai,
+        $tien_do_hoan_thanh,
+        $id_nhiem_vu
+    );
+
     if ($stmt->execute()) {
         // Ghi lịch sử
         $loai_thay_doi = 'Cập nhật nhiệm vụ';
@@ -293,7 +312,7 @@ if ($action == 'update_task' && isset($_POST['id_nhiem_vu'])) {
         $historyStmt->bind_param("iissi", $id_nhan_vien_duoc_gan, $id_nhiem_vu, $loai_thay_doi, $noi_dung, $id_nhan_vien_gan_phien);
         $historyStmt->execute();
         $historyStmt->close();
-        
+
         echo json_encode(['success' => true, 'message' => 'Cập nhật nhiệm vụ thành công']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $stmt->error]);
@@ -309,9 +328,9 @@ if ($action == 'delete_task' && isset($_POST['id_nhiem_vu'])) {
         echo json_encode(['success' => false, 'message' => 'Bạn không có quyền xóa nhiệm vụ']);
         exit;
     }
-    
+
     $id_nhiem_vu = intval($_POST['id_nhiem_vu']);
-    
+
     // Lấy thông tin nhiệm vụ trước khi xóa để ghi lịch sử
     $stmt = $mysqli->prepare("SELECT * FROM nhiem_vu WHERE id_nhiem_vu = ?");
     $stmt->bind_param("i", $id_nhiem_vu);
@@ -319,12 +338,12 @@ if ($action == 'delete_task' && isset($_POST['id_nhiem_vu'])) {
     $result = $stmt->get_result();
     $task = $result->fetch_assoc();
     $stmt->close();
-    
+
     if (!$task) {
         echo json_encode(['success' => false, 'message' => 'Không tìm thấy nhiệm vụ']);
         exit;
     }
-    
+
     // Use soft delete if deleted column exists, otherwise hard delete
     $checkDeleted = $mysqli->query("SHOW COLUMNS FROM nhiem_vu LIKE 'deleted'");
     if ($checkDeleted && $checkDeleted->num_rows > 0) {
@@ -335,7 +354,7 @@ if ($action == 'delete_task' && isset($_POST['id_nhiem_vu'])) {
         $stmt = $mysqli->prepare("DELETE FROM nhiem_vu WHERE id_nhiem_vu = ?");
     }
     $stmt->bind_param("i", $id_nhiem_vu);
-    
+
     if ($stmt->execute()) {
         // Ghi lịch sử (chỉ nếu bảng tồn tại)
         try {
@@ -355,7 +374,7 @@ if ($action == 'delete_task' && isset($_POST['id_nhiem_vu'])) {
             // Ignore history logging errors
             error_log("History logging error: " . $e->getMessage());
         }
-        
+
         echo json_encode(['success' => true, 'message' => 'Xóa nhiệm vụ thành công']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Lỗi: ' . $stmt->error]);
@@ -365,4 +384,3 @@ if ($action == 'delete_task' && isset($_POST['id_nhiem_vu'])) {
 }
 
 echo json_encode(['success' => false, 'message' => 'Action không hợp lệ']);
-

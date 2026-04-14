@@ -15,12 +15,16 @@ class InvoiceModel extends BaseModel {
     public function getInvoicesWithDetails($where = '', $orderBy = 'invoice_id DESC', $limit = '') {
         $query = "
             SELECT i.*,
-                   c.full_name, c.phone, c.email,
-                   b.booking_id, b.check_in_date, b.check_out_date,
+                   COALESCE(c.full_name, w.full_name) as full_name,
+                   COALESCE(c.phone, w.phone) as phone,
+                   COALESCE(c.email, w.email) as email,
+                   CASE WHEN (i.customer_id IS NULL OR i.customer_id = 0) OR b.walk_in_guest_id IS NOT NULL THEN 'Walk-in' ELSE 'Registered' END as guest_type,
+                   b.booking_id, b.check_in_date, b.check_out_date, b.walk_in_guest_id,
                    r.room_number, rt.room_type_name
             FROM {$this->table} i
-            LEFT JOIN customer c ON i.customer_id = c.customer_id
+            LEFT JOIN customer c ON i.customer_id = c.customer_id AND i.customer_id IS NOT NULL AND i.customer_id > 0
             LEFT JOIN booking b ON i.booking_id = b.booking_id
+            LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
             LEFT JOIN room r ON b.room_id = r.room_id
             LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
             WHERE i.deleted IS NULL
@@ -56,8 +60,14 @@ class InvoiceModel extends BaseModel {
         // Get booking info if exists
         if ($invoice['booking_id']) {
             $booking_stmt = $this->mysqli->prepare("
-                SELECT b.*, r.room_number, rt.room_type_name
+                SELECT b.*, 
+                       COALESCE(c.full_name, w.full_name) as full_name,
+                       COALESCE(c.phone, w.phone) as phone,
+                       COALESCE(c.email, w.email) as email,
+                       r.room_number, rt.room_type_name
                 FROM booking b
+                LEFT JOIN customer c ON b.customer_id = c.customer_id
+                LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
                 LEFT JOIN room r ON b.room_id = r.room_id
                 LEFT JOIN room_type rt ON r.room_type_id = rt.room_type_id
                 WHERE b.booking_id = ?

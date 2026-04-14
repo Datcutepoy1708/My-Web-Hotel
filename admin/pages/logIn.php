@@ -85,11 +85,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Hiện tại hệ thống KHÔNG sử dụng bảng login_tokens, nên chỉ giữ session
                         // và không lưu token vào cookie/DB để tránh lỗi khi thiếu bảng.
                         
-                        // Redirect
-                        $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : '/My-Web-Hotel/admin/index.php';
-                        $parsed = parse_url($redirect);
-                        if (isset($parsed['host']) && $parsed['host'] !== $_SERVER['SERVER_NAME']) {
-                            $redirect = '/My-Web-Hotel/admin/index.php';
+                        // Redirect - Nhân viên vào my-tasks, Quản lý vào home
+                        $chuc_vu = $nhanVien['chuc_vu'];
+                        $isManager = (
+                            stripos($chuc_vu, 'Quản lý') !== false ||
+                            stripos($chuc_vu, 'Manager') !== false ||
+                            stripos($chuc_vu, 'Admin') !== false ||
+                            stripos($chuc_vu, 'Giám đốc') !== false ||
+                            stripos($chuc_vu, 'Director') !== false
+                        );
+                        
+                        if ($isManager) {
+                            // Quản lý: redirect đến trang được chỉ định hoặc home
+                            $redirect = isset($_GET['redirect']) ? $_GET['redirect'] : '/My-Web-Hotel/admin/index.php';
+                            $parsed = parse_url($redirect);
+                            if (isset($parsed['host']) && $parsed['host'] !== $_SERVER['SERVER_NAME']) {
+                                $redirect = '/My-Web-Hotel/admin/index.php';
+                            }
+                        } else {
+                            // Nhân viên: luôn redirect đến my-tasks
+                            $redirect = '/My-Web-Hotel/admin/index.php?page=my-tasks';
                         }
                         
                         header("Location: $redirect");
@@ -120,6 +135,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Đăng nhập quản lý khách sạn</title>
+    <!-- favicon -->
+    <link rel="icon" href="/My-Web-Hotel/client/assets/images/favicon.png" type="image/x-icon" />
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <style>
@@ -187,24 +204,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         transform: translateY(-2px);
     }
 
-    .login-footer {
-        text-align: center;
-        margin-top: 1rem;
-        font-size: 0.9rem;
-        color: #ccc;
-    }
-
-    .login-footer a {
-        color: var(--primary);
-        text-decoration: none;
-    }
-
-    .login-footer a:hover {
-        text-decoration: underline;
-    }
-
     .alert {
         margin-bottom: 1rem;
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .toggle-password {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #ddd;
+        font-size: 1.1rem;
+        transition: color 0.3s;
+        z-index: 10;
+    }
+
+    .toggle-password:hover {
+        color: var(--primary);
+    }
+
+    .password-wrapper .form-control {
+        padding-right: 40px;
     }
 
     @media (max-width: 576px) {
@@ -219,46 +244,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="login-card">
         <h2>Đăng nhập quản lý khách sạn</h2>
-        
+
         <?php if ($error): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo htmlspecialchars($error); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?php echo htmlspecialchars($error); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         <?php endif; ?>
-        
+
         <form method="POST" action="">
             <div class="mb-3">
                 <label for="email" class="form-label">Email</label>
-                <input type="email" class="form-control" id="email" name="email" 
-                    placeholder="Nhập email" value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required />
+                <input type="email" class="form-control" id="email" name="email" placeholder="Nhập email"
+                    value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>" required />
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">Mật khẩu</label>
-                <input type="password" class="form-control" id="password" name="password" 
-                    placeholder="Nhập mật khẩu" required />
+                <div class="password-wrapper">
+                    <input type="password" class="form-control" id="password" name="password"
+                        placeholder="Nhập mật khẩu" required />
+                    <span class="toggle-password" onclick="togglePassword()">
+                        <i class="fa-solid fa-eye" id="eyeIcon"></i>
+                    </span>
+                </div>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="remember" name="remember" />
                     <label class="form-check-label" for="remember">Ghi nhớ đăng nhập</label>
                 </div>
-                <a href="/My-Web-Hotel/admin/pages/forgotPass.php" class="text-decoration-none"
-                    style="color: var(--primary)">
-                    Quên mật khẩu?
-                </a>
             </div>
             <button type="submit" class="btn btn-primary w-100 py-2">Đăng nhập</button>
         </form>
-
-        <div class="login-footer">
-            <p>Chưa có tài khoản?
-                <a href="/My-Web-Hotel/admin/pages/signUp.php">Đăng ký ngay</a>
-            </p>
-        </div>
     </div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eyeIcon');
+
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            eyeIcon.classList.remove('fa-eye');
+            eyeIcon.classList.add('fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            eyeIcon.classList.remove('fa-eye-slash');
+            eyeIcon.classList.add('fa-eye');
+        }
+    }
+    </script>
 </body>
 
 </html>

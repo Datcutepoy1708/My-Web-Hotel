@@ -18,12 +18,15 @@ if ($invoice_id <= 0) {
 // Lấy thông tin hóa đơn
 $stmt = $mysqli->prepare("
     SELECT i.*, 
-           c.full_name, c.phone, c.email,
-           b.booking_id, b.check_in_date, b.check_out_date,
+           COALESCE(c.full_name, w.full_name) as full_name,
+           COALESCE(c.phone, w.phone) as phone,
+           COALESCE(c.email, w.email) as email,
+           b.booking_id, b.check_in_date, b.check_out_date, b.walk_in_guest_id,
            nv.ho_ten as staff_name, nv.ma_nhan_vien as staff_code
     FROM invoice i
-    LEFT JOIN customer c ON i.customer_id = c.customer_id
+    LEFT JOIN customer c ON i.customer_id = c.customer_id AND i.customer_id IS NOT NULL AND i.customer_id > 0
     LEFT JOIN booking b ON i.booking_id = b.booking_id
+    LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
     LEFT JOIN nhan_vien nv ON nv.id_nhan_vien = ?
     WHERE i.invoice_id = ? AND i.deleted IS NULL
     LIMIT 1
@@ -38,6 +41,30 @@ $stmt->close();
 if (!$invoice) {
     http_response_code(404);
     die('Invoice not found');
+}
+
+// Nếu không có thông tin khách hàng từ booking và invoice không có customer_id,
+// thử lấy từ booking_service (cho hóa đơn chỉ có dịch vụ)
+if (empty($invoice['full_name']) && (empty($invoice['customer_id']) || $invoice['customer_id'] == 0)) {
+    $walkInStmt = $mysqli->prepare("
+        SELECT w.full_name, w.phone, w.email
+        FROM invoice_service isv
+        INNER JOIN booking_service bs ON isv.booking_service_id = bs.booking_service_id
+        LEFT JOIN walk_in_guest w ON bs.walk_in_guest_id = w.id
+        WHERE isv.invoice_id = ? AND bs.walk_in_guest_id IS NOT NULL
+        LIMIT 1
+    ");
+    $walkInStmt->bind_param("i", $invoice_id);
+    $walkInStmt->execute();
+    $walkInResult = $walkInStmt->get_result();
+    $walkInGuest = $walkInResult->fetch_assoc();
+    $walkInStmt->close();
+    
+    if ($walkInGuest) {
+        $invoice['full_name'] = $walkInGuest['full_name'];
+        $invoice['phone'] = $walkInGuest['phone'];
+        $invoice['email'] = $walkInGuest['email'];
+    }
 }
 
 // Lấy danh sách dịch vụ

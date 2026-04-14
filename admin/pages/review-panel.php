@@ -390,23 +390,34 @@ if ($sort_order != 'DESC') $baseUrl .= "&sort_order=" . urlencode($sort_order);
                 $images = [];
                 $revId = (int)$review['review_id'];
                 $imgStmt = $mysqli->prepare("SELECT image_url FROM review_images WHERE review_id = ? AND deleted IS NULL ORDER BY display_order ASC, id ASC");
-                $imgStmt->bind_param("i", $revId);
-                $imgStmt->execute();
-                $imgRes = $imgStmt->get_result();
-                while ($rowImg = $imgRes->fetch_assoc()) {
-                    if (!empty($rowImg['image_url'])) {
-                        $images[] = $rowImg['image_url'];
+                if ($imgStmt) {
+                    $imgStmt->bind_param("i", $revId);
+                    if ($imgStmt->execute()) {
+                        $imgRes = $imgStmt->get_result();
+                        while ($rowImg = $imgRes->fetch_assoc()) {
+                            if (!empty($rowImg['image_url'])) {
+                                $images[] = $rowImg['image_url'];
+                            }
+                        }
                     }
+                    $imgStmt->close();
                 }
-                $imgStmt->close();
                 if (!empty($images)):
                 ?>
-                    <div class="review-images mt-2 d-flex flex-wrap gap-2">
-                        <?php foreach ($images as $imgUrl): ?>
-                            <img src="<?php echo h($imgUrl); ?>"
-                                 alt="Review Image"
-                                 style="width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd;">
-                        <?php endforeach; ?>
+                    <div class="review-images mt-3">
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php foreach ($images as $imgUrl): ?>
+                                <a href="<?php echo h($imgUrl); ?>" target="_blank" class="review-image-thumbnail">
+                                    <img src="<?php echo h($imgUrl); ?>"
+                                         alt="Review Image"
+                                         class="img-thumbnail"
+                                         style="width: 100px; height: 100px; object-fit: cover; border-radius: 6px; border: 2px solid #ddd; cursor: pointer; transition: transform 0.2s;"
+                                         onmouseover="this.style.transform='scale(1.1)'"
+                                         onmouseout="this.style.transform='scale(1)'"
+                                         onclick="event.preventDefault(); openImageModal('<?php echo h($imgUrl); ?>'); return false;">
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 <?php endif; ?>
                 <div class="review-actions">
@@ -425,12 +436,9 @@ if ($sort_order != 'DESC') $baseUrl .= "&sort_order=" . urlencode($sort_order);
                         <?php endif; ?>
                     <?php endif; ?>
                     <?php if ($canDeleteReview): ?>
-                        <form method="POST" style="display: inline-block;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đánh giá này?');">
-                            <input type="hidden" name="review_id" value="<?php echo $review['review_id']; ?>">
-                            <button type="submit" name="delete_review" class="btn-sm-custom delete">
-                                <i class="fas fa-trash"></i> Xóa
-                            </button>
-                        </form>
+                        <button type="button" class="btn-sm-custom delete" onclick="deleteReview(<?php echo $review['review_id']; ?>)">
+                            <i class="fas fa-trash"></i> Xóa
+                        </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -459,6 +467,39 @@ if ($sort_order != 'DESC') $baseUrl .= "&sort_order=" . urlencode($sort_order);
                             </p>
                             <p><strong>Nội dung:</strong></p>
                             <p><?php echo nl2br(h($review['comment'])); ?></p>
+                            <?php
+                            // Lấy ảnh cho modal
+                            $modalImages = [];
+                            $modalImgStmt = $mysqli->prepare("SELECT image_url FROM review_images WHERE review_id = ? AND deleted IS NULL ORDER BY display_order ASC, id ASC");
+                            if ($modalImgStmt) {
+                                $modalImgStmt->bind_param("i", $review['review_id']);
+                                if ($modalImgStmt->execute()) {
+                                    $modalImgRes = $modalImgStmt->get_result();
+                                    while ($modalRow = $modalImgRes->fetch_assoc()) {
+                                        if (!empty($modalRow['image_url'])) {
+                                            $modalImages[] = $modalRow['image_url'];
+                                        }
+                                    }
+                                }
+                                $modalImgStmt->close();
+                            }
+                            if (!empty($modalImages)):
+                            ?>
+                            <p><strong>Ảnh đính kèm:</strong></p>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <?php foreach ($modalImages as $modalImgUrl): ?>
+                                    <a href="<?php echo h($modalImgUrl); ?>" target="_blank">
+                                        <img src="<?php echo h($modalImgUrl); ?>"
+                                             alt="Review Image"
+                                             class="img-thumbnail"
+                                             style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd; cursor: pointer; transition: transform 0.2s;"
+                                             onmouseover="this.style.transform='scale(1.1)'"
+                                             onmouseout="this.style.transform='scale(1)'"
+                                             onclick="event.preventDefault(); openImageModal('<?php echo h($modalImgUrl); ?>'); return false;">
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                            <?php endif; ?>
                             <p><strong>Trạng thái:</strong> <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span></p>
                             <p><strong>Ngày tạo:</strong> <?php echo formatDateTime($review['created_at']); ?></p>
                         </div>
@@ -480,12 +521,9 @@ if ($sort_order != 'DESC') $baseUrl .= "&sort_order=" . urlencode($sort_order);
                             </form>
                             <?php endif; ?>
                             <?php if ($canDeleteReview): ?>
-                            <form method="POST" style="display: inline-block;" onsubmit="return confirm('Bạn có chắc chắn muốn xóa đánh giá này? Hành động này không thể hoàn tác.');">
-                                <input type="hidden" name="review_id" value="<?php echo $review['review_id']; ?>">
-                                <button type="submit" name="delete_review" class="btn btn-danger">
-                                    <i class="fas fa-trash"></i> Xóa
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-danger" onclick="deleteReview(<?php echo $review['review_id']; ?>); bootstrap.Modal.getInstance(document.getElementById('viewReviewModal<?php echo $review['review_id']; ?>')).hide();">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
                             <?php endif; ?>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
                         </div>
@@ -498,3 +536,70 @@ if ($sort_order != 'DESC') $baseUrl .= "&sort_order=" . urlencode($sort_order);
     <!-- Pagination -->
     <?php echo getPagination($totalReview, $perPage, $pageNum, $baseUrl); ?>
 </div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Xem ảnh</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <img id="modalImage" src="" alt="Review Image" class="img-fluid" style="max-height: 80vh; width: auto;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Xác nhận xóa đánh giá -->
+<div class="modal fade" id="confirmDeleteReviewModal" tabindex="-1" aria-labelledby="confirmDeleteReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteReviewModalLabel">Xác nhận xóa</h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mt-3 mb-0">Bạn có chắc muốn xóa đánh giá này?<br>Hành động này không thể hoàn tác.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">Hủy</button>
+                <button type="button" class="btn btn-danger" id="btnConfirmDeleteReview" style="height: 38px; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-trash-alt me-2"></i>Xác nhận xóa
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openImageModal(imageUrl) {
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    document.getElementById('modalImage').src = imageUrl;
+    modal.show();
+}
+
+let reviewIdToDelete = null;
+
+function deleteReview(id) {
+    reviewIdToDelete = id;
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteReviewModal'));
+    modal.show();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const btnConfirmDelete = document.getElementById('btnConfirmDeleteReview');
+    if (btnConfirmDelete) {
+        btnConfirmDelete.addEventListener('click', function() {
+            if (reviewIdToDelete) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.innerHTML = '<input type="hidden" name="review_id" value="' + reviewIdToDelete + '">' +
+                    '<input type="hidden" name="delete_review" value="1">';
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+});
+</script>

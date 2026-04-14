@@ -92,29 +92,37 @@ document.querySelectorAll(".view-btn").forEach((btn) => {
       // Chuyển hướng đến trang chi tiết phòng
       window.location.href = href;
     } else {
-      console.error("Không tìm thấy link chi tiết phòng");
     }
   });
 });
 
-// Lấy ngày hôm nay
-const today = new Date().toISOString().split("T")[0];
+// Lấy ngày giờ hiện tại format YYYY-MM-DDTHH:mm theo giờ địa phương
+const now = new Date();
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, '0');
+const day = String(now.getDate()).padStart(2, '0');
+const hours = String(now.getHours()).padStart(2, '0');
+const minutes = String(now.getMinutes()).padStart(2, '0');
+const today = `${year}-${month}-${day}T${hours}:${minutes}`;
+
 const checkin = document.getElementById("checkin");
 const checkout = document.getElementById("checkout");
 
 // Không cho chọn ngày quá khứ
-checkin.min = today;
-checkout.min = today;
+if (checkin) checkin.min = today;
+if (checkout) checkout.min = today;
 
 // Khi người dùng chọn ngày nhận phòng
-checkin.addEventListener("change", function () {
-  const checkinDate = checkin.value;
+if (checkin) {
+  checkin.addEventListener("change", function () {
+    const checkinDate = checkin.value;
 
-  // Gán min cho checkout bằng checkin
-  checkout.min = checkinDate;
+    // Gán min cho checkout bằng checkin
+    if (checkout) checkout.min = checkinDate;
 
-  // Nếu ngày checkout hiện tại < checkin → tự động cập nhật
-  if (checkout.value && checkout.value < checkinDate) {
-    checkout.value = checkinDate;
-  }
-});
+    // Nếu ngày checkout hiện tại < checkin → tự động cập nhật
+    if (checkout && checkout.value && checkout.value < checkinDate) {
+      checkout.value = checkinDate;
+    }
+  });
+}

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $canViewSection = function ($sectionKey) {
     return function_exists('canAccessSection') ? canAccessSection($sectionKey) : true;
 };
@@ -31,9 +31,23 @@ $canAccessCustomers = $canViewSection('customers-manager');
                 <small><?php echo isset($_SESSION['chuc_vu']) ? htmlspecialchars($_SESSION['chuc_vu']) : ''; ?></small>
             </div>
         </div>
-        <?php $current_page = isset($page) ? $page : (isset($_GET['page']) ? $_GET['page'] : 'home'); ?>
+        <?php 
+            $current_page = isset($page) ? $page : (isset($_GET['page']) ? $_GET['page'] : 'home');
+            // Kiểm tra xem có phải quản lý không
+            $chuc_vu = $_SESSION['chuc_vu'] ?? '';
+            $isManager = false;
+            if (!empty($chuc_vu)) {
+                $isManager = (
+                    stripos($chuc_vu, 'Quản lý') !== false ||
+                    stripos($chuc_vu, 'Manager') !== false ||
+                    stripos($chuc_vu, 'Admin') !== false ||
+                    stripos($chuc_vu, 'Giám đốc') !== false ||
+                    stripos($chuc_vu, 'Director') !== false
+                );
+            }
+        ?>
         <div class="menu">
-            <?php if ($canViewSection('home')): ?>
+            <?php if ($isManager && $canViewSection('home')): ?>
             <div class="menu-item <?php echo $current_page === 'home' ? 'active' : ''; ?>" data-page="home">
                 <i class="fas fa-home"></i><span>Tổng Quan</span>
             </div>
@@ -95,6 +109,11 @@ $canAccessCustomers = $canViewSection('customers-manager');
             <?php if ($canViewSection('my-tasks')): ?>
             <div class="menu-item <?php echo $current_page === 'my-tasks' ? 'active' : ''; ?>" data-page="my-tasks">
                 <i class="fas fa-list-check"></i><span>Nhiệm Vụ Của Tôi</span>
+            </div>
+            <?php endif; ?>
+            <?php if ($isManager || $canViewSection('chatbot-manager')): ?>
+            <div class="menu-item <?php echo $current_page === 'chatbot-manager' ? 'active' : ''; ?>" data-page="chatbot-manager">
+                <i class="fas fa-robot"></i><span>Chat Tự Động</span>
             </div>
             <?php endif; ?>
         </div>

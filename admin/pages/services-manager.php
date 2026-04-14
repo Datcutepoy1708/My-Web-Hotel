@@ -262,10 +262,10 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
     </div>
 
     <?php if ($message): ?>
-        <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
-            <?php echo h($message); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
+    <div class="alert alert-<?php echo $messageType; ?> alert-dismissible fade show" role="alert">
+        <?php echo h($message); ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
     <?php endif; ?>
 
     <!-- Filter Section -->
@@ -293,10 +293,10 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                     <select class="form-select" name="service_type">
                         <option value="">Tất cả loại</option>
                         <?php foreach ($serviceTypes as $st): ?>
-                            <option value="<?php echo h($st['service_type']); ?>"
-                                <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
-                                <?php echo h($st['service_type']); ?>
-                            </option>
+                        <option value="<?php echo h($st['service_type']); ?>"
+                            <?php echo $type_filter == $st['service_type'] ? 'selected' : ''; ?>>
+                            <?php echo h($st['service_type']); ?>
+                        </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -323,43 +323,148 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
             </thead>
             <tbody>
                 <?php if (empty($services)): ?>
-                    <tr>
-                        <td colspan="7" class="text-center">Không có dữ liệu</td>
-                    </tr>
+                <tr>
+                    <td colspan="7" class="text-center">Không có dữ liệu</td>
+                </tr>
                 <?php else: ?>
-                    <?php foreach ($services as $service): ?>
-                        <tr>
-                            <td><?php echo $service['service_id']; ?></td>
-                            <td><?php echo h($service['service_name']); ?></td>
-                            <td>
-                                <span class="badge bg-info"><?php echo h($service['service_type']); ?></span>
-                            </td>
-                            <td><?php echo h($service['unit'] ?: '-'); ?></td>
-                            <td><?php echo formatCurrency($service['price']); ?></td>
-                            <td>
-                                <span class="badge <?php echo $service['status'] == 'Active' ? 'bg-success' : 'bg-danger'; ?>">
-                                    <?php echo h($service['status']); ?>
-                                </span>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-warning"
-                                    onclick="editService(<?php echo $service['service_id']; ?>)" title="Sửa">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger"
-                                    onclick="deleteService(<?php echo $service['service_id']; ?>)" title="Xóa">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                <?php foreach ($services as $service): ?>
+                <tr>
+                    <td><?php echo $service['service_id']; ?></td>
+                    <td><?php echo h($service['service_name']); ?></td>
+                    <td>
+                        <span class="badge bg-info"><?php echo h($service['service_type']); ?></span>
+                    </td>
+                    <td><?php echo h($service['unit'] ?: '-'); ?></td>
+                    <td><?php echo formatCurrency($service['price']); ?></td>
+                    <td>
+                        <span class="badge <?php echo $service['status'] == 'Active' ? 'bg-success' : 'bg-danger'; ?>">
+                            <?php echo h($service['status']); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                            data-bs-target="#viewServiceModal<?php echo $service['service_id']; ?>"
+                            title="Xem chi tiết">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning"
+                            onclick="editService(<?php echo $service['service_id']; ?>)" title="Sửa">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                            data-bs-target="#confirmDeleteServiceModal"
+                            data-service-id="<?php echo $service['service_id']; ?>" title="Xóa">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
+    <!-- Modal Xem Chi Tiết Dịch Vụ -->
+    <?php if (!empty($services)): ?>
+    <?php foreach ($services as $service): ?>
+    <?php
+        // Xác định trạng thái
+        $statusClass = $service['status'] == 'Active' ? 'bg-success' : 'bg-danger';
+        $statusText = $service['status'] == 'Active' ? 'Đang hoạt động' : 'Tạm dừng';
+        ?>
+    <div class="modal fade" id="viewServiceModal<?php echo $service['service_id']; ?>" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chi Tiết Dịch Vụ</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <!-- Cột Ảnh -->
+                        <div class="col-md-6">
+                            <?php if (!empty($service['image'])): ?>
+                            <div class="text-center">
+                                <img src="<?php echo h($service['image']); ?>"
+                                    alt="<?php echo h($service['service_name']); ?>" class="img-fluid rounded"
+                                    style="height: 250px; width: 100%; object-fit: cover; border: 2px solid #ddd;">
+                            </div>
+                            <?php else: ?>
+                            <div class="d-flex align-items-center justify-content-center bg-light rounded"
+                                style="width: 100%; height: 300px;">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-image fa-3x mb-2"></i>
+                                    <p class="mb-0">Chưa có ảnh</p>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        </div>
 
+                        <!-- Cột Thông Tin -->
+                        <div class="col-md-6">
+                            <p><strong>Mã dịch vụ:</strong> #<?php echo $service['service_id']; ?></p>
+                            <p><strong>Tên dịch vụ:</strong> <?php echo h($service['service_name']); ?></p>
+                            <p><strong>Loại dịch vụ:</strong>
+                                <span class="badge bg-info"><?php echo h($service['service_type']); ?></span>
+                            </p>
+                            <p><strong>Giá:</strong>
+                                <span class="fw-bold"
+                                    style="color: #b69854;"><?php echo formatCurrency($service['price']); ?></span>
+                            </p>
+                            <p><strong>Đơn vị:</strong> <?php echo h($service['unit'] ?: '-'); ?></p>
+                            <p><strong>Trạng thái:</strong>
+                                <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <?php if (!empty($service['description'])): ?>
+                        <p><strong>Mô tả:</strong></p>
+                        <div class="p-3 desc">
+                            <?php echo nl2br(h($service['description'])); ?>
+                        </div>
+                        <?php else: ?>
+                        <p><strong>Mô tả:</strong> <span class="text-muted">Không có mô tả</span></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <?php if ($canEditService): ?>
+                    <button type="button" class="btn btn-primary"
+                        onclick="editServiceFromView(<?php echo $service['service_id']; ?>)">
+                        <i class="fas fa-edit"></i> Chỉnh Sửa
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endforeach; ?>
+    <?php endif; ?>
     <!-- Pagination -->
     <?php echo getPagination($total, $perPage, $pageNum, $baseUrl); ?>
+</div>
+
+<!-- Modal Xác nhận xóa dịch vụ -->
+<div class="modal fade" id="confirmDeleteServiceModal" tabindex="-1" aria-labelledby="confirmDeleteServiceModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteServiceModalLabel">
+                    Xác nhận xóa
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mt-3 mb-0">Bạn có chắc muốn xóa dịch vụ này?<br>Hành động này không thể hoàn tác.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteServiceButton">
+                    <i class="fas fa-trash-alt me-2"></i>Xóa dịch vụ
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Modal Thêm/Sửa Dịch Vụ -->
@@ -368,12 +473,11 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"><?php echo $editService ? 'Sửa' : 'Thêm'; ?> Dịch Vụ</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" enctype="multipart/form-data">
                 <div class="modal-body">
                     <?php if ($editService): ?>
-                        <input type="hidden" name="service_id" value="<?php echo $editService['service_id']; ?>">
+                    <input type="hidden" name="service_id" value="<?php echo $editService['service_id']; ?>">
                     <?php endif; ?>
 
                     <div class="row">
@@ -387,10 +491,10 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                             <select class="form-select" name="service_type">
                                 <option value="" disabled>Tất cả loại</option>
                                 <?php foreach ($serviceTypes as $st): ?>
-                                    <option value="<?php echo h($st['service_type']); ?>"
-                                        <?php echo (isset($editService) && $editService['service_type'] == $st['service_type']) ? 'selected' : ''; ?>>
-                                        <?php echo h($st['service_type']); ?>
-                                    </option>
+                                <option value="<?php echo h($st['service_type']); ?>"
+                                    <?php echo (isset($editService) && $editService['service_type'] == $st['service_type']) ? 'selected' : ''; ?>>
+                                    <?php echo h($st['service_type']); ?>
+                                </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -421,22 +525,20 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
                             <p class="text-muted mb-0">Click để chọn ảnh</p>
                             <small class="text-muted">hoặc kéo thả ảnh vào đây</small>
                         </div>
-                        <input type="file" id="serviceImage" name="image" accept="image/*"
-                            style="display: none" onchange="previewImage(this, 'servicePreview')" />
+                        <input type="file" id="serviceImage" name="image" accept="image/*" style="display: none"
+                            onchange="previewImage(this, 'servicePreview')" />
                         <input type="hidden" name="remove_image" id="removeServiceImage" value="0">
                         <div id="serviceImageWrapper" class="image-preview-item position-relative d-inline-block mt-3">
                             <?php
                                 $hasImage = $editService && !empty($editService['image']);
                                 $serviceImageUrl = $hasImage ? $editService['image'] : '';
                             ?>
-                            <img id="servicePreview" class="image-preview"
-                                src="<?php echo h($serviceImageUrl); ?>"
+                            <img id="servicePreview" class="image-preview" src="<?php echo h($serviceImageUrl); ?>"
                                 style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #ddd; <?php echo $hasImage ? 'display: block;' : 'display: none;'; ?>" />
-                            <button type="button"
-                                    id="serviceImageRemoveBtn"
-                                    class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
-                                    style="<?php echo $hasImage ? '' : 'display: none;'; ?>"
-                                    onclick="clearServiceImage(this)">
+                            <button type="button" id="serviceImageRemoveBtn"
+                                class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
+                                style="<?php echo $hasImage ? '' : 'display: none;'; ?>"
+                                onclick="clearServiceImage(this)">
                                 ×
                             </button>
                         </div>
@@ -469,229 +571,352 @@ if ($type_filter) $baseUrl .= "&type=" . urlencode($type_filter);
 </div>
 
 <script>
-    // Preview image function
-    function previewImage(input, previewId) {
-        const preview = document.getElementById(previewId);
-        if (!preview) return;
-        
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                preview.src = e.target.result;
-                preview.style.display = "block";
+// Preview image function
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
 
-                // Khi chọn ảnh mới thì không xóa ảnh nữa
-                const removeInput = document.getElementById('removeServiceImage');
-                if (removeInput) {
-                    removeInput.value = '0';
-                }
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
 
-                // Hiển thị lại nút X nếu có
-                const removeBtn = document.getElementById('serviceImageRemoveBtn');
-                if (removeBtn) {
-                    removeBtn.style.display = 'flex';
-                }
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-    }
+            // Khi chọn ảnh mới thì không xóa ảnh nữa
+            const removeInput = document.getElementById('removeServiceImage');
+            if (removeInput) {
+                removeInput.value = '0';
+            }
 
-    // Xóa ảnh dịch vụ hiện tại (set cờ remove_image = 1)
-    function clearServiceImage(button) {
-        const preview = document.getElementById('servicePreview');
-        const removeInput = document.getElementById('removeServiceImage');
-        if (preview) {
-            preview.src = '';
-            preview.style.display = 'none';
-        }
-        if (removeInput) {
-            removeInput.value = '1';
-        }
-        if (button && button.parentElement) {
-            button.parentElement.remove(); // Xóa luôn cả khung image-preview-item giống loại phòng
-        }
-    }
-    
-    // ==================== HELPER FUNCTIONS ====================
-
-    // Hàm xóa query string edit - PHẢI ở ngoài
-    function clearEditQueryString() {
-        const url = new URL(window.location);
-        url.searchParams.delete('action');
-        url.searchParams.delete('id');
-        window.history.replaceState({}, '', url.toString());
-    }
-
-    // Hàm force cleanup backdrop
-    function forceCleanupBackdrop() {
-        const openModals = document.querySelectorAll('.modal.show');
-        if (openModals.length === 0) {
-            document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-            document.body.classList.remove('modal-open');
-            document.body.style.overflow = '';
-            document.body.style.paddingRight = '';
-        }
-    }
-
-    // Hàm reset modal về trạng thái "Thêm mới"
-    function resetModalToAddMode(modalElement, form) {
-        if (!modalElement || !form) return;
-
-        const modalId = modalElement.id;
-        const modalTitle = modalElement.querySelector('.modal-title');
-        const submitBtn = form.querySelector('button[type="submit"]');
-
-        // Config cho từng modal
-        const modalConfig = {
-            'addServiceModal': {
-                title: 'Thêm dịch vụ',
-                buttonName: 'add_service',
-                buttonHTML: '<i class="fas fa-save"></i> Thêm dịch vụ'
+            // Hiển thị lại nút X nếu có
+            const removeBtn = document.getElementById('serviceImageRemoveBtn');
+            if (removeBtn) {
+                removeBtn.style.display = 'flex';
             }
         };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 
-        const config = modalConfig[modalId];
-        if (config) {
-            if (modalTitle) modalTitle.textContent = config.title;
-            if (submitBtn) {
-                submitBtn.name = config.buttonName;
-                submitBtn.innerHTML = config.buttonHTML;
-            }
+// Xóa ảnh dịch vụ hiện tại (set cờ remove_image = 1)
+function clearServiceImage(button) {
+    const preview = document.getElementById('servicePreview');
+    const removeInput = document.getElementById('removeServiceImage');
+    if (preview) {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+    if (removeInput) {
+        removeInput.value = '1';
+    }
+    if (button && button.parentElement) {
+        button.parentElement.remove(); // Xóa luôn cả khung image-preview-item giống loại phòng
+    }
+}
+
+// ==================== HELPER FUNCTIONS ====================
+
+// Hàm xóa query string edit - PHẢI ở ngoài
+function clearEditQueryString() {
+    const url = new URL(window.location);
+    url.searchParams.delete('action');
+    url.searchParams.delete('id');
+    window.history.replaceState({}, '', url.toString());
+}
+
+// Hàm force cleanup backdrop
+function forceCleanupBackdrop() {
+    const openModals = document.querySelectorAll('.modal.show');
+    if (openModals.length === 0) {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }
+}
+
+// Hàm reset modal về trạng thái "Thêm mới"
+function resetModalToAddMode(modalElement, form) {
+    if (!modalElement || !form) return;
+
+    const modalId = modalElement.id;
+    const modalTitle = modalElement.querySelector('.modal-title');
+    const submitBtn = form.querySelector('button[type="submit"]');
+
+    // Config cho từng modal
+    const modalConfig = {
+        'addServiceModal': {
+            title: 'Thêm dịch vụ',
+            buttonName: 'add_service',
+            buttonHTML: '<i class="fas fa-save"></i> Thêm dịch vụ'
+        }
+    };
+
+    const config = modalConfig[modalId];
+    if (config) {
+        if (modalTitle) modalTitle.textContent = config.title;
+        if (submitBtn) {
+            submitBtn.name = config.buttonName;
+            submitBtn.innerHTML = config.buttonHTML;
         }
     }
+}
 
-    // Hàm reset form tổng quát
-    function resetFormFields(form) {
-        if (!form) return;
-        form.reset();
+// Hàm reset form tổng quát
+function resetFormFields(form) {
+    if (!form) return;
+    form.reset();
 
-        // Xóa input hidden (trừ page và panel)
-        form.querySelectorAll('input[type="hidden"]').forEach(input => {
-            if (input.name !== 'page' && input.name !== 'panel') {
-                input.remove();
-            }
-        });
-
-        // Reset text/number/tel/email inputs
-        form.querySelectorAll('input[type="text"], input[type="number"],select').forEach(input => {
-            input.value = '';
-        });
-
-        // Reset textarea
-        form.querySelectorAll('textarea').forEach(textarea => {
-            textarea.value = '';
-        });
-
-        // Reset date về hôm nay
-        const today = new Date().toISOString().split('T')[0];
-        form.querySelectorAll('input[type="date"]').forEach(input => {
-            input.value = today;
-        });
-
-        // Clear readonly fields
-        form.querySelectorAll('input[readonly]').forEach(input => {
-            input.value = '';
-        });
-    }
-
-    // ==================== SERVICE FUNCTIONS ====================
-    function editService(id) {
-        const url = new URL(window.location.href);
-        url.searchParams.set('action', 'edit');
-        url.searchParams.set('id', id);
-        window.location.href = url.toString();
-    }
-
-    function deleteService(id) {
-        if (confirm('Bạn có chắc chắn muốn xóa dịch vụ này?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.innerHTML = '<input type="hidden" name="service_id" value="' + id + '">' +
-                '<input type="hidden" name="delete_service" value="1">';
-            document.body.appendChild(form);
-            form.submit();
+    // Xóa input hidden (trừ page và panel)
+    form.querySelectorAll('input[type="hidden"]').forEach(input => {
+        if (input.name !== 'page' && input.name !== 'panel') {
+            input.remove();
         }
+    });
+
+    // Reset text/number/tel/email inputs
+    form.querySelectorAll('input[type="text"], input[type="number"],select').forEach(input => {
+        input.value = '';
+    });
+
+    // Reset textarea
+    form.querySelectorAll('textarea').forEach(textarea => {
+        textarea.value = '';
+    });
+
+    // Reset date về hôm nay
+    const today = new Date().toISOString().split('T')[0];
+    form.querySelectorAll('input[type="date"]').forEach(input => {
+        input.value = today;
+    });
+
+    // Clear readonly fields
+    form.querySelectorAll('input[readonly]').forEach(input => {
+        input.value = '';
+    });
+
+    // Reset image preview và file input
+    form.querySelectorAll('input[type="file"]').forEach(input => {
+        input.value = '';
+    });
+
+    // Reset image preview
+    const previewImg = form.querySelector('#servicePreview');
+    if (previewImg) {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
     }
 
-    // ==================== MODAL AUTO-RESET ====================
+    // Ẩn nút xóa ảnh (dấu X đỏ) - QUAN TRỌNG
+    // Tìm trong form trước, nếu không có thì tìm trong document
+    let removeImageBtn = form.querySelector('#serviceImageRemoveBtn');
+    if (!removeImageBtn) {
+        removeImageBtn = document.getElementById('serviceImageRemoveBtn');
+    }
+    if (removeImageBtn) {
+        removeImageBtn.style.display = 'none';
+    }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    // Reset remove image input về 0
+    let removeImageInput = form.querySelector('#removeServiceImage');
+    if (!removeImageInput) {
+        removeImageInput = document.getElementById('removeServiceImage');
+    }
+    if (removeImageInput) {
+        removeImageInput.value = '0';
+    }
 
-        // Tự động mở modal edit nếu có action=edit
-        <?php if ($editService): ?>
-            const editModal = new bootstrap.Modal(document.getElementById('addServiceModal'));
-            editModal.show();
-        <?php endif; ?>
+    // Đảm bảo image wrapper vẫn hiển thị (không ẩn hoàn toàn)
+    let imageWrapper = form.querySelector('#serviceImageWrapper');
+    if (!imageWrapper) {
+        imageWrapper = document.getElementById('serviceImageWrapper');
+    }
+    if (imageWrapper) {
+        imageWrapper.style.display = 'block';
+    }
+}
 
-        // Danh sách modal cần auto-reset
-        const resettableModals = ['addServiceModal'];
+// ==================== SERVICE FUNCTIONS ====================
+function editService(id) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('action', 'edit');
+    url.searchParams.set('id', id);
+    window.location.href = url.toString();
+}
 
-        // Xử lý TỔNG QUÁT cho TẤT CẢ modal
-        document.querySelectorAll('.modal').forEach(modalElement => {
+// Hàm xóa dịch vụ (cũ - giữ lại để tương thích ngược)
+function deleteService(id) {
+    currentServiceId = id;
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteServiceModal'));
+    modal.show();
+}
 
-            // Event: Khi modal đã đóng hoàn toàn
-            modalElement.addEventListener('hidden.bs.modal', function() {
-                const form = modalElement.querySelector('form');
-                const modalId = modalElement.id;
+// ==================== MODAL AUTO-RESET ====================
 
-                // Chỉ xử lý modal trong danh sách
-                if (resettableModals.includes(modalId)) {
-                    const isEditMode = window.location.search.includes('action=edit');
+document.addEventListener('DOMContentLoaded', function() {
 
-                    if (isEditMode) {
-                        // Xóa query string edit
-                        clearEditQueryString();
-                    }
+    // Tự động mở modal edit nếu có action=edit
+    <?php if ($editService): ?>
+    const editModal = new bootstrap.Modal(document.getElementById('addServiceModal'));
+    editModal.show();
+    <?php endif; ?>
 
-                    // Reset form về trạng thái "Thêm mới"
-                    if (form) {
-                        resetFormFields(form);
-                        resetModalToAddMode(modalElement, form);
-                    }
-                }
+    // Danh sách modal cần auto-reset
+    const resettableModals = ['addServiceModal'];
 
-                // Cleanup backdrop
-                setTimeout(forceCleanupBackdrop, 100);
-            });
+    // Xử lý TỔNG QUÁT cho TẤT CẢ modal
+    document.querySelectorAll('.modal').forEach(modalElement => {
 
-            // Event: Khi modal sắp mở
-            modalElement.addEventListener('show.bs.modal', function() {
-                const form = modalElement.querySelector('form');
+        // Event: Khi modal đã đóng hoàn toàn
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            const form = modalElement.querySelector('form');
+            const modalId = modalElement.id;
+
+            // Chỉ xử lý modal trong danh sách
+            if (resettableModals.includes(modalId)) {
                 const isEditMode = window.location.search.includes('action=edit');
 
-                // Nếu KHÔNG phải edit mode, reset form
-                if (!isEditMode && form && resettableModals.includes(modalElement.id)) {
-                    resetFormFields(form);
-                }
-            });
-        });
-
-        // Xử lý nút "Thêm mới" - xóa query string edit và reset form
-        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-            button.addEventListener('click', function() {
-                const isEditMode = window.location.search.includes('action=edit');
                 if (isEditMode) {
+                    // Xóa query string edit
                     clearEditQueryString();
                 }
-                // Reset form when opening add modal
-                const modalId = button.getAttribute('data-bs-target');
-                if (modalId && modalId.includes('addServiceModal')) {
-                    setTimeout(function() {
-                        const form = document.querySelector(modalId + ' form');
-                        if (form && !window.location.search.includes('action=edit')) {
-                            resetFormFields(form);
-                            resetModalToAddMode(document.querySelector(modalId), form);
-                        }
-                    }, 200);
+
+                // Reset form về trạng thái "Thêm mới"
+                if (form) {
+                    resetFormFields(form);
+                    resetModalToAddMode(modalElement, form);
                 }
-            });
+            }
+
+            // Cleanup backdrop
+            setTimeout(forceCleanupBackdrop, 100);
         });
 
-        // Xử lý ESC key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                setTimeout(forceCleanupBackdrop, 150);
+        // Event: Khi modal sắp mở
+        modalElement.addEventListener('show.bs.modal', function() {
+            const form = modalElement.querySelector('form');
+            const isEditMode = window.location.search.includes('action=edit');
+
+            // Nếu KHÔNG phải edit mode, reset form
+            if (!isEditMode && form && resettableModals.includes(modalElement.id)) {
+                resetFormFields(form);
             }
         });
     });
+
+    // Xử lý nút "Thêm mới" - xóa query string edit và reset form
+    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+        button.addEventListener('click', function() {
+            const isEditMode = window.location.search.includes('action=edit');
+            if (isEditMode) {
+                clearEditQueryString();
+            }
+            // Reset form when opening add modal
+            const modalId = button.getAttribute('data-bs-target');
+            if (modalId && modalId.includes('addServiceModal')) {
+                setTimeout(function() {
+                    const form = document.querySelector(modalId + ' form');
+                    if (form && !window.location.search.includes('action=edit')) {
+                        resetFormFields(form);
+                        resetModalToAddMode(document.querySelector(modalId), form);
+                    }
+                }, 200);
+            }
+        });
+    });
+
+    // Xử lý ESC key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            setTimeout(forceCleanupBackdrop, 150);
+        }
+    });
+});
+
+// Hàm xử lý sửa dịch vụ từ modal xem chi tiết
+function editServiceFromView(id) {
+    // Đóng modal xem chi tiết
+    const viewModal = bootstrap.Modal.getInstance(document.getElementById('viewServiceModal' + id));
+    if (viewModal) {
+        viewModal.hide();
+    }
+
+    // Chuyển hướng đến trang chỉnh sửa
+    window.location.href = 'index.php?page=services-manager&action=edit&id=' + id;
+}
+
+// Biến lưu trữ ID dịch vụ hiện tại
+let currentServiceId = null;
+
+// Khởi tạo sự kiện khi DOM đã tải xong
+document.addEventListener('DOMContentLoaded', function() {
+    // Xử lý sự kiện khi modal xác nhận xóa được hiển thị
+    const deleteModal = document.getElementById('confirmDeleteServiceModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            if (button && button.hasAttribute('data-service-id')) {
+                currentServiceId = button.getAttribute('data-service-id');
+            }
+        });
+    }
+
+    // Xử lý sự kiện khi nhấn nút xác nhận xóa
+    const confirmDeleteBtn = document.getElementById('confirmDeleteServiceButton');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            if (currentServiceId) {
+                performDeleteService(currentServiceId);
+            }
+        });
+    }
+});
+
+// Hàm thực hiện xóa dịch vụ
+function performDeleteService(id) {
+    if (!id) return;
+
+    // Tạo form ẩn để gửi yêu cầu xóa
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = window.location.href;
+    form.style.display = 'none';
+
+    // Thêm input ẩn chứa ID dịch vụ cần xóa
+    const idInput = document.createElement('input');
+    idInput.type = 'hidden';
+    idInput.name = 'service_id';
+    idInput.value = id;
+    form.appendChild(idInput);
+
+    // Thêm input ẩn cho action delete
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'delete_service';
+    actionInput.value = '1';
+    form.appendChild(actionInput);
+
+    // Thêm CSRF token nếu có
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (csrfToken) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+    }
+
+    // Thêm form vào body
+    document.body.appendChild(form);
+
+    // Gửi form
+    form.submit();
+}
+
+// Hàm xóa dịch vụ (giữ lại để tương thích ngược)
+function deleteService(id) {
+    currentServiceId = id;
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteServiceModal'));
+    modal.show();
+}
 </script>

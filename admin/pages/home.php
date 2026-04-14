@@ -9,9 +9,9 @@ $isManager = false;
 if (!empty($chuc_vu)) {
     $chuc_vu_lower = mb_strtolower($chuc_vu, 'UTF-8');
     $isManager = (
-        stripos($chuc_vu, 'Quản lý') !== false || 
-        stripos($chuc_vu, 'Manager') !== false || 
-        stripos($chuc_vu, 'Admin') !== false || 
+        stripos($chuc_vu, 'Quản lý') !== false ||
+        stripos($chuc_vu, 'Manager') !== false ||
+        stripos($chuc_vu, 'Admin') !== false ||
         stripos($chuc_vu, 'Giám đốc') !== false ||
         stripos($chuc_vu, 'Director') !== false
     );
@@ -55,7 +55,7 @@ $result = $mysqli->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM in
     AND YEAR(created_at) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
     AND deleted IS NULL");
 $prev_month_revenue = $result->fetch_assoc()['total'];
-$revenue_growth = $prev_month_revenue > 0 ? 
+$revenue_growth = $prev_month_revenue > 0 ?
     (($stats['monthly_revenue'] - $prev_month_revenue) / $prev_month_revenue) * 100 : 0;
 
 // Tỷ lệ phòng
@@ -84,12 +84,24 @@ for ($i = 6; $i >= 0; $i--) {
     $stmt->close();
 }
 
-// Booking gần đây
+// Thống kê booking: khách vãng lai vs khách có tài khoản
+$result = $mysqli->query("SELECT COUNT(*) as total FROM booking 
+    WHERE walk_in_guest_id IS NOT NULL AND deleted IS NULL");
+$stats['walk_in_bookings'] = $result->fetch_assoc()['total'];
+
+$result = $mysqli->query("SELECT COUNT(*) as total FROM booking 
+    WHERE walk_in_guest_id IS NULL AND customer_id > 0 AND deleted IS NULL");
+$stats['registered_bookings'] = $result->fetch_assoc()['total'];
+
+// Booking gần đây (bao gồm cả khách vãng lai)
 $recentBookings = [];
 $result = $mysqli->query("SELECT b.booking_id, b.check_in_date, b.check_out_date, 
-    c.full_name, r.room_number, i.total_amount, i.status
+    COALESCE(c.full_name, w.full_name) as full_name,
+    r.room_number, i.total_amount, i.status,
+    CASE WHEN b.walk_in_guest_id IS NOT NULL THEN 'Khách vãng lai' ELSE 'Khách có tài khoản' END as guest_type
     FROM booking b
-    INNER JOIN customer c ON b.customer_id = c.customer_id
+    LEFT JOIN customer c ON b.customer_id = c.customer_id AND b.walk_in_guest_id IS NULL
+    LEFT JOIN walk_in_guest w ON b.walk_in_guest_id = w.id
     INNER JOIN room r ON b.room_id = r.room_id
     LEFT JOIN invoice i ON b.booking_id = i.booking_id
     WHERE b.deleted IS NULL
@@ -143,11 +155,37 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
                     <h3><?php echo number_format($stats['monthly_revenue'] / 1000000, 1); ?>M</h3>
                     <p>Doanh Thu Tháng</p>
                     <?php if ($revenue_growth != 0): ?>
-                    <small class="<?php echo $revenue_growth > 0 ? 'text-success' : 'text-danger'; ?>">
-                        <i class="fas fa-arrow-<?php echo $revenue_growth > 0 ? 'up' : 'down'; ?>"></i>
-                        <?php echo number_format(abs($revenue_growth), 1); ?>% so với tháng trước
-                    </small>
+                        <small class="<?php echo $revenue_growth > 0 ? 'text-success' : 'text-danger'; ?>">
+                            <i class="fas fa-arrow-<?php echo $revenue_growth > 0 ? 'up' : 'down'; ?>"></i>
+                            <?php echo number_format(abs($revenue_growth), 1); ?>% so với tháng trước
+                        </small>
                     <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thống kê Booking theo loại khách -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="stat-info">
+                    <h3><?php echo $stats['registered_bookings']; ?></h3>
+                    <p>Booking Khách Có Tài Khoản</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="stat-card">
+                <div class="stat-icon bg-warning">
+                    <i class="fas fa-user-clock"></i>
+                </div>
+                <div class="stat-info">
+                    <h3><?php echo $stats['walk_in_bookings']; ?></h3>
+                    <p>Booking Khách Vãng Lai</p>
                 </div>
             </div>
         </div>
@@ -170,7 +208,9 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
                 <div class="card-header">
                     <h5>Doanh Thu 7 Ngày Qua</h5>
                 </div>
-                <canvas id="revenueChart" style="height: 300px"></canvas>
+                <div style="position: relative; height: 300px; padding: 20px;">
+                    <canvas id="revenueChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -188,6 +228,7 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
                             <tr>
                                 <th>Mã Đặt</th>
                                 <th>Khách hàng</th>
+                                <th>Loại</th>
                                 <th>Phòng</th>
                                 <th>Ngày</th>
                                 <th>Tổng tiền</th>
@@ -196,30 +237,34 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
                         </thead>
                         <tbody>
                             <?php if (empty($recentBookings)): ?>
-                            <tr>
-                                <td colspan="6" class="text-center">Không có dữ liệu</td>
-                            </tr>
+                                <tr>
+                                    <td colspan="7" class="text-center">Không có dữ liệu</td>
+                                </tr>
                             <?php else: ?>
-                            <?php foreach ($recentBookings as $booking): ?>
-                            <tr>
-                                <td>#<?php echo $booking['booking_id']; ?></td>
-                                <td><?php echo h($booking['full_name']); ?></td>
-                                <td><?php echo h($booking['room_number']); ?></td>
-                                <td>
-                                    <?php echo formatDate($booking['check_in_date']); ?><br>
-                                    <small><?php echo formatDate($booking['check_out_date']); ?></small>
-                                </td>
-                                <td><?php echo formatCurrency($booking['total_amount'] ?? 0); ?></td>
-                                <td>
-                                    <span class="badge <?php 
-                                        echo $booking['status'] == 'Paid' ? 'bg-success' : 
-                                            ($booking['status'] == 'Unpaid' ? 'bg-warning' : 'bg-secondary'); 
-                                    ?>">
-                                        <?php echo h($booking['status'] ?? 'Pending'); ?>
-                                    </span>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
+                                <?php foreach ($recentBookings as $booking): ?>
+                                    <tr>
+                                        <td>#<?php echo $booking['booking_id']; ?></td>
+                                        <td><?php echo h($booking['full_name']); ?></td>
+                                        <td>
+                                            <span class="badge <?php echo $booking['guest_type'] == 'Khách vãng lai' ? 'bg-warning' : 'bg-info'; ?>">
+                                                <?php echo h($booking['guest_type']); ?>
+                                            </span>
+                                        </td>
+                                        <td><?php echo h($booking['room_number']); ?></td>
+                                        <td>
+                                            <?php echo formatDate($booking['check_in_date']); ?><br>
+                                            <small><?php echo formatDate($booking['check_out_date']); ?></small>
+                                        </td>
+                                        <td><?php echo formatCurrency($booking['total_amount'] ?? 0); ?></td>
+                                        <td>
+                                            <span class="badge <?php
+                                                                echo $booking['status'] == 'Paid' ? 'bg-success' : ($booking['status'] == 'Unpaid' ? 'bg-warning' : 'bg-secondary');
+                                                                ?>">
+                                                <?php echo h($booking['status'] ?? 'Pending'); ?>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
                             <?php endif; ?>
                         </tbody>
                     </table>
@@ -254,101 +299,138 @@ $recentBookings = $result->fetch_all(MYSQLI_ASSOC);
     </div>
 </div>
 
-<?php 
+<?php
 // Chuẩn bị dữ liệu cho Chart.js
-$chartLabels = array_map(function($d) { 
-    return "'" . htmlspecialchars($d['date'], ENT_QUOTES) . "'"; 
+$chartLabels = array_map(function ($d) {
+    return "'" . htmlspecialchars($d['date'], ENT_QUOTES) . "'";
 }, $revenueData);
-$chartData = array_map(function($d) { 
-    return $d['revenue']; 
+$chartData = array_map(function ($d) {
+    return $d['revenue'];
 }, $revenueData);
 ?>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Script tạo biểu đồ - ĐẶT Ở CUỐI FILE -->
 <script>
-// Đợi DOM load xong
-document.addEventListener('DOMContentLoaded', function() {
-    // Room Chart
-    const roomCtxEl = document.getElementById('roomChart');
-    if (roomCtxEl) {
-        const roomCtx = roomCtxEl.getContext('2d');
-        new Chart(roomCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Có sẵn', 'Đã đặt', 'Đang thuê', 'Bảo trì', 'Đang dọn'],
-                datasets: [{
-                    data: [
-                        <?php echo $roomStats['Available'] ?? 0; ?>,
-                        <?php echo $roomStats['Booked'] ?? 0; ?>,
-                        <?php echo $roomStats['Occupied'] ?? 0; ?>,
-                        <?php echo $roomStats['Maintenance'] ?? 0; ?>,
-                        <?php echo $roomStats['Cleaning'] ?? 0; ?>
-                    ],
-                    backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
+    // Lưu dữ liệu vào biến global để dùng sau
+    window.dashboardData = {
+        roomStats: {
+            available: <?php echo $roomStats['Available'] ?? 0; ?>,
+            booked: <?php echo $roomStats['Booked'] ?? 0; ?>,
+            occupied: <?php echo $roomStats['Occupied'] ?? 0; ?>,
+            maintenance: <?php echo $roomStats['Maintenance'] ?? 0; ?>,
+            cleaning: <?php echo $roomStats['Cleaning'] ?? 0; ?>
+        },
+        revenueLabels: [<?php echo implode(',', $chartLabels); ?>],
+        revenueData: [<?php echo implode(',', $chartData); ?>]
+    };
+
+    // Hàm khởi tạo biểu đồ
+    function initDashboardCharts() {
+
+        // Lưu instance của các chart
+        if (window.roomChartInstance) {
+            window.roomChartInstance.destroy();
+        }
+        if (window.revenueChartInstance) {
+            window.revenueChartInstance.destroy();
+        }
+
+        // Room Chart
+        const roomCtxEl = document.getElementById('roomChart');
+        if (roomCtxEl) {
+            const roomCtx = roomCtxEl.getContext('2d');
+            window.roomChartInstance = new Chart(roomCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Có sẵn', 'Đã đặt', 'Đang thuê', 'Bảo trì', 'Đang dọn'],
+                    datasets: [{
+                        data: [
+                            window.dashboardData.roomStats.available,
+                            window.dashboardData.roomStats.booked,
+                            window.dashboardData.roomStats.occupied,
+                            window.dashboardData.roomStats.maintenance,
+                            window.dashboardData.roomStats.cleaning
+                        ],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
+
+        // Revenue Chart
+        const revenueCtxEl = document.getElementById('revenueChart');
+        if (revenueCtxEl) {
+            const revenueCtx = revenueCtxEl.getContext('2d');
+            window.revenueChartInstance = new Chart(revenueCtx, {
+                type: 'line',
+                data: {
+                    labels: window.dashboardData.revenueLabels,
+                    datasets: [{
+                        label: 'Doanh thu (VNĐ)',
+                        data: window.dashboardData.revenueData,
+                        borderColor: '#deb666',
+                        backgroundColor: 'rgba(222, 182, 102, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN').format(context.parsed.y) + ' VNĐ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    if (value >= 1000000) {
+                                        return (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return (value / 1000).toFixed(0) + 'K';
+                                    }
+                                    return value;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
 
-    // Revenue Chart
-    const revenueCtxEl = document.getElementById('revenueChart');
-    if (revenueCtxEl) {
-        const revenueCtx = revenueCtxEl.getContext('2d');
-        new Chart(revenueCtx, {
-            type: 'line',
-            data: {
-                labels: [<?php echo implode(',', $chartLabels); ?>],
-                datasets: [{
-                    label: 'Doanh thu (VNĐ)',
-                    data: [<?php echo implode(',', $chartData); ?>],
-                    borderColor: '#deb666',
-                    backgroundColor: 'rgba(222, 182, 102, 0.1)',
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return 'Doanh thu: ' + new Intl.NumberFormat('vi-VN').format(context
-                                    .parsed.y) + ' VNĐ';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                if (value >= 1000000) {
-                                    return (value / 1000000).toFixed(1) + 'M';
-                                } else if (value >= 1000) {
-                                    return (value / 1000).toFixed(0) + 'K';
-                                }
-                                return value;
-                            }
-                        }
-                    }
-                }
-            }
+    // Kiểm tra Chart.js đã load chưa
+    if (typeof Chart !== 'undefined') {
+        // Chart.js đã có, khởi tạo ngay
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDashboardCharts);
+        } else {
+            initDashboardCharts();
+        }
+    } else {
+        // Chart.js chưa có, đợi window load
+        window.addEventListener('load', function() {
+            // Đợi thêm 100ms để chắc chắn Chart.js đã load
+            setTimeout(initDashboardCharts, 100);
         });
     }
-});
 </script>

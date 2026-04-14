@@ -30,7 +30,6 @@
   function initGlobalModalReset() {
     if (typeof bootstrap === 'undefined' || !bootstrap.Modal) {
       // shouldn't happen if scripts loaded in right order, but guard anyway
-      console.warn('Bootstrap Modal not available yet — modal-reset initialization skipped.');
       return;
     }
 
@@ -96,7 +95,6 @@
           initGlobalModalReset();
         } else if (attempts > 30) { // ~3s timeout
           clearInterval(interval);
-          console.warn('modal-reset: bootstrap.Modal not found after waiting.');
         }
       }, 100);
     }

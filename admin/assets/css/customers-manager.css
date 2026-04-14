@@ -58,10 +58,12 @@
   border: 1px solid #ddd;
 }
 
-.btn-add {
+.btn-add,
+.btn-update {
   background-color: #deb666;
   color: #fff;
   height: 44px;
+  width: 170px;
   border: none;
   border-radius: 8px;
   font-weight: 500;
@@ -69,7 +71,8 @@
   margin-right: 8px;
 }
 
-.btn-add:hover {
+.btn-add:hover,
+.btn-update:hover {
   background-color: #c5a878;
 }
 .table-container {
@@ -158,12 +161,12 @@
   color: #fff;
 }
 .modal-header {
-  background-color: #deb666;
-  color: #fff;
+  background-color: #fffcf0;
+  color: #121212;
 }
 
 .modal-header .btn-close {
-  filter: brightness(0) invert(1);
+  /* filter: brightness(0) invert(1); Removed to make visible on light bg */
 }
 
 .form-label {

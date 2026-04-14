@@ -7,11 +7,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $full_name = trim($_POST['full_name']);
     $username = trim($_POST['username']);
     $email = trim($_POST['email']);
+    $phone = trim($_POST['phone']);
     $password = trim($_POST['password']);
     $confirm_password = trim($_POST['confirm_password']);
 
     // Kiểm tra dữ liệu rỗng
-    if (empty($full_name) ||empty($username) || empty($email) || empty($password) || empty($confirm_password)) {
+    if (empty($full_name) ||empty($username) || empty($email) || empty($phone) || empty($password) || empty($confirm_password)) {
         $_SESSION['error'] = "Vui lòng điền đầy đủ thông tin.";
         header("Location: ../pages/signUp.php");
         exit;
@@ -54,14 +55,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Băm mật khẩu và thêm người dùng
     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-    $insert = $mysqli->prepare("INSERT INTO customer (full_name, username, email, password, created_at) VALUES (?, ?, ?, ?, NOW())");
-    $insert->bind_param("ssss", $full_name, $username, $email, $hashed_password);
+    $insert = $mysqli->prepare("INSERT INTO customer (full_name, username, email, phone, password, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+    $insert->bind_param("sssss", $full_name, $username, $email, $phone, $hashed_password);
 
     if ($insert->execute()) {
         $_SESSION['success'] = "Đăng ký thành công! Vui lòng đăng nhập.";
         $insert->close();
         $mysqli->close();
-        header("Location: ../pages/login.php");
+        header("Location: ../pages/signUp.php"); // Đã sửa lỗi URL
         exit;
     } else {
         $_SESSION['error'] = "Đã có lỗi xảy ra: " . $mysqli->error;

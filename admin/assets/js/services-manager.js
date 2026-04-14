@@ -10,7 +10,6 @@ function editService(id, modalId) {
 
 function deleteService(id) {
   if (confirm("Xóa dịch vụ " + id + " ?")) {
-    console.log("Delete service", id);
   }
 }
 
@@ -24,7 +23,6 @@ function saveService() {
     alert("Vui lòng nhập đầy đủ thông tin bắt buộc.");
     return;
   }
-  console.log("Saved service", { id, name, type, unit, price });
   const modal = bootstrap.Modal.getInstance(
     document.getElementById("serviceModal")
   );
@@ -91,3 +89,18 @@ document
       "tableStandaloneService"
     )
   );
+// Hàm mở modal Sửa từ modal Xem chi tiết
+function editServiceFromView(id) {
+  // Đóng modal view hiện tại
+  const viewModal = bootstrap.Modal.getInstance(
+    document.getElementById("viewServiceModal" + id)
+  );
+  if (viewModal) {
+    viewModal.hide();
+  }
+
+  // Chuyển đến trang edit
+  setTimeout(function () {
+    editService(id);
+  }, 300);
+}

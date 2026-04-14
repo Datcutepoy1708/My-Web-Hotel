@@ -1,11 +1,11 @@
 <?php
 session_start();
-require_once '../includes/connect.php'; // Đường dẫn kết nối DB
-require_once '../../admin/includes/cloudinary_helper.php'; // Cloudinary helper
+require_once '../includes/connect.php';
+require_once __DIR__ . '/../../admin/includes/cloudinary_helper.php';
 
 // Kiểm tra người dùng đã đăng nhập chưa
 if (!isset($_SESSION['user_id'])) {
-    header("Location: /My-Web-Hotel/client/pages/login.php");
+    header("Location: /My-Web-Hotel/client/pages/logIn.php");
     exit();
 }
 
@@ -13,73 +13,82 @@ $user_id = $_SESSION['user_id'];
 
 // Kiểm tra form gửi bằng POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Lấy dữ liệu từ form (và loại bỏ ký tự đặc biệt để tránh lỗi)
+    // Lấy dữ liệu từ form
     $username    = trim($_POST['full_name'] ?? '');
-    $ngay_sinh    = trim($_POST['birth_day'] ?? '');
-    $dia_chi      = trim($_POST['address'] ?? '');
-    $gioi_tinh    = trim($_POST['gender'] ?? '');
-    $email        = trim($_POST['email'] ?? '');
-    $sdt          = trim($_POST['phone'] ?? '');
+    $ngay_sinh   = trim($_POST['birth_day'] ?? '');
+    $dia_chi     = trim($_POST['address'] ?? '');
+    $gioi_tinh   = trim($_POST['gender'] ?? '');
+    $email       = trim($_POST['email'] ?? '');
+    $sdt         = trim($_POST['phone'] ?? '');
 
     // Kiểm tra các trường bắt buộc
     if (empty($username) || empty($email)) {
-        header("Location: ../pages/profile.php?error=missing_fields");
+        header("Location: ../pages/profile.php?error=missing");
         exit();
     }
 
-    // Xử lý upload avatar
-    $avatar = null;
+    // Lấy avatar cũ trước khi cập nhật
+    $oldAvatarStmt = $mysqli->prepare("SELECT avatar FROM customer WHERE customer_id = ?");
+    $oldAvatarStmt->bind_param("i", $user_id);
+    $oldAvatarStmt->execute();
+    $oldAvatarResult = $oldAvatarStmt->get_result();
+    $oldAvatar = $oldAvatarResult->fetch_assoc()['avatar'] ?? null;
+    $oldAvatarStmt->close();
+
+    // Xử lý upload ảnh đại diện lên Cloudinary
+    $avatarPath = $oldAvatar; // Giữ nguyên avatar cũ nếu không upload mới
     if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-        $tmpPath = $_FILES['avatar']['tmp_name'];
-        $avatar = CloudinaryHelper::upload($tmpPath, 'customer');
-        
-        if ($avatar === false) {
-            header("Location: ../pages/profile.php?error=upload_failed");
+        $avatar = $_FILES['avatar'];
+        $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        $maxSize = 5 * 1024 * 1024; // 5MB
+
+        // Kiểm tra loại file
+        if (!in_array($avatar['type'], $allowedTypes)) {
+            header("Location: ../pages/profile.php?error=invalid_file_type");
             exit();
         }
+
+        // Kiểm tra kích thước file
+        if ($avatar['size'] > $maxSize) {
+            header("Location: ../pages/profile.php?error=file_too_large");
+            exit();
+        }
+
+        // Upload lên Cloudinary
+        $cloudinaryUrl = CloudinaryHelper::upload($avatar['tmp_name'], 'customer');
         
-        // Xóa avatar cũ trên Cloudinary nếu có
-        $stmtOld = $mysqli->prepare("SELECT avatar FROM customer WHERE customer_id = ?");
-        $stmtOld->bind_param("i", $user_id);
-        $stmtOld->execute();
-        $resultOld = $stmtOld->get_result();
-        if ($oldUser = $resultOld->fetch_assoc()) {
-            if (!empty($oldUser['avatar'])) {
-                CloudinaryHelper::deleteByUrl($oldUser['avatar']);
+        if ($cloudinaryUrl !== false) {
+            $avatarPath = $cloudinaryUrl;
+            
+            // Xóa ảnh cũ trên Cloudinary nếu có
+            if (!empty($oldAvatar) && strpos($oldAvatar, 'cloudinary.com') !== false) {
+                CloudinaryHelper::deleteByUrl($oldAvatar);
             }
+        } else {
+            header("Location: ../pages/profile.php?error=avatar");
+            exit();
         }
-        $stmtOld->close();
-    } else {
-        // Giữ avatar cũ nếu không upload mới
-        $stmtOld = $mysqli->prepare("SELECT avatar FROM customer WHERE customer_id = ?");
-        $stmtOld->bind_param("i", $user_id);
-        $stmtOld->execute();
-        $resultOld = $stmtOld->get_result();
-        if ($oldUser = $resultOld->fetch_assoc()) {
-            $avatar = $oldUser['avatar'];
-        }
-        $stmtOld->close();
     }
 
     // Cập nhật thông tin người dùng
-    if ($avatar !== null) {
+    if ($avatarPath) {
+        // Cập nhật cả avatar
         $sql = "UPDATE customer 
-                SET full_name = ?, date_of_birth = ?, address = ?, gender = ?, email = ?, phone = ?, avatar = ? 
+                SET full_name = ?, date_of_birth = ?, address = ?, gender = ?, email = ?, phone = ?, avatar = ?
                 WHERE customer_id = ?";
         $stmt = $mysqli->prepare($sql);
-        if (!$stmt) {
-            die("Lỗi prepare: " . $mysqli->error);
-        }
-        $stmt->bind_param("sssssssi", $username, $ngay_sinh, $dia_chi, $gioi_tinh, $email, $sdt, $avatar, $user_id);
+        $stmt->bind_param("sssssssi", $username, $ngay_sinh, $dia_chi, $gioi_tinh, $email, $sdt, $avatarPath, $user_id);
     } else {
+        // Chỉ cập nhật thông tin cơ bản
         $sql = "UPDATE customer 
-                SET full_name = ?, date_of_birth = ?, address = ?, gender = ?, email = ?, phone = ? 
+                SET full_name = ?, date_of_birth = ?, address = ?, gender = ?, email = ?, phone = ?
                 WHERE customer_id = ?";
         $stmt = $mysqli->prepare($sql);
-        if (!$stmt) {
-            die("Lỗi prepare: " . $mysqli->error);
-        }
         $stmt->bind_param("ssssssi", $username, $ngay_sinh, $dia_chi, $gioi_tinh, $email, $sdt, $user_id);
+    }
+
+    if (!$stmt) {
+        die("Lỗi prepare: " . $mysqli->error);
     }
 
     if ($stmt->execute()) {
@@ -88,8 +97,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     } else {
         // Lỗi khi cập nhật
-        header("Location: ../pages/profile.php?error=update_failed");
+        header("Location: ../pages/profile.php?error=1");
         exit();
     }
+    
+    $stmt->close();
 }
 ?>
